@@ -30,4 +30,40 @@ class Database {
         $stmt->execute([$compra_id]);
         return $stmt->fetch();
     }
+
+    public static function validarPorNumeroAlunoPin(string $numero, string $pin, int $funcionario_id): array {
+    $pdo = self::conexao();
+
+    // 1. Encontra a pessoa pelo número (aluno ou funcionário), não pelo comprador_id diretamente
+    $stmt = $pdo->prepare("SELECT id, nome FROM utilizadores_dev WHERE numero = ?");
+    $stmt->execute([$numero]);
+    $pessoa = $stmt->fetch();
+
+    if (!$pessoa) {
+        return ['status' => 'invalido'];
+    }
+
+    $stmt = $pdo->prepare("SELECT id, estado FROM compras 
+                            WHERE codigo_pin = ? AND comprador_id = ? AND data_refeicao = CAST(GETDATE() AS DATE)");
+    $stmt->execute([$pin, $pessoa['id']]);
+    $compra = $stmt->fetch();
+
+    if (!$compra) {
+        return ['status' => 'invalido'];
+    }
+    if ($compra['estado'] !== 'paga') {
+        return ['status' => $compra['estado'] === 'utilizada' ? 'ja_usada' : 'pendente', 'nome' => $pessoa['nome']];
+    }
+
+    $stmt = $pdo->prepare("UPDATE compras SET estado = 'utilizada' WHERE id = ? AND estado = 'paga'");
+    $stmt->execute([$compra['id']]);
+
+    if ($stmt->rowCount() === 1) {
+        $pdo->prepare("INSERT INTO validacoes (compra_id, funcionario_id, metodo_leitura) VALUES (?, ?, 'numero_pin')")
+            ->execute([$compra['id'], $funcionario_id]);
+        return ['status' => 'valido', 'nome' => $pessoa['nome']];
+    }
+
+    return ['status' => 'ja_usada', 'nome' => $pessoa['nome']];
+}
 }

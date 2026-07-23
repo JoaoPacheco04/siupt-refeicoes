@@ -11,17 +11,25 @@ class PagamentoService {
         $pdo = Database::conexao();
         $estado = $sucesso ? 'sucesso' : 'falhado';
 
-        $pdo->prepare("INSERT INTO pagamentos (compra_id, metodo, ref_gateway, estado_pagamento) 
-                        VALUES (?, 'simulado', ?, ?)")
-            ->execute([$compra_id, 'SIM-' . uniqid(), $estado]);
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare("INSERT INTO pagamentos (compra_id, metodo, ref_gateway, estado_pagamento) 
+                            VALUES (?, 'simulado', ?, ?)")
+                ->execute([$compra_id, 'SIM-' . uniqid(), $estado]);
 
-        if (!$sucesso) {
-            return ['status' => 'falhado'];
+            if (!$sucesso) {
+                $pdo->commit();
+                return ['status' => 'falhado'];
+            }
+
+            $stmt = $pdo->prepare("UPDATE compras SET estado = 'paga' WHERE id = ? AND estado = 'pendente'");
+            $stmt->execute([$compra_id]);
+
+            $pdo->commit();
+            return ['status' => $stmt->rowCount() === 1 ? 'paga' : 'erro'];
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            return ['status' => 'erro'];
         }
-
-        $stmt = $pdo->prepare("UPDATE compras SET estado = 'paga' WHERE id = ? AND estado = 'pendente'");
-        $stmt->execute([$compra_id]);
-
-        return ['status' => $stmt->rowCount() === 1 ? 'paga' : 'erro'];
     }
 }
