@@ -39,7 +39,6 @@ class Database {
             return 'refeicao_invalida';
         }
 
-        // Corte de vendas: até às 10h00 do dia anterior à data de consumo
         $limite = date('Y-m-d 10:00:00', strtotime($refeicao['data_refeicao'] . ' -1 day'));
         if (date('Y-m-d H:i:s') > $limite) {
             return 'fora_de_prazo';
@@ -62,6 +61,16 @@ class Database {
 
     public static function obterCompra(int $compra_id): array|false {
         $stmt = self::conexao()->prepare("SELECT * FROM compras WHERE id = ?");
+        $stmt->execute([$compra_id]);
+        return $stmt->fetch();
+    }
+
+    public static function obterCompraComEmail(int $compra_id): array|false {
+        $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal, u.email
+                                            FROM compras c
+                                            JOIN refeicoes_dev r ON c.refeicao_id = r.id
+                                            JOIN utilizadores_dev u ON c.comprador_id = u.id
+                                            WHERE c.id = ?");
         $stmt->execute([$compra_id]);
         return $stmt->fetch();
     }
@@ -90,7 +99,6 @@ class Database {
             return ['status' => 'invalido'];
         }
 
-        // Rate limiting: bloqueia após 5 tentativas falhadas nos últimos 10 minutos
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM tentativas_pin WHERE numero = ? AND data_tentativa > DATEADD(MINUTE, -10, GETDATE())");
         $stmt->execute([$numero]);
         if ((int) $stmt->fetchColumn() >= 5) {
@@ -139,12 +147,15 @@ class Database {
         return (int) $stmt->fetchColumn();
     }
 
-    public static function validarPorCartao(string $numero_lido, int $funcionario_id): array {
+    public static function validarPorCartao(string $uid_lido, int $funcionario_id): array {
         $pdo = self::conexao();
 
-        $pessoa = self::obterUtilizadorPorNumero($numero_lido);
+        $stmt = $pdo->prepare("SELECT id, nome FROM utilizadores_dev WHERE numero_cartao_uid = ?");
+        $stmt->execute([$uid_lido]);
+        $pessoa = $stmt->fetch();
+
         if (!$pessoa) {
-            $pdo->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")->execute([$numero_lido]);
+            $pdo->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")->execute([$uid_lido]);
             return ['status' => 'invalido'];
         }
 
@@ -155,7 +166,7 @@ class Database {
         $compra = $stmt->fetch();
 
         if (!$compra) {
-            $pdo->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")->execute([$numero_lido]);
+            $pdo->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")->execute([$uid_lido]);
             return ['status' => 'invalido', 'nome' => $pessoa['nome']];
         }
         if ($compra['estado'] !== 'paga') {
@@ -180,6 +191,21 @@ class Database {
             $pdo->rollBack();
             return ['status' => 'erro'];
         }
+    }
+
+    public static function vincularCartao(int $utilizador_id, string $uid): array {
+        $pdo = self::conexao();
+
+        $stmt = $pdo->prepare("SELECT id FROM utilizadores_dev WHERE numero_cartao_uid = ? AND id != ?");
+        $stmt->execute([$uid, $utilizador_id]);
+        if ($stmt->fetch()) {
+            return ['status' => 'uid_ja_associado'];
+        }
+
+        $stmt = $pdo->prepare("UPDATE utilizadores_dev SET numero_cartao_uid = ? WHERE id = ?");
+        $stmt->execute([$uid, $utilizador_id]);
+
+        return ['status' => 'vinculado'];
     }
 
     public static function autenticar(string $numero, string $password): array|false {

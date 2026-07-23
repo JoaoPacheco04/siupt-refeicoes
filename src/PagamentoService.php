@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/Database.php';
+require_once __DIR__ . '/EmailService.php';
 
 class PagamentoService {
 
@@ -26,6 +27,14 @@ class PagamentoService {
             $stmt->execute([$compra_id]);
 
             $pdo->commit();
+
+            if ($stmt->rowCount() === 1) {
+                $compra = Database::obterCompraComEmail($compra_id);
+                if ($compra && !empty($compra['email'])) {
+                    EmailService::enviarComprovativo($compra['email'], $compra);
+                }
+            }
+
             return ['status' => $stmt->rowCount() === 1 ? 'paga' : 'erro'];
         } catch (Exception $e) {
             $pdo->rollBack();
