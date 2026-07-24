@@ -30,8 +30,6 @@ document.querySelectorAll('.radio-prato-principal').forEach(radio => {
 });
 
 // ── Visibilidade dos componentes (Sopa/Sobremesa/Bebida) ──────────────────
-// Controlada só pelo checkbox "Menu completo": desmarcado = visível,
-// marcado = escondido. Nunca mexe em style.display diretamente — só na classe.
 function syncComponentesVisibility(card) {
     const menuCompletoBox = card.querySelector('.checkbox-menu-completo');
     const componentes = card.querySelector('.dia-componentes');
@@ -41,7 +39,6 @@ function syncComponentesVisibility(card) {
     componentes.classList.toggle('visivel', mostrar);
 }
 
-// Define o estado inicial correto em todos os cartões, assim que a página carrega
 document.querySelectorAll('.dia-card').forEach(syncComponentesVisibility);
 
 document.querySelectorAll('.checkbox-menu-completo').forEach(box => {
@@ -60,6 +57,28 @@ document.querySelectorAll('.checkbox-menu-completo').forEach(box => {
 document.querySelectorAll('.checkbox-componente, .checkbox-extra').forEach(el => {
     el.addEventListener('change', atualizarResumo);
 });
+
+// ── Extras já comprados por data — desativa e risca a checkbox ────────────
+function syncExtrasDisponiveis() {
+    const dataSelecionada = document.getElementById('dataExtras')?.value;
+    if (!dataSelecionada) return;
+
+    document.querySelectorAll('.checkbox-extra').forEach(cb => {
+        const chave = `${cb.dataset.rmId}|${dataSelecionada}`;
+        const jaComprado = (window.extrasJaComprados || []).includes(chave);
+
+        cb.disabled = jaComprado;
+        if (jaComprado) cb.checked = false;
+
+        const label = cb.closest('.componente-opcao');
+        if (label) label.classList.toggle('ja-comprado', jaComprado);
+    });
+
+    atualizarResumo();
+}
+
+document.getElementById('dataExtras')?.addEventListener('change', syncExtrasDisponiveis);
+syncExtrasDisponiveis();
 
 function coletarSelecoes() {
     const selecoes = [];
@@ -258,7 +277,7 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
         const qrHtml = confirmados.map((c, idx) => `
             <div class="qr-resultado">
                 <p class="text-muted small mb-1">Pedido #${c.pedido_id}</p>
-                <canvas id="qr-${idx}"></canvas>
+                <div id="qr-${idx}" style="display:inline-block;"></div>
             </div>
         `).join('');
 
@@ -285,7 +304,13 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
     modalResultado.open();
 
     confirmados.forEach((c, idx) => {
-        QRCode.toCanvas(document.getElementById(`qr-${idx}`), c.qrcode, { width: 160 });
+        new QRCode(document.getElementById(`qr-${idx}`), {
+            text: c.qrcode,
+            width: 160,
+            height: 160,
+            colorDark: '#1e2a3b',
+            colorLight: '#ffffff'
+        });
     });
 }
 

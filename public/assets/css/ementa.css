@@ -197,13 +197,41 @@
 
 .componente-opcao {
     display: flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-size: 0.82rem;
-    color: #374151;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    border: 1.5px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    min-width: 130px;
+    flex: 1;
     cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
 }
 
+.componente-opcao:has(input:checked) {
+    border-color: #3a78b5;
+    background: #eaf3fb;
+}
+
+.componente-opcao.ja-comprado {
+    opacity: 0.5;
+    text-decoration: line-through;
+    pointer-events: none;
+}
+
+.componente-opcao .nome-extra {
+    font-weight: 600;
+    color: #1e2a3b;
+    font-size: 0.85rem;
+}
+
+.componente-opcao .preco-extra {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    color: #2c4a6e;
+    font-size: 0.8rem;
+}
 .extras-secao {
     margin-top: 1.5rem;
 }

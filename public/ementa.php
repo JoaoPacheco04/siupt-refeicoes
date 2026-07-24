@@ -35,7 +35,6 @@ $tipoMenuCompletoId = Database::obterTipoIdPorNome('Menu Completo');
 $prazotexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia anterior';
 
 // ── Batch de preços (evita N+1) ───────────────────────────────────────────
-// Recolher todos os tipo IDs necessários para a semana (+ menu completo + extras)
 $tipoIdsSemana = array_unique(array_column($pratos, 'RM_TP_ID'));
 $tipoIdsExtras = array_unique(array_column($extras, 'RM_TP_ID'));
 $tipoIdsTodos  = array_unique(array_merge(
@@ -60,7 +59,6 @@ foreach ($pratos as $p) {
 }
 ksort($diasEmenta);
 
-// Preços do menu completo por data (usa preços do batch — preço é o mesmo para a semana)
 $precosMenuCompleto = [];
 if ($tipoMenuCompletoId !== null) {
     $precoMCBase = $precosBatch[$tipoMenuCompletoId] ?? null;
@@ -69,7 +67,7 @@ if ($tipoMenuCompletoId !== null) {
     }
 }
 
-// ── Datas com pedido já ativo (aviso de duplicado) ───────────────────────
+// ── Datas com pedido já ativo (aviso de duplicado — pratos principais) ───
 $datasEmenta = array_keys($diasEmenta);
 $datasComPedido = array_flip(
     Database::listarDatasComPedidoAtivo((int) $utilizador['id'], $datasEmenta)
@@ -84,6 +82,9 @@ while (count($diasUteisExtras) < 5) {
     }
     $cursor->modify('+1 day');
 }
+
+// Itens extra já comprados — tem de correr DEPOIS de $diasUteisExtras estar preenchido
+$itensExtrasComprados = Database::listarItensExtrasComprados((int) $utilizador['id'], $diasUteisExtras);
 
 $numerosDia = [1 => '2ª', 2 => '3ª', 3 => '4ª', 4 => '5ª', 5 => '6ª'];
 $nomesCompletoDia = [1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta'];
@@ -219,15 +220,16 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
         <?php if (!empty($componentesExtra) && !$jaComprado): ?>
         <div class="dia-componentes"> 
-             <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
-                <label class="componente-opcao">
-                    <input type="checkbox" class="checkbox-componente"
-                           data-rm-id="<?= $comp['rm_id'] ?>"
-                           data-preco="<?= $comp['preco'] ?>"
-                           data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
-                    <?= htmlspecialchars($tipoNome) ?> — <?= number_format($comp['preco'], 2, ',', '') ?>€
-                </label>
-            <?php endforeach; ?>
+            <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
+    <label class="componente-opcao">
+        <input type="checkbox" class="checkbox-componente"
+               data-rm-id="<?= $comp['rm_id'] ?>"
+               data-preco="<?= $comp['preco'] ?>"
+               data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
+        <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
+        <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
+    </label>
+<?php endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -254,17 +256,17 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
         <div class="extras-lista">
             <?php foreach ($extras as $e):
-                $precoExtra = $precosBatch[(int) $e['RM_TP_ID']] ?? 0;
-            ?>
-                <label class="componente-opcao">
-                    <input type="checkbox" class="checkbox-extra"
-                           data-rm-id="<?= $e['RM_ID'] ?>"
-                           data-preco="<?= $precoExtra ?>"
-                           data-nome="<?= htmlspecialchars($e['RM_NOME']) ?>">
-                    <?= htmlspecialchars($e['RM_NOME']) ?>
-                    — <?= number_format($precoExtra, 2, ',', '') ?>€
-                </label>
-            <?php endforeach; ?>
+    $precoExtra = $precosBatch[(int) $e['RM_TP_ID']] ?? 0;
+?>
+    <label class="componente-opcao">
+        <input type="checkbox" class="checkbox-extra"
+               data-rm-id="<?= $e['RM_ID'] ?>"
+               data-preco="<?= $precoExtra ?>"
+               data-nome="<?= htmlspecialchars($e['RM_NOME']) ?>">
+        <span class="nome-extra"><?= htmlspecialchars($e['RM_NOME']) ?></span>
+        <span class="preco-extra"><?= number_format($precoExtra, 2, ',', '') ?>€</span>
+    </label>
+<?php endforeach; ?>
         </div>
     </div>
     <?php endif; ?>
@@ -290,7 +292,11 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
     </button>
 </div>
 
+<script>
+    window.extrasJaComprados = <?= json_encode($itensExtrasComprados) ?>;
+</script>
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
-<script src="assets/js/vendor/qrcode.min.js"></script><script src="assets/js/ementa.js"></script>
+<script src="assets/js/vendor/qrcode.min.js"></script>
+<script src="assets/js/ementa.js"></script>
 </body>
 </html>

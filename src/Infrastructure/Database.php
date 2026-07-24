@@ -399,5 +399,23 @@ class Database {
     self::conexao()->prepare("UPDATE restaurante_pedido SET RP_PAGO = 1 WHERE RP_ID = ?")
         ->execute([$pedidoId]);
     }
+
+    public static function listarItensExtrasComprados(int $utilizadorId, array $datas): array {
+    if (empty($datas)) return [];
+    $ph = implode(',', array_fill(0, count($datas), '?'));
+    $stmt = self::conexao()->prepare("
+        SELECT DISTINCT rc.RC_RM_ID, rp.RP_DATA_REFEICAO
+        FROM restaurante_compra rc
+        JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
+        WHERE rp.RP_U_ID = ? AND rp.RP_UTILIZADO = 0 AND rp.RP_PAGO = 1
+          AND rp.RP_DATA_REFEICAO IN ($ph)
+    ");
+    $stmt->execute(array_merge([$utilizadorId], $datas));
+    $resultado = [];
+    foreach ($stmt->fetchAll() as $row) {
+        $resultado[] = $row['RC_RM_ID'] . '|' . $row['RP_DATA_REFEICAO'];
+    }
+    return $resultado;
+}
     
 }
