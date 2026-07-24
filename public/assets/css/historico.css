@@ -1,0 +1,251 @@
+.historico-main {
+    background: transparent;
+    min-height: calc(100vh - 36px);
+    padding: 1.5rem 1.5rem 2rem;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.historico-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.85rem 0;
+}
+
+/* ── Filtros ──────────────────────────────────────────── */
+.historico-filtros {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
+.btn-filtro {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: none;
+    border: 1.5px solid #dee2e6;
+    border-radius: 20px;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #6a7280;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-filtro:hover {
+    border-color: #3a78b5;
+    color: #3a78b5;
+}
+
+.btn-filtro.ativo-filtro {
+    background: #1a3a63;
+    border-color: #1a3a63;
+    color: #fff;
+}
+
+.filtro-conta {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.12);
+    border-radius: 10px;
+    padding: 0 0.45rem;
+    font-size: 0.7rem;
+    min-width: 18px;
+    height: 18px;
+    font-weight: 700;
+}
+
+.btn-filtro.ativo-filtro .filtro-conta {
+    background: rgba(255,255,255,0.25);
+}
+
+.historico-sem-filtro {
+    text-align: center;
+    color: #8a99ad;
+    font-size: 0.88rem;
+    padding: 2rem 0;
+}
+
+.historico-sem-filtro i {
+    margin-right: 0.35rem;
+}
+
+.compra-card {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    padding: 1.1rem 1.35rem;
+    margin-bottom: 0.85rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    box-shadow: 0 1px 3px rgba(15, 31, 56, 0.06);
+    transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+.compra-card:hover {
+    box-shadow: 0 4px 14px rgba(15, 31, 56, 0.1);
+    border-color: #d3dbe6;
+}
+
+.compra-info {
+    flex: 1;
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.compra-dia-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    flex-shrink: 0;
+    background: #f0f4f8;
+    border-radius: 8px;
+    line-height: 1.1;
+}
+
+.compra-dia-badge .dia-abrev {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #2c4a6e;
+}
+
+.compra-dia-badge .dia-data {
+    font-size: 0.62rem;
+    color: #8a99ad;
+    font-weight: 500;
+}
+
+.compra-dia-badge.dia-badge-hoje {
+    background: #1a3a63;
+}
+
+.compra-dia-badge.dia-badge-hoje .dia-abrev,
+.compra-dia-badge.dia-badge-hoje .dia-data {
+    color: #fff;
+}
+
+.dia-hoje-mini {
+    font-size: 0.54rem;
+    font-weight: 700;
+    color: #73c5d8;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 1px;
+}
+
+.compra-detalhe {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.compra-prato {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: #1e2a3b;
+}
+
+.compra-preco {
+    font-size: 0.8rem;
+    color: #8a99ad;
+}
+
+.compra-pedido-especial {
+    font-size: 0.72rem;
+    color: #3a78b5;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-top: 0.1rem;
+}
+
+.compra-lado-direito {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-shrink: 0;
+}
+
+
+.estado-badge {
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.35rem 0.75rem;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+.estado-ativo     { background: #dcfce7; color: #166534; }
+.estado-utilizado { background: #e5e7eb; color: #4b5563; }
+.estado-vencido   { background: #fee2e2; color: #991b1b; }
+
+.btn-ver-qr {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #1a3a63;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.btn-ver-qr:hover {
+    background: #12294a;
+    transform: translateY(-1px);
+}
+
+.historico-vazio {
+    text-align: center;
+    color: #8a99ad;
+    padding: 4rem 0;
+    font-size: 0.9rem;
+}
+
+.historico-vazio i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    color: #c4d0df;
+}
+
+@media (max-width: 480px) {
+    .historico-main {
+        padding: 1rem 0.75rem;
+    }
+
+    .compra-card {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .compra-lado-direito {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+.estado-nao-pago { background: #fef3c7; color: #92400e; }

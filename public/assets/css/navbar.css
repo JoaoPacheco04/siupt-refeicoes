@@ -1,0 +1,215 @@
+#bodycontainer {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    background: #e3e6fb;
+    border-bottom: 2px solid #73c5d8;
+    min-height: 60px;
+    padding: 4px 1.1rem 4px 0;
+    gap: 1.25rem;
+    flex-shrink: 0;
+}
+
+a#home {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
+}
+
+#siupt-logo {
+    height: 68px;
+    width: auto;
+    display: block;
+    margin-top: 4px;
+}
+
+header nav {
+    flex: 1;
+}
+
+#mainmenu {
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    height: auto;
+    transform: translateY(2px);
+}
+
+#mainmenu li {
+    display: flex;
+    align-items: center;
+}
+
+#mainmenu li a {
+    color: #8c98a9;
+    font-family: "Plus Jakarta Sans", Arial, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 0.5rem 0.8rem;
+    border-radius: 3px;
+    transition: color 0.15s;
+}
+
+#mainmenu li a:hover {
+    color: #4b5563;
+    background: transparent;
+}
+
+#mainmenu li.selected a {
+    color: #2c4060;
+    font-weight: 600;
+    background: transparent;
+}
+
+#form_new_user_lang {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    transform: translateY(5px);
+}
+
+#form_new_user_lang label {
+    display: none;
+}
+
+#new_user_lang {
+    font-size: 0.84rem;
+    border: 1px solid #cfd3dc;
+    border-radius: 0;
+    padding: 0.25rem 0.55rem;
+    background: #fff;
+    color: #2f3542;
+    cursor: pointer;
+    outline: none;
+}
+
+#new_user_lang:focus {
+    border-color: #73c5d8;
+}
+
+#profile {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-shrink: 0;
+    transform: translateY(5px);
+}
+
+#profile-photo,
+.profile-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 3px;
+    box-shadow: 0 3px 9px rgba(17, 24, 39, 0.35);
+    background: linear-gradient(135deg, #5a6ac9, #7e8fe0);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+}
+
+#profile-photo img,
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 3px;
+}
+
+#quit {
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23111827' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 1v7'/%3E%3Cpath d='M3.757 3.757a6 6 0 1 0 8.486 0'/%3E%3C/svg%3E");
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: 18px 18px;
+    font-size: 0;
+}
+
+#quit:hover {
+    opacity: 0.75;
+}
+
+@media (max-width: 768px) {
+    #mainmenu {
+        display: none;
+    }
+
+    header {
+        padding: 0 0.9rem 0 0;
+        gap: 0.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    header {
+        padding: 0 0.75rem 0 0;
+        min-height: 48px;
+        gap: 0.5rem;
+    }
+
+    #siupt-logo {
+        height: 44px;
+    }
+
+    #form_new_user_lang {
+        display: none;
+    }
+
+    #profile {
+        margin-left: auto;
+        gap: 0.75rem;
+    }
+
+    #profile-photo,
+    .profile-avatar {
+        width: 32px;
+        height: 32px;
+        font-size: 0.85rem;
+    }
+
+    #quit {
+        width: 19px;
+        height: 19px;
+        background-size: 19px 19px;
+    }
+}
+
+.nav-icon-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 3px;
+    color: #4b5563;
+    text-decoration: none;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.nav-icon-link:hover {
+    background: rgba(115, 197, 216, 0.15);
+    color: #2c4060;
+}

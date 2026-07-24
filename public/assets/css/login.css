@@ -1,0 +1,190 @@
+.login-page {
+    display: flex;
+    min-height: 100vh;
+}
+
+.login-left {
+    flex: 1;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 2.5rem;
+    color: #fff;
+    background: linear-gradient(160deg, rgba(15, 40, 70, .80), rgba(35, 90, 140, .75)),
+        url('https://www.upt.pt/wp-content/uploads/2022/04/IMG_1843-scaled.jpg') center/cover;
+}
+
+.login-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.login-brand-badge {
+    width: 46px;
+    height: 46px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.login-brand-badge img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.login-brand-text {
+    font-size: 13px;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+}
+
+.login-left-title {
+    font-size: 3rem;
+    letter-spacing: 2px;
+    margin-bottom: 0.25rem;
+}
+
+.login-left-subtitle {
+    font-size: 0.95rem;
+    opacity: 0.85;
+}
+
+.login-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 2.5rem 4rem;
+    justify-content: center;
+    background: #fff;
+    max-width: 640px;
+}
+
+.login-right-top {
+    position: absolute;
+    top: 2rem;
+    right: 3rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.login-welcome {
+    font-size: 1.6rem;
+    margin-bottom: 0.25rem;
+}
+
+.login-subtext {
+    color: #6c757d;
+    margin-bottom: 1.75rem;
+}
+
+.login-field-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    color: #6c757d;
+    margin-bottom: 0.4rem;
+}
+
+.user-type-toggle {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.user-type-option {
+    flex: 1;
+    border: 1.5px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+    color: #495057;
+    font-size: 0.9rem;
+    transition: all 0.15s ease;
+}
+
+.user-type-option i {
+    display: block;
+    font-size: 1.3rem;
+    margin-bottom: 0.25rem;
+}
+
+.user-type-option.active {
+    border-color: #1a73b5;
+    background: #eaf3fb;
+    color: #1a73b5;
+    font-weight: 600;
+}
+
+.input-icon-group {
+    position: relative;
+    margin-bottom: 1.25rem;
+}
+
+.input-icon-group i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #adb5bd;
+}
+
+.input-icon-group input {
+    padding-left: 42px;
+    background: #f8f9fb;
+    border: 1px solid #dee2e6;
+}
+
+.input-icon-group input:focus {
+    background: #fff;
+    border-color: #1a73b5;
+    box-shadow: 0 0 0 0.2rem rgba(26, 115, 181, 0.15);
+}
+
+.forgot-link {
+    float: right;
+    font-size: 0.8rem;
+    color: #1a73b5;
+    text-decoration: none;
+}
+
+.btn-siupt {
+    background: #1a3a63;
+    border-color: #1a3a63;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    padding: 0.7rem;
+}
+
+.btn-siupt:hover {
+    background: #12294a;
+    border-color: #12294a;
+}
+
+@media (max-width: 768px) {
+    .login-page {
+        flex-direction: column;
+    }
+
+    .login-left {
+        min-height: 260px;
+    }
+
+    .login-right {
+        padding: 2rem;
+        max-width: none;
+    }
+
+    .login-right-top {
+        position: static;
+        justify-content: flex-end;
+        margin-bottom: 1rem;
+    }
+}

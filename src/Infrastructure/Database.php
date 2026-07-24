@@ -5,6 +5,9 @@ require_once __DIR__ . '/../../config/config.php';
 class Database {
     private static ?PDO $instancia = null;
 
+    private const PERFIL_ALUNO = 1;
+    private const PERFIL_FUNCIONARIO = 2;
+
     public static function conexao(): PDO {
         if (self::$instancia === null) {
             $dsn = "sqlsrv:Server=" . DB_HOST . ";Database=" . DB_NAME . ";TrustServerCertificate=yes";
@@ -17,234 +20,384 @@ class Database {
     }
 
     // ============================================
-    // PONTO DE COSTURA 1 — trocar quando chegar o esquema real da UPT
-    // (alunos/funcionarios separados, em vez de utilizadores_dev)
+    // Utilizadores
     // ============================================
-    private static function obterUtilizadorPorNumero(string $numero): array|false {
-        $stmt = self::conexao()->prepare("SELECT id, nome, tipo, password FROM utilizadores_dev WHERE numero = ?");
-        $stmt->execute([$numero]);
+    public static function obterUtilizadorPorBICC(string $bicc): array|false {
+        $stmt = self::conexao()->prepare("SELECT U_ID, U_BICC, U_PASS, U_NOME, U_EMAIL, U_PERFIL FROM users WHERE U_BICC = ?");
+        $stmt->execute([$bicc]);
         return $stmt->fetch();
     }
 
-    public static function obterRefeicao(int $refeicao_id): array|false {
-        $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE id = ?");
-        $stmt->execute([$refeicao_id]);
-        return $stmt->fetch();
-    }
-
-    public static function criarCompra(int $comprador_id, int $refeicao_id, ?string $pedido_especial = null): int|string {
-        $pdo = self::conexao();
-
-        $refeicao = self::obterRefeicao($refeicao_id);
-        if (!$refeicao) {
-            return 'refeicao_invalida';
-        }
-
-        $limite = date('Y-m-d 10:00:00', strtotime($refeicao['data_refeicao'] . ' -1 day'));
-        if (date('Y-m-d H:i:s') > $limite) {
-            return 'fora_de_prazo';
-        }
-
-        $codigo_pin = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-
-        try {
-            $stmt = $pdo->prepare("INSERT INTO compras (comprador_id, refeicao_id, estado, codigo_pin, pedido_especial, preco_total, data_refeicao) 
-                                    VALUES (?, ?, 'pendente', ?, ?, ?, ?)");
-            $stmt->execute([$comprador_id, $refeicao_id, $codigo_pin, $pedido_especial, $refeicao['preco'], $refeicao['data_refeicao']]);
-            return (int) $pdo->lastInsertId();
-        } catch (PDOException $e) {
-            if ($e->getCode() === '23000') {
-                return 'ja_comprado';
-            }
-            throw $e;
-        }
-    }
-
-    public static function obterCompra(int $compra_id): array|false {
-        $stmt = self::conexao()->prepare("SELECT * FROM compras WHERE id = ?");
-        $stmt->execute([$compra_id]);
-        return $stmt->fetch();
-    }
-
-    public static function obterCompraComEmail(int $compra_id): array|false {
-        $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal, u.email, u.numero_cartao_uid
-                                            FROM compras c
-                                            JOIN refeicoes_dev r ON c.refeicao_id = r.id
-                                            JOIN utilizadores_dev u ON c.comprador_id = u.id
-                                            WHERE c.id = ?");
-        $stmt->execute([$compra_id]);
-        return $stmt->fetch();
-    }
-
-    public static function listarComprasDoAluno(int $comprador_id): array {
-        $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal 
-                                            FROM compras c
-                                            JOIN refeicoes_dev r ON c.refeicao_id = r.id
-                                            WHERE c.comprador_id = ?
-                                            ORDER BY c.data_refeicao DESC");
-        $stmt->execute([$comprador_id]);
-        return $stmt->fetchAll();
-    }
-
-    public static function refeicoesJaCompradas(int $comprador_id): array {
-        $stmt = self::conexao()->prepare("SELECT DISTINCT refeicao_id FROM compras WHERE comprador_id = ? AND estado != 'cancelada_pela_cantina'");
-        $stmt->execute([$comprador_id]);
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
-    }
-
-    // ============================================
-    // Rate limiting partilhado (cartão + PIN)
-    // ============================================
-    private static function estaBloqueado(string $identificador): bool {
-        $stmt = self::conexao()->prepare(
-            "SELECT COUNT(*) FROM tentativas_pin WHERE numero = ? AND data_tentativa > DATEADD(MINUTE, -10, GETDATE())"
-        );
-        $stmt->execute([$identificador]);
-        return (int) $stmt->fetchColumn() >= 5;
-    }
-
-    private static function registarTentativaFalhada(string $identificador): void {
-        self::conexao()->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")
-            ->execute([$identificador]);
-    }
-
-    public static function validarPorNumeroAlunoPin(string $numero, string $pin, int $funcionario_id): array {
-        $pdo = self::conexao();
-
-        if (self::estaBloqueado($numero)) {
-            return ['status' => 'bloqueado'];
-        }
-
-        $pessoa = self::obterUtilizadorPorNumero($numero);
-        if (!$pessoa) {
-            self::registarTentativaFalhada($numero);
-            return ['status' => 'invalido'];
-        }
-
-        $stmt = $pdo->prepare("SELECT TOP 1 id, estado, codigo_pin, pedido_especial FROM compras 
-                                WHERE comprador_id = ? AND data_refeicao = CAST(GETDATE() AS DATE)
-                                ORDER BY id DESC");
-        $stmt->execute([$pessoa['id']]);
-        $compra = $stmt->fetch();
-
-        if (!$compra || $compra['codigo_pin'] !== $pin) {
-            self::registarTentativaFalhada($numero);
-            return ['status' => 'invalido'];
-        }
-
-        if ($compra['estado'] !== 'paga') {
-            return ['status' => $compra['estado'] === 'utilizada' ? 'ja_usada' : 'pendente', 'nome' => $pessoa['nome']];
-        }
-
-        $pdo->beginTransaction();
-        try {
-            $stmt = $pdo->prepare("UPDATE compras SET estado = 'utilizada' WHERE id = ? AND estado = 'paga'");
-            $stmt->execute([$compra['id']]);
-
-            if ($stmt->rowCount() === 1) {
-                $pdo->prepare("INSERT INTO validacoes (compra_id, funcionario_id, metodo_leitura) VALUES (?, ?, 'numero_pin')")
-                    ->execute([$compra['id'], $funcionario_id]);
-                $pdo->commit();
-                return ['status' => 'valido', 'nome' => $pessoa['nome'], 'pedido_especial' => $compra['pedido_especial']];
-            }
-
-            $pdo->rollBack();
-            return ['status' => 'ja_usada', 'nome' => $pessoa['nome']];
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            return ['status' => 'erro'];
-        }
-    }
-
-    public static function contarValidacoesHoje(int $funcionario_id): int {
-        $stmt = self::conexao()->prepare("SELECT COUNT(*) FROM validacoes 
-                                            WHERE funcionario_id = ? AND CAST(data_validacao AS DATE) = CAST(GETDATE() AS DATE)");
-        $stmt->execute([$funcionario_id]);
-        return (int) $stmt->fetchColumn();
-    }
-
-    public static function validarPorCartao(string $uid_lido, int $funcionario_id): array {
-        $pdo = self::conexao();
-
-        if (self::estaBloqueado($uid_lido)) {
-            return ['status' => 'bloqueado'];
-        }
-
-        $stmt = $pdo->prepare("SELECT id, nome FROM utilizadores_dev WHERE numero_cartao_uid = ?");
-        $stmt->execute([$uid_lido]);
-        $pessoa = $stmt->fetch();
-
-        if (!$pessoa) {
-            self::registarTentativaFalhada($uid_lido);
-            return ['status' => 'invalido'];
-        }
-
-        $stmt = $pdo->prepare("SELECT TOP 1 id, estado, pedido_especial FROM compras 
-                                WHERE comprador_id = ? AND data_refeicao = CAST(GETDATE() AS DATE)
-                                ORDER BY id DESC");
-        $stmt->execute([$pessoa['id']]);
-        $compra = $stmt->fetch();
-
-        if (!$compra) {
-            self::registarTentativaFalhada($uid_lido);
-            return ['status' => 'invalido', 'nome' => $pessoa['nome']];
-        }
-        if ($compra['estado'] !== 'paga') {
-            return ['status' => $compra['estado'] === 'utilizada' ? 'ja_usada' : 'pendente', 'nome' => $pessoa['nome']];
-        }
-
-        $pdo->beginTransaction();
-        try {
-            $stmt = $pdo->prepare("UPDATE compras SET estado = 'utilizada' WHERE id = ? AND estado = 'paga'");
-            $stmt->execute([$compra['id']]);
-
-            if ($stmt->rowCount() === 1) {
-                $pdo->prepare("INSERT INTO validacoes (compra_id, funcionario_id, metodo_leitura) VALUES (?, ?, 'cartao')")
-                    ->execute([$compra['id'], $funcionario_id]);
-                $pdo->commit();
-                return ['status' => 'valido', 'nome' => $pessoa['nome'], 'pedido_especial' => $compra['pedido_especial']];
-            }
-
-            $pdo->rollBack();
-            return ['status' => 'ja_usada', 'nome' => $pessoa['nome']];
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            return ['status' => 'erro'];
-        }
-    }
-
-    public static function vincularCartao(int $utilizador_id, string $uid): array {
-        $pdo = self::conexao();
-
-        $stmt = $pdo->prepare("SELECT id FROM utilizadores_dev WHERE numero_cartao_uid = ? AND id != ?");
-        $stmt->execute([$uid, $utilizador_id]);
-        if ($stmt->fetch()) {
-            return ['status' => 'uid_ja_associado'];
-        }
-
-        $stmt = $pdo->prepare("UPDATE utilizadores_dev SET numero_cartao_uid = ? WHERE id = ?");
-        $stmt->execute([$uid, $utilizador_id]);
-
-        return ['status' => 'vinculado'];
-    }
-
-    public static function autenticar(string $numero, string $password): array|false {
-        $utilizador = self::obterUtilizadorPorNumero($numero);
-        if (!$utilizador || $utilizador['password'] !== $password) {
+    public static function autenticar(string $bicc, string $password): array|false {
+        $utilizador = self::obterUtilizadorPorBICC($bicc);
+        if (!$utilizador || !password_verify($password, $utilizador['U_PASS'])) {
             return false;
         }
         return $utilizador;
     }
 
-    public static function listarRefeicoesDisponiveis(): array {
-        $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE data_refeicao >= CAST(GETDATE() AS DATE) ORDER BY data_refeicao");
+    public static function perfilParaTipo(int $perfil): string {
+        return $perfil === self::PERFIL_FUNCIONARIO ? 'funcionario' : 'aluno';
+    }
+
+    // ============================================
+    // Menu e preços
+    // ============================================
+    public static function listarPratosEmentaSemana(string $inicio, string $fim): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rm.RM_ID, rm.RM_NOME, rm.RM_DATA, rm.RM_TP_ID, rtp.RTP_NOME, rtp.RM_PRATO_DIA
+            FROM restaurante_menu rm
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+            WHERE rm.RM_DATA BETWEEN ? AND ?
+            ORDER BY rm.RM_DATA, rtp.RTP_NOME
+        ");
+        $stmt->execute([$inicio, $fim]);
+        return $stmt->fetchAll();
+    }
+
+    public static function listarPratosExtras(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rm.RM_ID, rm.RM_NOME, rm.RM_TP_ID, rtp.RTP_NOME
+            FROM restaurante_menu rm
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+            WHERE rm.RM_DATA IS NULL
+            ORDER BY rtp.RTP_NOME, rm.RM_NOME
+        ");
         $stmt->execute();
         return $stmt->fetchAll();
     }
 
-    public static function listarRefeicoesSemana(string $inicio, string $fim): array {
-        $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE data_refeicao BETWEEN ? AND ? ORDER BY data_refeicao");
-        $stmt->execute([$inicio, $fim]);
+    public static function obterTipoIdPorNome(string $nome): ?int {
+        $stmt = self::conexao()->prepare("SELECT RTP_ID FROM restaurante_tipo_refeicao WHERE RTP_NOME = ?");
+        $stmt->execute([$nome]);
+        $id = $stmt->fetchColumn();
+        return $id !== false ? (int) $id : null;
+    }
+
+    public static function obterPrecoVigente(int $tipoRefeicaoId, string $dataPedido): ?float {
+        $stmt = self::conexao()->prepare("
+            SELECT TOP 1 RPTR_PRECO
+            FROM restaurante_preco_tipo_refeicao
+            WHERE RPTR_TP_ID = ? AND RPTR_DATAINICIO <= ?
+            ORDER BY RPTR_DATAINICIO DESC
+        ");
+        $stmt->execute([$tipoRefeicaoId, $dataPedido]);
+        $preco = $stmt->fetchColumn();
+        return $preco !== false ? (float) $preco : null;
+    }
+
+    /**
+     * Resolve preços vigentes para vários tipos numa única query (evita N+1 na ementa).
+     * Retorna [tipo_id => preco]
+     */
+    public static function obterPrecosVigentesBatch(array $tipoIds, string $data): array {
+        if (empty($tipoIds)) return [];
+        $tipoIds = array_values(array_unique(array_map('intval', $tipoIds)));
+        $ph = implode(',', array_fill(0, count($tipoIds), '?'));
+        $stmt = self::conexao()->prepare("
+            SELECT x.RPTR_TP_ID, x.RPTR_PRECO
+            FROM (
+                SELECT RPTR_TP_ID, RPTR_PRECO,
+                       ROW_NUMBER() OVER (PARTITION BY RPTR_TP_ID ORDER BY RPTR_DATAINICIO DESC) AS rn
+                FROM restaurante_preco_tipo_refeicao
+                WHERE RPTR_DATAINICIO <= ? AND RPTR_TP_ID IN ($ph)
+            ) x
+            WHERE x.rn = 1
+        ");
+        $stmt->execute(array_merge([$data], $tipoIds));
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $resultado[(int) $row['RPTR_TP_ID']] = (float) $row['RPTR_PRECO'];
+        }
+        return $resultado;
+    }
+
+    /**
+     * Busca linhas de vários pedidos numa única query (evita N+1 no histórico).
+     * Retorna [pedido_id => [linhas]]
+     */
+    public static function listarLinhasDePedidos(array $pedidoIds): array {
+        if (empty($pedidoIds)) return [];
+        $ph = implode(',', array_fill(0, count($pedidoIds), '?'));
+        $stmt = self::conexao()->prepare("
+            SELECT rc.RC_RP_ID, rc.RC_MENU_COMPLETO, rc.RC_PRECO, rm.RM_NOME, rtp.RTP_NOME
+            FROM restaurante_compra rc
+            JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+            WHERE rc.RC_RP_ID IN ($ph)
+        ");
+        $stmt->execute($pedidoIds);
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $resultado[(int) $row['RC_RP_ID']][] = $row;
+        }
+        return $resultado;
+    }
+
+    /**
+     * Devolve as datas (de uma lista) para as quais o utilizador já tem pedido ativo.
+     * Usado para mostrar aviso de duplicado na ementa.
+     */
+   public static function listarDatasComPedidoAtivo(int $utilizadorId, array $datas): array {
+    if (empty($datas)) return [];
+    $ph = implode(',', array_fill(0, count($datas), '?'));
+    $hoje = date('Y-m-d');
+    $stmt = self::conexao()->prepare("
+        SELECT DISTINCT RP_DATA_REFEICAO
+        FROM restaurante_pedido
+        WHERE RP_U_ID = ? AND RP_DATA_REFEICAO IN ($ph)
+          AND RP_UTILIZADO = 0 AND RP_PAGO = 1 AND RP_DATA_REFEICAO >= ?
+    ");
+    $stmt->execute(array_merge([$utilizadorId], $datas, [$hoje]));
+    return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+}
+
+    public static function obterDataLimite(int $tipoRefeicaoId): array|false {
+        $stmt = self::conexao()->prepare("SELECT RDL_HORA, RDL_DIA_ANTECEDENCIA FROM restaurante_data_limite WHERE RDL_RTP_ID = ?");
+        $stmt->execute([$tipoRefeicaoId]);
+        return $stmt->fetch();
+    }
+
+    /**
+     * Devolve uma string legível com o prazo de compra dos pratos principais (Carne/Peixe/Vegetariano).
+     * Exemplo: "até às 14h30 do dia anterior" ou "até às 10h00 com 2 dias de antecedência".
+     * Retorna null se não houver regra configurada.
+     */
+    public static function obterDataLimitePrincipalTexto(): ?string {
+        // Tenta obter o prazo pelo primeiro tipo principal encontrado
+        foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipo) {
+            $tipoId = self::obterTipoIdPorNome($tipo);
+            if ($tipoId === null) continue;
+            $limite = self::obterDataLimite($tipoId);
+            if (!$limite) continue;
+
+            $hora = rtrim(substr($limite['RDL_HORA'], 0, 5), ':'); // "14:30:00" -> "14:30"
+            $dias = (int) $limite['RDL_DIA_ANTECEDENCIA'];
+
+            if ($dias === 1) {
+                return "até às {$hora} do dia anterior";
+            } elseif ($dias === 0) {
+                return "até às {$hora} do próprio dia";
+            } else {
+                return "até às {$hora} com {$dias} dias de antecedência";
+            }
+        }
+        return null;
+    }
+
+    public static function foraDePrazo(int $tipoRefeicaoId, string $dataRefeicao): bool {
+        $limite = self::obterDataLimite($tipoRefeicaoId);
+        if (!$limite) {
+            return false; // sem regra definida = sem restrição (ex: pratos extras)
+        }
+        $dataLimite = date(
+            'Y-m-d ' . $limite['RDL_HORA'],
+            strtotime($dataRefeicao . ' -' . $limite['RDL_DIA_ANTECEDENCIA'] . ' days')
+        );
+        return date('Y-m-d H:i:s') > $dataLimite;
+    }
+
+    // ============================================
+    // Pedidos e compras
+    // ============================================
+
+    /**
+     * $itens = [ ['rm_id' => int, 'menu_completo' => bool], ... ]
+     */
+    public static function criarPedido(int $utilizadorId, string $dataRefeicao, array $itens): int|string {
+        if (empty($itens)) {
+            return 'sem_itens';
+        }
+
+        $pdo = self::conexao();
+        $pdo->beginTransaction();
+
+        try {
+            $precoTotal = 0;
+            $linhasValidadas = [];
+
+            foreach ($itens as $item) {
+                $stmt = $pdo->prepare("SELECT RM_ID, RM_TP_ID, RM_DATA FROM restaurante_menu WHERE RM_ID = ?");
+                $stmt->execute([$item['rm_id']]);
+                $prato = $stmt->fetch();
+
+                if (!$prato) {
+                    $pdo->rollBack();
+                    return 'prato_invalido';
+                }
+
+                $menuCompleto = !empty($item['menu_completo']);
+
+                // Menu completo só faz sentido para pratos da ementa (com data),
+                // não para extras (que já têm preço próprio fixo)
+                if ($menuCompleto && $prato['RM_DATA'] === null) {
+                    $pdo->rollBack();
+                    return 'menu_completo_invalido_para_extra';
+                }
+
+                if (self::foraDePrazo((int) $prato['RM_TP_ID'], $dataRefeicao)) {
+                    $pdo->rollBack();
+                    return 'fora_de_prazo';
+                }
+
+                // Se for menu completo, o preço vem do tipo "Menu Completo",
+                // não do tipo do prato individual (bundle a preço fixo)
+                if ($menuCompleto) {
+                    $tipoPrecoId = self::obterTipoIdPorNome('Menu Completo');
+                    if ($tipoPrecoId === null) {
+                        $pdo->rollBack();
+                        return 'menu_completo_nao_configurado';
+                    }
+                } else {
+                    $tipoPrecoId = (int) $prato['RM_TP_ID'];
+                }
+
+                $preco = self::obterPrecoVigente($tipoPrecoId, $dataRefeicao);
+                if ($preco === null) {
+                    $pdo->rollBack();
+                    return 'sem_preco_definido';
+                }
+
+                $linhasValidadas[] = [
+                    'rm_id' => $prato['RM_ID'],
+                    'menu_completo' => $menuCompleto,
+                    'preco' => $preco,
+                ];
+                $precoTotal += $preco;
+            }
+
+            $qrcode = bin2hex(random_bytes(24)); // 48 caracteres, imprevisível
+
+            $stmt = $pdo->prepare("INSERT INTO restaurante_pedido (RP_U_ID, RP_DATA_REFEICAO, RP_PRECO_TOTAL, RP_QRCODE, RP_UTILIZADO)
+                                    VALUES (?, ?, ?, ?, 0)");
+            $stmt->execute([$utilizadorId, $dataRefeicao, $precoTotal, $qrcode]);
+            $pedidoId = (int) $pdo->lastInsertId();
+
+            $stmtLinha = $pdo->prepare("INSERT INTO restaurante_compra (RC_RP_ID, RC_MENU_COMPLETO, RC_RM_ID, RC_PRECO)
+                                         VALUES (?, ?, ?, ?)");
+            foreach ($linhasValidadas as $linha) {
+                $stmtLinha->execute([$pedidoId, $linha['menu_completo'] ? 1 : 0, $linha['rm_id'], $linha['preco']]);
+            }
+
+            $pdo->commit();
+            return $pedidoId;
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public static function obterPedido(int $pedidoId): array|false {
+        $stmt = self::conexao()->prepare("SELECT * FROM restaurante_pedido WHERE RP_ID = ?");
+        $stmt->execute([$pedidoId]);
+        return $stmt->fetch();
+    }
+
+    public static function listarLinhasDoPedido(int $pedidoId): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rc.*, rm.RM_NOME, rtp.RTP_NOME
+            FROM restaurante_compra rc
+            JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+            WHERE rc.RC_RP_ID = ?
+        ");
+        $stmt->execute([$pedidoId]);
         return $stmt->fetchAll();
     }
+
+    public static function listarPedidosDoUtilizador(int $utilizadorId): array {
+        $stmt = self::conexao()->prepare("
+            SELECT * FROM restaurante_pedido
+            WHERE RP_U_ID = ?
+            ORDER BY RP_DATA_REFEICAO DESC
+        ");
+        $stmt->execute([$utilizadorId]);
+        $pedidos = $stmt->fetchAll();
+
+        foreach ($pedidos as &$p) {
+            $p['estado'] = self::calcularEstadoPedido($p);
+        }
+        return $pedidos;
+    }
+
+    // "Vencido" não é guardado — é sempre calculado no momento da leitura.
+    // Um pedido é vencido apenas se a data de refeição já passou (ontem ou antes),
+    // nunca no próprio dia (onde ainda pode ser levantado).
+   public static function calcularEstadoPedido(array $pedido): string {
+    if (!$pedido['RP_PAGO']) {
+        return 'nao_pago';
+    }
+    if ($pedido['RP_UTILIZADO']) {
+        return 'utilizado';
+    }
+    if ($pedido['RP_DATA_REFEICAO'] < date('Y-m-d')) {
+        return 'vencido';
+    }
+    return 'ativo';
+}
+
+    // ============================================
+    // Pagamento (simulado)
+    // ============================================
+    public static function registarTentativaPagamento(int $pedidoId, string $estado, ?string $refGateway = null): void {
+        $ref = $refGateway ?? ('SIM-' . uniqid());
+        self::conexao()->prepare("
+            INSERT INTO restaurante_pagamento (RPG_RP_ID, RPG_METODO, RPG_REF_GATEWAY, RPG_ESTADO)
+            VALUES (?, 'simulado', ?, ?)
+        ")->execute([$pedidoId, $ref, $estado]);
+    }
+
+    // ============================================
+    // Validação por QR code (lado do funcionário)
+    // ============================================
+    public static function validarPorQrCode(string $qrcode, int $funcionarioId): array {
+        $pdo = self::conexao();
+
+        $stmt = $pdo->prepare("SELECT rp.*, u.U_NOME FROM restaurante_pedido rp JOIN users u ON rp.RP_U_ID = u.U_ID WHERE rp.RP_QRCODE = ?");
+        $stmt->execute([$qrcode]);
+        $pedido = $stmt->fetch();
+
+        if (!$pedido) {
+            return ['status' => 'invalido'];
+        }
+
+        $estado = self::calcularEstadoPedido($pedido);
+        if ($estado !== 'ativo') {
+            return ['status' => $estado, 'nome' => $pedido['U_NOME']];
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("UPDATE restaurante_pedido SET RP_UTILIZADO = 1 WHERE RP_ID = ? AND RP_UTILIZADO = 0");
+            $stmt->execute([$pedido['RP_ID']]);
+
+            if ($stmt->rowCount() === 1) {
+                $pdo->prepare("INSERT INTO restaurante_validacao (RV_RP_ID, RV_FUNCIONARIO_ID) VALUES (?, ?)")
+                    ->execute([$pedido['RP_ID'], $funcionarioId]);
+                $pdo->commit();
+                return ['status' => 'valido', 'nome' => $pedido['U_NOME'], 'pedido_id' => $pedido['RP_ID']];
+            }
+
+            $pdo->rollBack();
+            return ['status' => 'utilizado', 'nome' => $pedido['U_NOME']];
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            return ['status' => 'erro'];
+        }
+    }
+
+    public static function contarValidacoesHoje(int $funcionarioId): int {
+        $stmt = self::conexao()->prepare("
+            SELECT COUNT(*) FROM restaurante_validacao
+            WHERE RV_FUNCIONARIO_ID = ? AND CAST(RV_DATA_VALIDACAO AS DATE) = CAST(GETDATE() AS DATE)
+        ");
+        $stmt->execute([$funcionarioId]);
+        return (int) $stmt->fetchColumn();
+    }
+
+    public static function marcarPedidoComoPago(int $pedidoId): void {
+    self::conexao()->prepare("UPDATE restaurante_pedido SET RP_PAGO = 1 WHERE RP_ID = ?")
+        ->execute([$pedidoId]);
+    }
+    
 }

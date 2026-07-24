@@ -1,0 +1,119 @@
+.tingle-modal-box {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 16px 60px rgba(0, 0, 0, 0.2);
+}
+
+.tingle-modal-box__content {
+    padding: 1.75rem 1.75rem 0.5rem;
+}
+
+.modal-siupt-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.modal-siupt-header i {
+    font-size: 1.6rem;
+    color: #1a3a63;
+}
+
+.modal-siupt-header.sucesso i {
+    color: #16a34a;
+}
+
+.modal-siupt-header.erro i {
+    color: #dc2626;
+}
+
+.modal-siupt-header.aviso i {
+    color: #d97706;
+}
+
+.modal-siupt-header h4 {
+    margin: 0;
+    font-size: 1.15rem;
+    color: #1e2a3b;
+}
+
+.resumo-modal-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 0.88rem;
+    color: #374151;
+}
+
+.resumo-modal-item.erro-item {
+    color: #dc2626;
+    gap: 0.4rem;
+}
+
+.resumo-modal-total {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Manrope', sans-serif;
+    font-weight: 800;
+    font-size: 1.05rem;
+    margin-top: 0.9rem;
+    padding-top: 0.65rem;
+    border-top: 2px solid #1a3a63;
+    color: #1a3a63;
+}
+
+.modal-email-aviso {
+    background: #f0f7ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    margin-top: 1rem;
+    font-size: 0.8rem;
+    color: #1d4ed8;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    line-height: 1.5;
+}
+
+.modal-email-aviso i {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.tingle-modal-box__footer {
+    padding: 0.85rem 1.75rem;
+    border-top: 1px solid #f3f4f6;
+    background: #fafafa;
+}
+
+.tingle-btn {
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 0.88rem;
+    padding: 0.5rem 1.25rem;
+    transition: all 0.15s;
+}
+
+.tingle-btn--primary {
+    background: #1a3a63 !important;
+    border: none !important;
+}
+
+.tingle-btn--primary:hover {
+    background: #12294a !important;
+}
+
+.tingle-btn--default {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+.tingle-btn--default:hover {
+    background: #e5e7eb !important;
+}

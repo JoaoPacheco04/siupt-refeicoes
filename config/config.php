@@ -6,3 +6,5 @@ define('DB_PASS', '');
 
 define('MAIL_HOST', 'localhost');
 define('MAIL_PORT', 1025);
+
+define('APP_BASE_URL', '/siupt-refeicoes/public');

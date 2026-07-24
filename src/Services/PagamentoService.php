@@ -1,47 +1,23 @@
 <?php
 require_once __DIR__ . '/../Infrastructure/Database.php';
-require_once __DIR__ . '/EmailService.php';
 
 class PagamentoService {
 
-    public static function processar(int $compra_id, bool $sucesso, ?string $refGatewayBatch = null): array {
-        return self::simular($compra_id, $sucesso, $refGatewayBatch);
+    public static function processar(int $pedidoId, bool $sucesso, ?string $refGatewayBatch = null): array {
+        return self::simular($pedidoId, $sucesso, $refGatewayBatch);
     }
 
-    // PONTO DE COSTURA — trocar $refGatewayBatch pela referência real devolvida
-    // pelo gateway MB WAY quando a integração real entrar
-    private static function simular(int $compra_id, bool $sucesso, ?string $refGatewayBatch = null): array {
-        $pdo = Database::conexao();
+    private static function simular(int $pedidoId, bool $sucesso, ?string $refGatewayBatch = null): array {
         $estado = $sucesso ? 'sucesso' : 'falhado';
-        $ref = $refGatewayBatch ?? ('SIM-' . uniqid());
 
-        $pdo->beginTransaction();
-        try {
-            $pdo->prepare("INSERT INTO pagamentos (compra_id, metodo, ref_gateway, estado_pagamento) 
-                            VALUES (?, 'simulado', ?, ?)")
-                ->execute([$compra_id, $ref, $estado]);
+        Database::registarTentativaPagamento($pedidoId, $estado, $refGatewayBatch);
 
-            if (!$sucesso) {
-                $pdo->commit();
-                return ['status' => 'falhado'];
-            }
-
-            $stmt = $pdo->prepare("UPDATE compras SET estado = 'paga' WHERE id = ? AND estado = 'pendente'");
-            $stmt->execute([$compra_id]);
-
-            $pdo->commit();
-
-            if ($stmt->rowCount() === 1) {
-                $compra = Database::obterCompraComEmail($compra_id);
-                if ($compra && !empty($compra['email'])) {
-                    EmailService::enviarComprovativo($compra['email'], $compra);
-                }
-            }
-
-            return ['status' => $stmt->rowCount() === 1 ? 'paga' : 'erro'];
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            return ['status' => 'erro'];
+        if (!$sucesso) {
+            return ['status' => 'falhado'];
         }
+
+        Database::marcarPedidoComoPago($pedidoId);
+
+        return ['status' => 'confirmado'];
     }
 }

@@ -1,0 +1,412 @@
+.ementa-main {
+    background: transparent;
+    min-height: calc(100vh - 36px);
+    padding: 1.25rem 1.5rem;
+}
+
+.ementa-cabecalho {
+    margin-bottom: 1rem;
+}
+
+.ementa-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.3rem 0;
+    letter-spacing: 0;
+}
+
+.ementa-horario {
+    font-size: 0.78rem;
+    color: #444;
+    margin: 0.1rem 0;
+    line-height: 1.5;
+}
+
+.ementa-semana {
+    font-size: 0.85rem;
+    color: #555;
+    font-weight: 600;
+    text-transform: lowercase;
+    margin: 0.75rem 0 0.6rem 0;
+    letter-spacing: 0;
+}
+
+.dia-card {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 1px 3px rgba(15, 31, 56, 0.06);
+}
+
+.dia-card.dia-passado {
+    background: #f8f9fa;
+    opacity: 0.65;
+    pointer-events: none;
+}
+
+.dia-card.dia-passado input {
+    cursor: not-allowed;
+}
+
+.dia-passado-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #991b1b;
+    background: #fee2e2;
+    border-radius: 10px;
+    padding: 0.15rem 0.55rem;
+    margin-left: auto;
+    letter-spacing: 0.3px;
+}
+
+.dia-card.dia-hoje {
+    border-color: #3a78b5;
+    box-shadow: 0 0 0 2px rgba(58, 120, 181, 0.15), 0 2px 8px rgba(15, 31, 56, 0.08);
+}
+
+.dia-hoje-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #166534;
+    background: #dcfce7;
+    border-radius: 10px;
+    padding: 0.15rem 0.55rem;
+    margin-left: auto;
+    letter-spacing: 0.3px;
+}
+
+.dia-card.dia-ja-comprado {
+    border-color: #16a34a;
+    background: #f0fdf4;
+}
+
+.dia-comprado-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #166534;
+    background: #dcfce7;
+    border-radius: 10px;
+    padding: 0.15rem 0.55rem;
+    margin-left: auto;
+    letter-spacing: 0.3px;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.aviso-duplicado {
+    font-size: 0.8rem;
+    color: #166534;
+    background: #dcfce7;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    padding: 0.45rem 0.75rem;
+    margin: 0 0 0.6rem 0;
+}
+
+.aviso-duplicado a {
+    color: #15803d;
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.dia-card-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.dia-card-header .dia-abrev {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    color: #2c4a6e;
+}
+
+.dia-card-header .dia-data {
+    font-size: 0.8rem;
+    color: #8a99ad;
+}
+
+.dia-pratos-principais {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.6rem;
+}
+
+.prato-opcao {
+    flex: 1;
+    min-width: 140px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1.5px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.prato-opcao:has(input:checked) {
+    border-color: #3a78b5;
+    background: #eaf3fb;
+}
+
+.prato-opcao-label {
+    display: flex;
+    flex-direction: column;
+    font-size: 0.8rem;
+}
+
+.prato-opcao-label small {
+    color: #6a7280;
+}
+
+.prato-opcao-preco {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    color: #2c4a6e;
+    font-size: 0.78rem;
+    margin-top: 0.15rem;
+}
+
+.menu-completo-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #1a3a63;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+}
+
+.dia-componentes {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding-top: 0.5rem;
+    border-top: 1px dashed #e5e9ef;
+}
+
+.componente-opcao {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: #374151;
+    cursor: pointer;
+}
+
+.extras-secao {
+    margin-top: 1.5rem;
+}
+
+.extras-data-escolha {
+    margin-bottom: 0.75rem;
+    font-size: 0.85rem;
+}
+
+.extras-data-escolha select {
+    margin-left: 0.5rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 4px;
+    border: 1px solid #dee2e6;
+}
+
+.extras-lista {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+}
+
+.qr-resultado {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.qr-resultado canvas {
+    margin: 0.5rem auto;
+}
+
+.resumo-fixo {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #1a3a63;
+    border-top: 2px solid #0f2540;
+    padding: 0.75rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 -3px 16px rgba(15, 31, 56, 0.25);
+    z-index: 90;
+}
+
+.resumo-info {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    color: #fff;
+}
+
+.resumo-count {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+}
+
+.resumo-count span {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.resumo-count small {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.resumo-divider {
+    width: 1px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.resumo-valor {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+}
+
+.resumo-valor strong {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: #fff;
+}
+
+.resumo-valor small {
+    font-size: 0.68rem;
+    color: rgba(255, 255, 255, 0.6);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@keyframes pulse-green {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
+    50% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+}
+
+.btn-comprar {
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0.6rem 1.5rem;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.18s;
+}
+
+.btn-comprar:not(:disabled) {
+    animation: pulse-green 2.2s ease-in-out infinite;
+}
+
+.btn-comprar:not(:disabled):hover {
+    background: #219a52;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(39, 174, 96, 0.4);
+    animation: none;
+}
+
+.btn-comprar:disabled {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.35);
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .ementa-main {
+        padding: 0.85rem 0.75rem;
+    }
+
+    .ementa-titulo {
+        font-size: 1.35rem;
+    }
+
+    .ementa-horario {
+        font-size: 0.72rem;
+    }
+
+    .ementa-semana {
+        font-size: 0.78rem;
+        margin: 0.6rem 0 0.5rem;
+    }
+
+    .dia-card {
+        padding: 0.85rem 1rem;
+    }
+
+    .prato-opcao {
+        min-width: 100%;
+    }
+
+    .resumo-fixo {
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.65rem 1rem;
+        align-items: stretch;
+    }
+
+    .resumo-info {
+        justify-content: center;
+        gap: 1.5rem;
+    }
+
+    .btn-comprar {
+        width: 100%;
+        justify-content: center;
+        padding: 0.65rem;
+        font-size: 0.92rem;
+        border-radius: 6px;
+    }
+
+    main.ementa-main {
+        padding-bottom: 150px !important;
+    }
+}
+
+.dia-componentes {
+    display: none;
+}
+
+.dia-componentes.visivel {
+    display: flex;
+}
+
+.menu-completo-toggle:has(input:disabled) {
+    opacity: 0.4;
+    cursor: not-allowed;
+}

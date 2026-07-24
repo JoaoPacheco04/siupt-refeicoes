@@ -1,0 +1,237 @@
+/* ============================================
+   Página de Validação — Funcionário
+   ============================================ */
+
+.validar-main {
+    min-height: calc(100vh - 60px);
+    padding: 1.75rem 1.5rem 3rem;
+    max-width: 560px;
+    margin: 0 auto;
+}
+
+.validar-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.25rem 0;
+}
+
+.validar-subtitulo {
+    font-size: 0.85rem;
+    color: #8a99ad;
+    margin: 0 0 1.5rem 0;
+}
+
+/* ---- Contador de validações ---- */
+.validacoes-contador {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #f0f4f8;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
+    color: #4b5563;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+.validacoes-contador i {
+    color: #3a78b5;
+    font-size: 1rem;
+}
+
+.validacoes-contador .num {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.1rem;
+    color: #1e2a3b;
+}
+
+/* ---- Área de scan / input ---- */
+.scan-card {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 31, 56, 0.06);
+    margin-bottom: 1.25rem;
+}
+
+.scan-card-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+#qr-reader {
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0a1628;
+    min-height: 250px;
+}
+
+/* Override html5-qrcode default styles */
+#qr-reader img[alt="Info icon"],
+#qr-reader img[alt="Camera based scan"] {
+    display: none !important;
+}
+
+.scan-separador {
+    text-align: center;
+    font-size: 0.78rem;
+    color: #8a99ad;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin: 1rem 0;
+    position: relative;
+}
+
+.scan-separador::before,
+.scan-separador::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 42%;
+    height: 1px;
+    background: #e5e9ef;
+}
+
+.scan-separador::before { left: 0; }
+.scan-separador::after  { right: 0; }
+
+.scan-input-group {
+    display: flex;
+    gap: 0.6rem;
+}
+
+.scan-input {
+    flex: 1;
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.875rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #1e2a3b;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+}
+
+.scan-input:focus {
+    border-color: #73c5d8;
+    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
+}
+
+.btn-validar-manual {
+    background: #1a3a63;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.1rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.btn-validar-manual:hover {
+    background: #12294a;
+    transform: translateY(-1px);
+}
+
+/* ---- Resultado ---- */
+.resultado-card {
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-top: 1rem;
+    display: none;
+    animation: fadeInUp 0.25s ease;
+}
+
+.resultado-card.visivel {
+    display: block;
+}
+
+.resultado-card.sucesso {
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+}
+
+.resultado-card.erro {
+    background: #fef2f2;
+    border: 1.5px solid #fca5a5;
+}
+
+.resultado-card.aviso {
+    background: #fffbeb;
+    border: 1.5px solid #fcd34d;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.resultado-icone {
+    font-size: 2.25rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.resultado-estado {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.1rem;
+    font-weight: 800;
+    margin-bottom: 0.25rem;
+}
+
+.resultado-card.sucesso .resultado-estado { color: #166534; }
+.resultado-card.erro    .resultado-estado { color: #991b1b; }
+.resultado-card.aviso   .resultado-estado { color: #92400e; }
+
+.resultado-nome {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #1e2a3b;
+    margin-bottom: 0.75rem;
+}
+
+.resultado-linhas {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid rgba(0,0,0,0.07);
+    padding-top: 0.75rem;
+}
+
+.resultado-linhas li {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.82rem;
+    color: #4b5563;
+    padding: 0.2rem 0;
+}
+
+.resultado-linhas li .item-nome {
+    font-weight: 600;
+    color: #1e2a3b;
+}
+
+.resultado-linhas li .item-tipo {
+    font-size: 0.74rem;
+    color: #8a99ad;
+}

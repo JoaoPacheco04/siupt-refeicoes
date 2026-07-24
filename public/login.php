@@ -6,22 +6,33 @@ session_start();
 
 $erro = '';
 
+// Logout
+if (isset($_GET['logout'])) {
+    session_unset();
+    session_destroy();
+    header('Location: login.php');
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $numero = $_POST['numero'] ?? '';
+
+    $bicc = $_POST['numero'] ?? '';
     $password = $_POST['password'] ?? '';
 
-    $utilizador = Database::autenticar($numero, $password);
+    $utilizador = Database::autenticar($bicc, $password);
 
     if ($utilizador) {
-        $_SESSION['user_id'] = $utilizador['id'];
-        $_SESSION['user_nome'] = $utilizador['nome'];
-        $_SESSION['user_tipo'] = $utilizador['tipo'];
+        $tipo = Database::perfilParaTipo((int) $utilizador['U_PERFIL']);
 
-        header('Location: ' . ($utilizador['tipo'] === 'funcionario' ? 'validar.php' : 'ementa.php'));
+        $_SESSION['user_id'] = $utilizador['U_ID'];
+        $_SESSION['user_nome'] = $utilizador['U_NOME'];
+        $_SESSION['user_tipo'] = $tipo;
+
+        header('Location: ' . ($tipo === 'funcionario' ? 'validar.php' : 'ementa.php'));
         exit;
     }
 
-    $erro = 'Número ou password incorretos';
+    $erro = 'BI/CC ou password incorretos';
 }
 ?>
 <!DOCTYPE html>
@@ -32,7 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title>SIUPT - Login</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="assets/css/siupt.css" rel="stylesheet">
+    <link href="assets/css/base.css" rel="stylesheet">
+    <link href="assets/css/login.css" rel="stylesheet">
 </head>
 <body>
 

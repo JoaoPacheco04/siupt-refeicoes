@@ -1,52 +1,143 @@
-const checkboxes = document.querySelectorAll('.checkbox-refeicao');
 const btnComprar = document.getElementById('btnComprar');
 const totalSelecionadasEl = document.getElementById('totalSelecionadas');
 const totalValorEl = document.getElementById('totalValor');
-const btnSelecionarSemana = document.getElementById('btnSelecionarSemana');
 
-function atualizarResumo() {
-    const selecionadas = [...checkboxes].filter(c => c.checked);
-    const total = selecionadas.reduce((soma, c) => soma + parseFloat(c.dataset.preco), 0);
-    totalSelecionadasEl.textContent = selecionadas.length;
-    totalValorEl.textContent = total.toFixed(2).replace('.', ',') + '€';
-    btnComprar.disabled = selecionadas.length === 0;
+// ── Permitir desmarcar o prato principal ao clicar de novo ─────────────────
+const ultimoSelecionado = {};
+
+document.querySelectorAll('.radio-prato-principal').forEach(radio => {
+    const grupo = radio.name;
+
+    radio.addEventListener('click', function () {
+        if (ultimoSelecionado[grupo] === this) {
+            this.checked = false;
+            ultimoSelecionado[grupo] = null;
+
+            const card = this.closest('.dia-card');
+            if (card) {
+                const menuCompletoBox = card.querySelector('.checkbox-menu-completo');
+                if (menuCompletoBox) menuCompletoBox.checked = false;
+                card.querySelectorAll('.checkbox-componente').forEach(c => c.checked = false);
+                syncComponentesVisibility(card);
+            }
+
+            atualizarResumo();
+        } else {
+            ultimoSelecionado[grupo] = this;
+            atualizarResumo();
+        }
+    });
+});
+
+// ── Visibilidade dos componentes (Sopa/Sobremesa/Bebida) ──────────────────
+// Controlada só pelo checkbox "Menu completo": desmarcado = visível,
+// marcado = escondido. Nunca mexe em style.display diretamente — só na classe.
+function syncComponentesVisibility(card) {
+    const menuCompletoBox = card.querySelector('.checkbox-menu-completo');
+    const componentes = card.querySelector('.dia-componentes');
+    if (!componentes) return;
+
+    const mostrar = !(menuCompletoBox?.checked ?? false);
+    componentes.classList.toggle('visivel', mostrar);
 }
 
-// ── Checkbox liga/desliga o seletor de pedido especial correspondente ──────
-checkboxes.forEach(c => {
-    c.addEventListener('change', () => {
-        const select = document.querySelector(`.pedido-especial-select[data-for="${c.dataset.id}"]`);
-        if (select) {
-            select.disabled = !c.checked;
-            if (!c.checked) {
-                select.value = '';
-                c.dataset.pedido = '';
+// Define o estado inicial correto em todos os cartões, assim que a página carrega
+document.querySelectorAll('.dia-card').forEach(syncComponentesVisibility);
+
+document.querySelectorAll('.checkbox-menu-completo').forEach(box => {
+    box.addEventListener('change', () => {
+        const card = box.closest('.dia-card');
+        if (card) {
+            syncComponentesVisibility(card);
+            if (box.checked) {
+                card.querySelectorAll('.checkbox-componente').forEach(c => c.checked = false);
             }
         }
         atualizarResumo();
     });
 });
 
-document.querySelectorAll('.pedido-especial-select').forEach(sel => {
-    sel.addEventListener('change', () => {
-        const cb = document.querySelector(`.checkbox-refeicao[data-id="${sel.dataset.for}"]`);
-        if (cb) cb.dataset.pedido = sel.value;
-    });
+document.querySelectorAll('.checkbox-componente, .checkbox-extra').forEach(el => {
+    el.addEventListener('change', atualizarResumo);
 });
 
-btnSelecionarSemana.addEventListener('click', () => {
-    checkboxes.forEach(c => { if (!c.disabled) c.checked = true; });
-    atualizarResumo();
-});
+function coletarSelecoes() {
+    const selecoes = [];
+
+    document.querySelectorAll('.dia-card').forEach(card => {
+        const data = card.dataset.data;
+        const radioPrato = card.querySelector('.radio-prato-principal:checked');
+        if (!radioPrato) return;
+
+        const menuCompletoBox     = card.querySelector('.checkbox-menu-completo');
+        const menuCompletoChecked = menuCompletoBox?.checked ?? false;
+
+        const precoItem = menuCompletoChecked
+            ? parseFloat(menuCompletoBox.dataset.precoMc || radioPrato.dataset.preco)
+            : parseFloat(radioPrato.dataset.preco);
+
+        const itens = [{
+            rm_id: radioPrato.dataset.rmId,
+            nome: radioPrato.dataset.nome,
+            preco: precoItem,
+            menu_completo: menuCompletoChecked
+        }];
+
+        if (!menuCompletoChecked) {
+            card.querySelectorAll('.checkbox-componente:checked').forEach(c => {
+                itens.push({
+                    rm_id: c.dataset.rmId,
+                    nome: c.dataset.nome,
+                    preco: parseFloat(c.dataset.preco),
+                    menu_completo: false
+                });
+            });
+        }
+
+        selecoes.push({ data, itens });
+    });
+
+    const extrasSelecionados = [...document.querySelectorAll('.checkbox-extra:checked')];
+    if (extrasSelecionados.length > 0) {
+        const dataExtras = document.getElementById('dataExtras')?.value;
+        selecoes.push({
+            data: dataExtras,
+            itens: extrasSelecionados.map(c => ({
+                rm_id: c.dataset.rmId,
+                nome: c.dataset.nome,
+                preco: parseFloat(c.dataset.preco),
+                menu_completo: false
+            }))
+        });
+    }
+
+    return selecoes;
+}
+
+function atualizarResumo() {
+    const selecoes = coletarSelecoes();
+    let totalItens = 0;
+    let totalValor = 0;
+
+    selecoes.forEach(grupo => {
+        grupo.itens.forEach(item => {
+            totalItens++;
+            totalValor += item.preco;
+        });
+    });
+
+    totalSelecionadasEl.textContent = totalItens;
+    totalValorEl.textContent = totalValor.toFixed(2).replace('.', ',') + '€';
+    btnComprar.disabled = totalItens === 0;
+}
 
 btnComprar.addEventListener('click', () => {
-    const selecionadas = [...checkboxes].filter(c => c.checked);
-    if (selecionadas.length === 0) return;
+    const selecoes = coletarSelecoes();
+    if (selecoes.length === 0) return;
 
-    const total = selecionadas.reduce((soma, c) => soma + parseFloat(c.dataset.preco), 0);
-
-    const listaHtml = selecionadas
-        .map(c => `<div class="resumo-modal-item"><span>${c.dataset.label}</span><span>${parseFloat(c.dataset.preco).toFixed(2)}€</span></div>`)
+    const totalGeral = selecoes.reduce((soma, g) => soma + g.itens.reduce((s, i) => s + i.preco, 0), 0);
+    const listaHtml = selecoes
+        .map(g => g.itens.map(i => `<div class="resumo-modal-item"><span>${i.nome}</span><span>${i.preco.toFixed(2)}€</span></div>`).join(''))
         .join('');
 
     const modal = new tingle.modal({
@@ -61,35 +152,35 @@ btnComprar.addEventListener('click', () => {
             <i class="bi bi-bag-check"></i>
             <h4>Confirmar compra</h4>
         </div>
-        <p class="text-muted small mb-3">Confirma os dias selecionados antes de prosseguires.</p>
         ${listaHtml}
-        <div class="resumo-modal-total"><span>Total</span><span>${total.toFixed(2).replace('.', ',')}€</span></div>
+        <div class="resumo-modal-total"><span>Total</span><span>${totalGeral.toFixed(2).replace('.', ',')}€</span></div>
     `);
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
     modal.addFooterBtn('Confirmar e pagar', 'tingle-btn tingle-btn--primary', async () => {
         modal.close();
-        await processarCompra(selecionadas, total);
+        await processarPedidos(selecoes, totalGeral);
     });
 
     modal.open();
 });
 
-// ── Passo 1: cria as compras (estado "pendente"), sem pagamento ────────────
-async function processarCompra(selecionadas, total) {
+async function processarPedidos(selecoes, totalGeral) {
     btnComprar.disabled = true;
     const btnSpan = btnComprar.querySelector('span');
     if (btnSpan) btnSpan.textContent = 'A criar pedido...';
 
-    const compraIds = [];
-    const falhasCriacao = [];
+    const pedidoIds = [];
+    const falhas = [];
 
-    for (const c of selecionadas) {
+    for (const grupo of selecoes) {
         try {
-            const body = new URLSearchParams({ refeicao_id: c.dataset.id });
-            if (c.dataset.pedido) body.set('pedido_especial', c.dataset.pedido);
+            const body = new URLSearchParams({
+                data_refeicao: grupo.data,
+                itens: JSON.stringify(grupo.itens.map(i => ({ rm_id: i.rm_id, menu_completo: i.menu_completo })))
+            });
 
-            const resposta = await fetch('api/criar_compra.php', {
+            const resposta = await fetch('api/criar_pedido.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body
@@ -97,27 +188,26 @@ async function processarCompra(selecionadas, total) {
             const dados = await resposta.json();
 
             if (dados.status === 'ok') {
-                compraIds.push(dados.compra_id);
+                pedidoIds.push(dados.pedido_id);
             } else {
-                falhasCriacao.push(dados.mensagem || 'Erro desconhecido');
+                falhas.push(dados.mensagem || 'Erro desconhecido');
             }
         } catch (e) {
-            falhasCriacao.push('Erro de rede ao criar compra');
+            falhas.push('Erro de rede ao criar pedido');
         }
     }
 
-    if (compraIds.length === 0) {
+    if (pedidoIds.length === 0) {
         if (btnSpan) btnSpan.textContent = 'Confirmar compra';
         atualizarResumo();
-        mostrarErro(falhasCriacao.length ? falhasCriacao : ['Não foi possível criar nenhuma compra.']);
+        mostrarErro(falhas.length ? falhas : ['Não foi possível criar nenhum pedido.']);
         return;
     }
 
-    mostrarEcraPagamento(compraIds, total, falhasCriacao);
+    mostrarEcraPagamento(pedidoIds, totalGeral, falhas);
 }
 
-// ── Passo 2: ecrã de pagamento — aqui entra a integração real MB WAY ───────
-function mostrarEcraPagamento(compraIds, total, falhasCriacao) {
+function mostrarEcraPagamento(pedidoIds, total, falhas) {
     const modalPagamento = new tingle.modal({ footer: false, closeMethods: [] });
     modalPagamento.setContent(`
         <div class="text-center py-3">
@@ -129,38 +219,33 @@ function mostrarEcraPagamento(compraIds, total, falhasCriacao) {
                 <button id="simSucesso" class="btn btn-success btn-sm">Simular aceite</button>
                 <button id="simFalha" class="btn btn-outline-danger btn-sm">Simular recusa</button>
             </div>
-            <p class="text-muted mt-3" style="font-size:0.7rem;">
-                (Botões apenas em ambiente de desenvolvimento — a integração real substitui isto por uma notificação assíncrona do gateway.)
-            </p>
         </div>
     `);
     modalPagamento.open();
 
-    document.getElementById('simSucesso').onclick = () => confirmarPagamento(compraIds, true, modalPagamento, falhasCriacao);
-    document.getElementById('simFalha').onclick = () => confirmarPagamento(compraIds, false, modalPagamento, falhasCriacao);
+    document.getElementById('simSucesso').onclick = () => confirmarPagamento(pedidoIds, true, modalPagamento, falhas);
+    document.getElementById('simFalha').onclick = () => confirmarPagamento(pedidoIds, false, modalPagamento, falhas);
 }
 
-// ── Passo 3: confirma o pagamento do lote todo numa só chamada ─────────────
-async function confirmarPagamento(compraIds, sucesso, modalPagamento, falhasCriacao) {
+async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
     modalPagamento.close();
 
     let dados;
     try {
-        const resposta = await fetch('api/confirmar_pagamento.php', {
+        const resposta = await fetch('api/confirmar_pagamento_pedido.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
-                compra_ids: compraIds.join(','),
+                pedido_ids: pedidoIds.join(','),
                 resultado: sucesso ? 'sucesso' : 'falha'
             })
         });
         dados = await resposta.json();
     } catch (e) {
-        dados = { status: 'erro', pagas: 0, total: compraIds.length };
+        dados = { status: 'erro', detalhe: [] };
     }
 
-    const pagas = dados.pagas ?? 0;
-    const totalTentadas = dados.total ?? compraIds.length;
+    const confirmados = (dados.detalhe || []).filter(d => d.status === 'confirmado');
 
     const modalResultado = new tingle.modal({
         footer: true,
@@ -168,48 +253,40 @@ async function confirmarPagamento(compraIds, sucesso, modalPagamento, falhasCria
         cssClass: ['tingle-siupt']
     });
 
-    let conteudoResultado;
-    if (pagas === totalTentadas && pagas > 0) {
-        conteudoResultado = `
+    let conteudo;
+    if (confirmados.length > 0) {
+        const qrHtml = confirmados.map((c, idx) => `
+            <div class="qr-resultado">
+                <p class="text-muted small mb-1">Pedido #${c.pedido_id}</p>
+                <canvas id="qr-${idx}"></canvas>
+            </div>
+        `).join('');
+
+        conteudo = `
             <div class="modal-siupt-header sucesso">
                 <i class="bi bi-check-circle-fill"></i>
                 <h4>Compra confirmada!</h4>
             </div>
-            <p>${pagas} refeição(ões) paga(s) com sucesso.</p>
-            <div class="modal-email-aviso">
-                <i class="bi bi-envelope-check"></i>
-                Vais receber por email o comprovativo com o código de validação —
-                usa o cartão de estudante na cantina, ou apresenta esse código se não o tiveres contigo.
-            </div>
-        `;
-    } else if (pagas > 0) {
-        conteudoResultado = `
-            <div class="modal-siupt-header aviso">
-                <i class="bi bi-exclamation-triangle-fill"></i>
-                <h4>${pagas} de ${totalTentadas} refeição(ões) paga(s)</h4>
-            </div>
-            <p class="text-muted small">As restantes ficaram pendentes — podes tentar de novo a partir do histórico de compras.</p>
+            <p>${confirmados.length} pedido(s) confirmado(s). Mostra o QR code na cantina.</p>
+            ${qrHtml}
         `;
     } else {
-        conteudoResultado = `
+        conteudo = `
             <div class="modal-siupt-header erro">
                 <i class="bi bi-x-circle-fill"></i>
                 <h4>Pagamento não confirmado</h4>
             </div>
-            <p class="text-muted small">A compra ficou registada como pendente. Podes tentar pagar novamente a partir do histórico de compras.</p>
+            <p class="text-muted small">Podes tentar novamente a partir do histórico de compras.</p>
         `;
     }
 
-    if (falhasCriacao.length > 0) {
-        conteudoResultado += `
-            <p class="text-muted small mt-2">${falhasCriacao.length} refeição(ões) não chegaram a ser criadas:</p>
-            ${falhasCriacao.map(f => `<div class="resumo-modal-item erro-item"><i class="bi bi-x-circle"></i> ${f}</div>`).join('')}
-        `;
-    }
-
-    modalResultado.setContent(conteudoResultado);
+    modalResultado.setContent(conteudo);
     modalResultado.addFooterBtn('Continuar', 'tingle-btn tingle-btn--primary', () => location.reload());
     modalResultado.open();
+
+    confirmados.forEach((c, idx) => {
+        QRCode.toCanvas(document.getElementById(`qr-${idx}`), c.qrcode, { width: 160 });
+    });
 }
 
 function mostrarErro(mensagens) {
