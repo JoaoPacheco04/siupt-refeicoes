@@ -249,3 +249,7 @@
 }
 
 .estado-nao-pago { background: #fef3c7; color: #92400e; }
+
+.btn-filtro.filtro-vazio {
+    opacity: 0.5;
+}

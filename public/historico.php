@@ -100,16 +100,16 @@ foreach ($pedidos as $p) {
         <button class="btn-filtro ativo-filtro" data-filtro="todos" id="filtro-todos">
             Todos <span class="filtro-conta"><?= $contagens['todos'] ?></span>
         </button>
-        <button class="btn-filtro" data-filtro="nao_pago" id="filtro-nao_pago">
+        <button class="btn-filtro<?= $contagens['nao_pago'] === 0 ? ' filtro-vazio' : '' ?>" data-filtro="nao_pago" id="filtro-nao_pago">
             Pendentes <span class="filtro-conta"><?= $contagens['nao_pago'] ?></span>
         </button>
-        <button class="btn-filtro" data-filtro="ativo" id="filtro-ativo">
+        <button class="btn-filtro<?= $contagens['ativo'] === 0 ? ' filtro-vazio' : '' ?>" data-filtro="ativo" id="filtro-ativo">
             Ativos <span class="filtro-conta"><?= $contagens['ativo'] ?></span>
         </button>
-        <button class="btn-filtro" data-filtro="utilizado" id="filtro-utilizado">
+        <button class="btn-filtro<?= $contagens['utilizado'] === 0 ? ' filtro-vazio' : '' ?>" data-filtro="utilizado" id="filtro-utilizado">
             Levantados <span class="filtro-conta"><?= $contagens['utilizado'] ?></span>
         </button>
-        <button class="btn-filtro" data-filtro="vencido" id="filtro-vencido">
+        <button class="btn-filtro<?= $contagens['vencido'] === 0 ? ' filtro-vazio' : '' ?>" data-filtro="vencido" id="filtro-vencido">
             Vencidos <span class="filtro-conta"><?= $contagens['vencido'] ?></span>
         </button>
     </div>
@@ -175,6 +175,7 @@ foreach ($pedidos as $p) {
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
-<script src="assets/js/vendor/qrcode.min.js"></script><script src="assets/js/historico.js"></script>
+<script src="assets/js/vendor/qrcode.min.js"></script>
+<script src="assets/js/historico.js"></script>
 </body>
 </html>
