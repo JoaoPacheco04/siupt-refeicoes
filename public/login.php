@@ -1,6 +1,8 @@
 <?php
+require_once __DIR__ . '/../src/Support/Auth.php';
+require_once __DIR__ . '/../src/Infrastructure/Database.php';
+
 session_start();
-require_once __DIR__ . '/../src/Database.php';
 
 $erro = '';
 
@@ -26,17 +28,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SIUPT - Login</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/css/siupt.css" rel="stylesheet">
 </head>
 <body>
-    <h2>Login</h2>
-    <?php if ($erro): ?>
-        <p style="color:red;"><?= htmlspecialchars($erro) ?></p>
-    <?php endif; ?>
-    <form method="POST">
-        <label>Número: <input type="text" name="numero" required></label><br>
-        <label>Password: <input type="password" name="password" required></label><br>
-        <button type="submit">Entrar</button>
-    </form>
+
+<div class="login-page">
+
+    <div class="login-left">
+        <div class="login-brand">
+            <div class="login-brand-badge">
+                <img src="https://siupt.upt.pt/styles/images/Logoinstitucional-PT-HE-branco-negativo.png" alt="UPT">            </div>
+            <div class="login-brand-text">
+                UNIVERSIDADE<br>PORTUCALENSE
+            </div>
+        </div>
+        <div>
+            <div class="login-left-title">SIUPT</div>
+            <div class="login-left-subtitle">Sistema de Informação da Universidade Portucalense</div>
+        </div>
+    </div>
+
+    <div class="login-right position-relative">
+
+        <div class="login-right-top">
+            <i class="bi bi-globe"></i> Português
+            <i class="bi bi-question-circle"></i>
+        </div>
+
+        <div class="login-welcome">Bem-vindo</div>
+        <div class="login-subtext">Aceda à sua área reservada do Portal Académico.</div>
+        <?php if ($erro): ?>
+            <div class="alert alert-danger py-2 small"><?= htmlspecialchars($erro) ?></div>
+        <?php endif; ?>
+
+        <div class="login-field-label">Tipo de utilizador</div>
+        <div class="user-type-toggle" id="tipoToggle">
+            <div class="user-type-option active" data-tipo="estudante">
+                <i class="bi bi-mortarboard"></i> Estudante
+            </div>
+            <div class="user-type-option" data-tipo="colaborador">
+                <i class="bi bi-briefcase"></i> Colaborador
+            </div>
+        </div>
+
+        <form method="POST">
+            <div class="login-field-label" id="labelNumero">Número de estudante</div>
+            <div class="input-icon-group">
+                <i class="bi bi-person-badge"></i>
+                <input type="text" name="numero" class="form-control" required autofocus>
+            </div>
+
+            <div class="login-field-label">
+                Palavra-passe
+                <a href="#" class="forgot-link">Esqueceu-se?</a>
+            </div>
+            <div class="input-icon-group">
+                <i class="bi bi-lock"></i>
+                <input type="password" name="password" class="form-control" required>
+            </div>
+
+            <button type="submit" class="btn btn-siupt w-100 text-white mt-2">
+                ENTRAR <i class="bi bi-box-arrow-in-right"></i>
+            </button>
+        </form>
+
+    </div>
+</div>
+
+<script>
+document.querySelectorAll('.user-type-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+        document.querySelectorAll('.user-type-option').forEach(o => o.classList.remove('active'));
+        opt.classList.add('active');
+        document.getElementById('labelNumero').textContent =
+            opt.dataset.tipo === 'estudante' ? 'Numero de estudante' : 'Numero de colaborador';
+    });
+});
+</script>
+
 </body>
 </html>

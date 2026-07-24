@@ -1,16 +1,19 @@
 <?php
-require_once __DIR__ . '/../src/Database.php';
+
+use App\Infrastructure\Database;
+
+require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 $pdo = Database::conexao();
 
-// 1. Compras pendentes de HOJE nunca pagas -> expiradas
-$stmt1 = $pdo->prepare("UPDATE compras SET estado = 'expirada' 
+// 1. Compras pendentes de hoje nunca pagas -> expiradas
+$stmt1 = $pdo->prepare("UPDATE compras SET estado = 'expirada'
                          WHERE estado = 'pendente' AND data_refeicao <= CAST(GETDATE() AS DATE)");
 $stmt1->execute();
 $expiradas = $stmt1->rowCount();
 
-// 2. Compras pagas de dias JÁ PASSADOS nunca levantadas -> nao_levantada
-$stmt2 = $pdo->prepare("UPDATE compras SET estado = 'nao_levantada' 
+// 2. Compras pagas de dias passados nunca levantadas -> nao_levantada
+$stmt2 = $pdo->prepare("UPDATE compras SET estado = 'nao_levantada'
                          WHERE estado = 'paga' AND data_refeicao < CAST(GETDATE() AS DATE)");
 $stmt2->execute();
 $naoLevantadas = $stmt2->rowCount();

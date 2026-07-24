@@ -1,9 +1,10 @@
 <?php
-require_once __DIR__ . '/../../src/Auth.php';
-require_once __DIR__ . '/../../src/Database.php';
+
+
+require_once __DIR__ . '/../../src/Support/Auth.php';
+require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('funcionario');
-
 $numero_lido = $_GET['numero'] ?? '';
 
 if ($numero_lido === '') {

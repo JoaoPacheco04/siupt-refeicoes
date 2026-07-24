@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../src/PagamentoService.php';
+require_once __DIR__ . '/../../src/Services/PagamentoService.php';
 
 $compra_id = (int) ($_GET['compra_id'] ?? 0);
 $sucesso = ($_GET['resultado'] ?? '') === 'sucesso';

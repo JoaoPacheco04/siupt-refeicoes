@@ -1,10 +1,11 @@
 <?php
-require_once __DIR__ . '/../../src/Auth.php';
-require_once __DIR__ . '/../../src/Database.php';
+
+
+require_once __DIR__ . '/../../src/Support/Auth.php';
+require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('aluno');
 $compra_id = (int) ($_GET['id'] ?? 0);
-
 $compra = Database::obterCompra($compra_id);
 
 if (!$compra || $compra['comprador_id'] != $utilizador['id']) {

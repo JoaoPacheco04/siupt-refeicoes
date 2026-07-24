@@ -1,5 +1,8 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
+
+
+
+require_once __DIR__ . '/../../config/config.php';
 
 class Database {
     private static ?PDO $instancia = null;
@@ -16,7 +19,7 @@ class Database {
     }
 
     // ============================================
-    // PONTO DE COSTURA 1 — trocar quando chegar o esquema real da UPT
+    // PONTO DE COSTURA 1 ??? trocar quando chegar o esquema real da UPT
     // (alunos/funcionarios separados, em vez de utilizadores_dev)
     // ============================================
     private static function obterUtilizadorPorNumero(string $numero): array|false {
@@ -65,16 +68,15 @@ class Database {
         return $stmt->fetch();
     }
 
-    public static function obterCompraComEmail(int $compra_id): array|false {
-        $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal, u.email
-                                            FROM compras c
-                                            JOIN refeicoes_dev r ON c.refeicao_id = r.id
-                                            JOIN utilizadores_dev u ON c.comprador_id = u.id
-                                            WHERE c.id = ?");
-        $stmt->execute([$compra_id]);
-        return $stmt->fetch();
-    }
-
+     public static function obterCompraComEmail(int $compra_id): array|false {
+    $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal, u.email, u.numero_cartao_uid
+                                        FROM compras c
+                                        JOIN refeicoes_dev r ON c.refeicao_id = r.id
+                                        JOIN utilizadores_dev u ON c.comprador_id = u.id
+                                        WHERE c.id = ?");
+    $stmt->execute([$compra_id]);
+    return $stmt->fetch();
+}
     public static function listarComprasDoAluno(int $comprador_id): array {
         $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal 
                                             FROM compras c
@@ -215,4 +217,16 @@ class Database {
         }
         return $utilizador;
     }
+    public static function listarRefeicoesDisponiveis(): array {
+    $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE data_refeicao >= CAST(GETDATE() AS DATE) ORDER BY data_refeicao");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+    public static function listarRefeicoesSemana(string $inicio, string $fim): array {
+        $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE data_refeicao BETWEEN ? AND ? ORDER BY data_refeicao");
+        $stmt->execute([$inicio, $fim]);
+    return $stmt->fetchAll();
+}
+   
 }
