@@ -59,15 +59,6 @@ $nomeMes = $meses[(int) $sexta->format('n')];
             <li id="menu_id_16" class=""><a href="#">Decisão</a></li>
         </ul>
     </nav>
-    <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
-        <span><?= htmlspecialchars(explode(' ', $utilizador['nome'])[0] . ' ' . (explode(' ', $utilizador['nome'])[count(explode(' ', $utilizador['nome'])) - 1] ?? '')) ?></span>
-        <img src="https://siupt.upt.pt/styles/images/metro_off.png" alt="A sua foto" id="profile-photo">
-        <div>
-            <a id="quit" href="login.php?submit_type=111" title="Terminar sessão">&nbsp;</a>
-            <a id="help" href="http://suporte.uportu.pt/" title="Ajuda">&nbsp;</a>
-            <a id="conf" href="#" title="Preferências">&nbsp;</a>
-        </div>
-    </div>
     <form id="form_new_user_lang" method="post" action="#">
         <input type="hidden" id="submit_confirm" name="submit_confirm" value="Tem a certeza que pretende alterar a linguagem? Irá perder as alterações não gravadas desta página.">
         <input type="hidden" id="submit_type" name="submit_type" value="switch_language">
@@ -78,6 +69,12 @@ $nomeMes = $meses[(int) $sexta->format('n')];
             <option value="pt" selected>Português</option>
         </select>
     </form>
+    <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
+        <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
+        <div id="profile-photo" class="profile-avatar">
+            <?= htmlspecialchars(strtoupper(substr($utilizador['nome'], 0, 1))) ?>
+        </div>
+    </div>
 </header>
 
 <main class="ementa-main container" style="padding-bottom:130px; max-width:820px;">
@@ -114,7 +111,13 @@ $nomeMes = $meses[(int) $sexta->format('n')];
                 <input type="checkbox" class="checkbox-refeicao"
                        data-id="<?= $r['id'] ?>"
                        data-preco="<?= $r['preco'] ?>"
-                       data-label="<?= htmlspecialchars($numDia . ' — ' . $r['sopa'] . ' / ' . $r['prato_principal']) ?>">
+                       data-label="<?= htmlspecialchars($numDia . ' — ' . $r['sopa'] . ' / ' . $r['prato_principal']) ?>"
+                       data-pedido="">
+                <select class="pedido-especial-select" data-for="<?= $r['id'] ?>" disabled title="Preferência alimentar (sujeita a disponibilidade)">
+                    <option value="">—</option>
+                    <option value="vegetariano">Vegetariano</option>
+                    <option value="dieta">Dieta</option>
+                </select>
             <?php elseif ($jaComprado): ?>
                 <i class="bi bi-check-circle-fill text-success" style="font-size:1.4rem;"></i>
             <?php else: ?>
@@ -260,4 +263,4 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 </body>
-</html>
+</html>

@@ -4,19 +4,22 @@ require_once __DIR__ . '/EmailService.php';
 
 class PagamentoService {
 
-    public static function processar(int $compra_id, bool $sucesso): array {
-        return self::simular($compra_id, $sucesso);
+    public static function processar(int $compra_id, bool $sucesso, ?string $refGatewayBatch = null): array {
+        return self::simular($compra_id, $sucesso, $refGatewayBatch);
     }
 
-    private static function simular(int $compra_id, bool $sucesso): array {
+    // PONTO DE COSTURA — trocar $refGatewayBatch pela referência real devolvida
+    // pelo gateway MB WAY quando a integração real entrar
+    private static function simular(int $compra_id, bool $sucesso, ?string $refGatewayBatch = null): array {
         $pdo = Database::conexao();
         $estado = $sucesso ? 'sucesso' : 'falhado';
+        $ref = $refGatewayBatch ?? ('SIM-' . uniqid());
 
         $pdo->beginTransaction();
         try {
             $pdo->prepare("INSERT INTO pagamentos (compra_id, metodo, ref_gateway, estado_pagamento) 
                             VALUES (?, 'simulado', ?, ?)")
-                ->execute([$compra_id, 'SIM-' . uniqid(), $estado]);
+                ->execute([$compra_id, $ref, $estado]);
 
             if (!$sucesso) {
                 $pdo->commit();

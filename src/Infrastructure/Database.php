@@ -1,7 +1,5 @@
 <?php
 
-
-
 require_once __DIR__ . '/../../config/config.php';
 
 class Database {
@@ -19,7 +17,7 @@ class Database {
     }
 
     // ============================================
-    // PONTO DE COSTURA 1 ??? trocar quando chegar o esquema real da UPT
+    // PONTO DE COSTURA 1 — trocar quando chegar o esquema real da UPT
     // (alunos/funcionarios separados, em vez de utilizadores_dev)
     // ============================================
     private static function obterUtilizadorPorNumero(string $numero): array|false {
@@ -68,15 +66,16 @@ class Database {
         return $stmt->fetch();
     }
 
-     public static function obterCompraComEmail(int $compra_id): array|false {
-    $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal, u.email, u.numero_cartao_uid
-                                        FROM compras c
-                                        JOIN refeicoes_dev r ON c.refeicao_id = r.id
-                                        JOIN utilizadores_dev u ON c.comprador_id = u.id
-                                        WHERE c.id = ?");
-    $stmt->execute([$compra_id]);
-    return $stmt->fetch();
-}
+    public static function obterCompraComEmail(int $compra_id): array|false {
+        $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal, u.email, u.numero_cartao_uid
+                                            FROM compras c
+                                            JOIN refeicoes_dev r ON c.refeicao_id = r.id
+                                            JOIN utilizadores_dev u ON c.comprador_id = u.id
+                                            WHERE c.id = ?");
+        $stmt->execute([$compra_id]);
+        return $stmt->fetch();
+    }
+
     public static function listarComprasDoAluno(int $comprador_id): array {
         $stmt = self::conexao()->prepare("SELECT c.*, r.sopa, r.prato_principal 
                                             FROM compras c
@@ -93,18 +92,33 @@ class Database {
         return $stmt->fetchAll(PDO::FETCH_COLUMN);
     }
 
+    // ============================================
+    // Rate limiting partilhado (cartão + PIN)
+    // ============================================
+    private static function estaBloqueado(string $identificador): bool {
+        $stmt = self::conexao()->prepare(
+            "SELECT COUNT(*) FROM tentativas_pin WHERE numero = ? AND data_tentativa > DATEADD(MINUTE, -10, GETDATE())"
+        );
+        $stmt->execute([$identificador]);
+        return (int) $stmt->fetchColumn() >= 5;
+    }
+
+    private static function registarTentativaFalhada(string $identificador): void {
+        self::conexao()->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")
+            ->execute([$identificador]);
+    }
+
     public static function validarPorNumeroAlunoPin(string $numero, string $pin, int $funcionario_id): array {
         $pdo = self::conexao();
 
-        $pessoa = self::obterUtilizadorPorNumero($numero);
-        if (!$pessoa) {
-            return ['status' => 'invalido'];
+        if (self::estaBloqueado($numero)) {
+            return ['status' => 'bloqueado'];
         }
 
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM tentativas_pin WHERE numero = ? AND data_tentativa > DATEADD(MINUTE, -10, GETDATE())");
-        $stmt->execute([$numero]);
-        if ((int) $stmt->fetchColumn() >= 5) {
-            return ['status' => 'bloqueado'];
+        $pessoa = self::obterUtilizadorPorNumero($numero);
+        if (!$pessoa) {
+            self::registarTentativaFalhada($numero);
+            return ['status' => 'invalido'];
         }
 
         $stmt = $pdo->prepare("SELECT TOP 1 id, estado, codigo_pin, pedido_especial FROM compras 
@@ -114,7 +128,7 @@ class Database {
         $compra = $stmt->fetch();
 
         if (!$compra || $compra['codigo_pin'] !== $pin) {
-            $pdo->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")->execute([$numero]);
+            self::registarTentativaFalhada($numero);
             return ['status' => 'invalido'];
         }
 
@@ -152,12 +166,16 @@ class Database {
     public static function validarPorCartao(string $uid_lido, int $funcionario_id): array {
         $pdo = self::conexao();
 
+        if (self::estaBloqueado($uid_lido)) {
+            return ['status' => 'bloqueado'];
+        }
+
         $stmt = $pdo->prepare("SELECT id, nome FROM utilizadores_dev WHERE numero_cartao_uid = ?");
         $stmt->execute([$uid_lido]);
         $pessoa = $stmt->fetch();
 
         if (!$pessoa) {
-            $pdo->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")->execute([$uid_lido]);
+            self::registarTentativaFalhada($uid_lido);
             return ['status' => 'invalido'];
         }
 
@@ -168,7 +186,7 @@ class Database {
         $compra = $stmt->fetch();
 
         if (!$compra) {
-            $pdo->prepare("INSERT INTO tentativas_pin (numero) VALUES (?)")->execute([$uid_lido]);
+            self::registarTentativaFalhada($uid_lido);
             return ['status' => 'invalido', 'nome' => $pessoa['nome']];
         }
         if ($compra['estado'] !== 'paga') {
@@ -217,16 +235,16 @@ class Database {
         }
         return $utilizador;
     }
+
     public static function listarRefeicoesDisponiveis(): array {
-    $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE data_refeicao >= CAST(GETDATE() AS DATE) ORDER BY data_refeicao");
-    $stmt->execute();
-    return $stmt->fetchAll();
-}
+        $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE data_refeicao >= CAST(GETDATE() AS DATE) ORDER BY data_refeicao");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 
     public static function listarRefeicoesSemana(string $inicio, string $fim): array {
         $stmt = self::conexao()->prepare("SELECT * FROM refeicoes_dev WHERE data_refeicao BETWEEN ? AND ? ORDER BY data_refeicao");
         $stmt->execute([$inicio, $fim]);
-    return $stmt->fetchAll();
-}
-   
+        return $stmt->fetchAll();
+    }
 }

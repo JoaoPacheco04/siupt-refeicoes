@@ -1,13 +1,12 @@
 <?php
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
-require_once __DIR__ . '/../../src/Services/PagamentoService.php';
 
 header('Content-Type: application/json');
 
 $utilizador = exigirLogin('aluno');
-$refeicao_id = (int) ($_GET['refeicao_id'] ?? 0);
-$pedido_especial = $_GET['pedido_especial'] ?? null;
+$refeicao_id = (int) ($_POST['refeicao_id'] ?? 0);
+$pedido_especial = $_POST['pedido_especial'] ?? null;
 
 $opcoes_validas = ['vegetariano', 'dieta'];
 if ($pedido_especial !== null && !in_array($pedido_especial, $opcoes_validas, true)) {
@@ -29,14 +28,6 @@ if ($resultado === 'refeicao_invalida') {
 } elseif ($resultado === 'fora_de_prazo') {
     echo json_encode(['status' => 'erro', 'mensagem' => 'Fora do prazo de compra (corte às 10h00 do dia anterior)']);
 } else {
-    // Compra criada com sucesso — invocar pagamento imediatamente
-    $compra_id = (int) $resultado;
-    $pagamento = PagamentoService::processar($compra_id, true);
-
-    if ($pagamento['status'] === 'paga') {
-        echo json_encode(['status' => 'ok', 'compra_id' => $compra_id, 'mensagem' => 'Compra criada e paga com sucesso']);
-    } else {
-        // Compra criada mas pagamento falhou — ainda comunicamos sucesso parcial
-        echo json_encode(['status' => 'ok', 'compra_id' => $compra_id, 'mensagem' => 'Compra criada (pagamento pendente)', 'aviso' => 'pagamento_pendente']);
-    }
+    // Compra fica "pendente" — o pagamento é confirmado à parte, em lote
+    echo json_encode(['status' => 'ok', 'compra_id' => (int) $resultado]);
 }

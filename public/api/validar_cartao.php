@@ -1,11 +1,9 @@
 <?php
-
-
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('funcionario');
-$numero_lido = $_GET['numero'] ?? '';
+$numero_lido = $_POST['numero'] ?? '';
 
 if ($numero_lido === '') {
     echo "Falta o parametro numero";

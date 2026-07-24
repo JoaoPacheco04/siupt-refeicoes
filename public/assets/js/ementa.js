@@ -4,7 +4,6 @@ const totalSelecionadasEl = document.getElementById('totalSelecionadas');
 const totalValorEl = document.getElementById('totalValor');
 const btnSelecionarSemana = document.getElementById('btnSelecionarSemana');
 
-// ── Actualiza o resumo no rodapé fixo ──────────────────────────────────────
 function atualizarResumo() {
     const selecionadas = [...checkboxes].filter(c => c.checked);
     const total = selecionadas.reduce((soma, c) => soma + parseFloat(c.dataset.preco), 0);
@@ -13,14 +12,33 @@ function atualizarResumo() {
     btnComprar.disabled = selecionadas.length === 0;
 }
 
-checkboxes.forEach(c => c.addEventListener('change', atualizarResumo));
+// ── Checkbox liga/desliga o seletor de pedido especial correspondente ──────
+checkboxes.forEach(c => {
+    c.addEventListener('change', () => {
+        const select = document.querySelector(`.pedido-especial-select[data-for="${c.dataset.id}"]`);
+        if (select) {
+            select.disabled = !c.checked;
+            if (!c.checked) {
+                select.value = '';
+                c.dataset.pedido = '';
+            }
+        }
+        atualizarResumo();
+    });
+});
+
+document.querySelectorAll('.pedido-especial-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+        const cb = document.querySelector(`.checkbox-refeicao[data-id="${sel.dataset.for}"]`);
+        if (cb) cb.dataset.pedido = sel.value;
+    });
+});
 
 btnSelecionarSemana.addEventListener('click', () => {
     checkboxes.forEach(c => { if (!c.disabled) c.checked = true; });
     atualizarResumo();
 });
 
-// ── Botão de Confirmar compra ──────────────────────────────────────────────
 btnComprar.addEventListener('click', () => {
     const selecionadas = [...checkboxes].filter(c => c.checked);
     if (selecionadas.length === 0) return;
@@ -31,7 +49,6 @@ btnComprar.addEventListener('click', () => {
         .map(c => `<div class="resumo-modal-item"><span>${c.dataset.label}</span><span>${parseFloat(c.dataset.preco).toFixed(2)}€</span></div>`)
         .join('');
 
-    // Modal de confirmação antes de comprar
     const modal = new tingle.modal({
         footer: true,
         closeMethods: ['overlay', 'button', 'escape'],
@@ -52,46 +69,99 @@ btnComprar.addEventListener('click', () => {
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
     modal.addFooterBtn('Confirmar e pagar', 'tingle-btn tingle-btn--primary', async () => {
         modal.close();
-        await processarCompra(selecionadas, listaHtml, total);
+        await processarCompra(selecionadas, total);
     });
 
     modal.open();
 });
 
-// ── Processar a compra via API ─────────────────────────────────────────────
-// BUG 2 fix: listaHtml e total são agora parâmetros, não variáveis de scope externo
-async function processarCompra(selecionadas, listaHtml, total) {
-    // Estado de loading no botão
+// ── Passo 1: cria as compras (estado "pendente"), sem pagamento ────────────
+async function processarCompra(selecionadas, total) {
     btnComprar.disabled = true;
     const btnSpan = btnComprar.querySelector('span');
-    if (btnSpan) btnSpan.textContent = 'A processar...';
+    if (btnSpan) btnSpan.textContent = 'A criar pedido...';
 
-    let sucesso = 0;
-    const falhas = [];
+    const compraIds = [];
+    const falhasCriacao = [];
 
     for (const c of selecionadas) {
         try {
-            // BUG 5 fix: usar JSON em vez de texto.includes()
-            const resposta = await fetch(`api/criar_compra.php?refeicao_id=${c.dataset.id}`);
+            const body = new URLSearchParams({ refeicao_id: c.dataset.id });
+            if (c.dataset.pedido) body.set('pedido_especial', c.dataset.pedido);
+
+            const resposta = await fetch('api/criar_compra.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body
+            });
             const dados = await resposta.json();
 
             if (dados.status === 'ok') {
-                sucesso++;
-                c.checked = false;
-                c.disabled = true;
+                compraIds.push(dados.compra_id);
             } else {
-                falhas.push(dados.mensagem || 'Erro desconhecido');
+                falhasCriacao.push(dados.mensagem || 'Erro desconhecido');
             }
         } catch (e) {
-            falhas.push('Erro de rede ao processar refeição');
+            falhasCriacao.push('Erro de rede ao criar compra');
         }
     }
 
-    // Restaurar botão
-    if (btnSpan) btnSpan.textContent = 'Confirmar compra';
-    atualizarResumo();
+    if (compraIds.length === 0) {
+        if (btnSpan) btnSpan.textContent = 'Confirmar compra';
+        atualizarResumo();
+        mostrarErro(falhasCriacao.length ? falhasCriacao : ['Não foi possível criar nenhuma compra.']);
+        return;
+    }
 
-    // BUG 2 fix: usar modalResultado (variável local correcta) em vez de modal
+    mostrarEcraPagamento(compraIds, total, falhasCriacao);
+}
+
+// ── Passo 2: ecrã de pagamento — aqui entra a integração real MB WAY ───────
+function mostrarEcraPagamento(compraIds, total, falhasCriacao) {
+    const modalPagamento = new tingle.modal({ footer: false, closeMethods: [] });
+    modalPagamento.setContent(`
+        <div class="text-center py-3">
+            <i class="bi bi-phone" style="font-size:2.5rem;color:#3d8bb5;"></i>
+            <h4 class="mt-2">A aguardar confirmação</h4>
+            <p class="text-muted small">Aceita o pedido de pagamento MB WAY no teu telemóvel.<br>
+            Valor a pagar: <strong>${total.toFixed(2).replace('.', ',')}€</strong></p>
+            <div class="d-flex justify-content-center gap-2 mt-3">
+                <button id="simSucesso" class="btn btn-success btn-sm">Simular aceite</button>
+                <button id="simFalha" class="btn btn-outline-danger btn-sm">Simular recusa</button>
+            </div>
+            <p class="text-muted mt-3" style="font-size:0.7rem;">
+                (Botões apenas em ambiente de desenvolvimento — a integração real substitui isto por uma notificação assíncrona do gateway.)
+            </p>
+        </div>
+    `);
+    modalPagamento.open();
+
+    document.getElementById('simSucesso').onclick = () => confirmarPagamento(compraIds, true, modalPagamento, falhasCriacao);
+    document.getElementById('simFalha').onclick = () => confirmarPagamento(compraIds, false, modalPagamento, falhasCriacao);
+}
+
+// ── Passo 3: confirma o pagamento do lote todo numa só chamada ─────────────
+async function confirmarPagamento(compraIds, sucesso, modalPagamento, falhasCriacao) {
+    modalPagamento.close();
+
+    let dados;
+    try {
+        const resposta = await fetch('api/confirmar_pagamento.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                compra_ids: compraIds.join(','),
+                resultado: sucesso ? 'sucesso' : 'falha'
+            })
+        });
+        dados = await resposta.json();
+    } catch (e) {
+        dados = { status: 'erro', pagas: 0, total: compraIds.length };
+    }
+
+    const pagas = dados.pagas ?? 0;
+    const totalTentadas = dados.total ?? compraIds.length;
+
     const modalResultado = new tingle.modal({
         footer: true,
         closeMethods: ['overlay', 'button', 'escape'],
@@ -99,43 +169,58 @@ async function processarCompra(selecionadas, listaHtml, total) {
     });
 
     let conteudoResultado;
-    if (sucesso > 0 && falhas.length === 0) {
-        // Sucesso total
+    if (pagas === totalTentadas && pagas > 0) {
         conteudoResultado = `
             <div class="modal-siupt-header sucesso">
                 <i class="bi bi-check-circle-fill"></i>
                 <h4>Compra confirmada!</h4>
             </div>
-            ${listaHtml}
-            <div class="resumo-modal-total"><span>Total pago</span><span>${total.toFixed(2).replace('.', ',')}€</span></div>
+            <p>${pagas} refeição(ões) paga(s) com sucesso.</p>
             <div class="modal-email-aviso">
                 <i class="bi bi-envelope-check"></i>
                 Vais receber por email o comprovativo com o código de validação —
                 usa o cartão de estudante na cantina, ou apresenta esse código se não o tiveres contigo.
             </div>
         `;
-    } else if (sucesso > 0 && falhas.length > 0) {
-        // Sucesso parcial
+    } else if (pagas > 0) {
         conteudoResultado = `
             <div class="modal-siupt-header aviso">
                 <i class="bi bi-exclamation-triangle-fill"></i>
-                <h4>${sucesso} compra(s) confirmada(s)</h4>
+                <h4>${pagas} de ${totalTentadas} refeição(ões) paga(s)</h4>
             </div>
-            <p class="text-muted small">${falhas.length} refeição(ões) não puderam ser processadas:</p>
-            ${falhas.map(f => `<div class="resumo-modal-item erro-item"><i class="bi bi-x-circle"></i> ${f}</div>`).join('')}
+            <p class="text-muted small">As restantes ficaram pendentes — podes tentar de novo a partir do histórico de compras.</p>
         `;
     } else {
-        // Falha total
         conteudoResultado = `
             <div class="modal-siupt-header erro">
                 <i class="bi bi-x-circle-fill"></i>
-                <h4>Erro ao processar</h4>
+                <h4>Pagamento não confirmado</h4>
             </div>
-            ${falhas.map(f => `<div class="resumo-modal-item erro-item"><i class="bi bi-x-circle"></i> ${f}</div>`).join('')}
+            <p class="text-muted small">A compra ficou registada como pendente. Podes tentar pagar novamente a partir do histórico de compras.</p>
+        `;
+    }
+
+    if (falhasCriacao.length > 0) {
+        conteudoResultado += `
+            <p class="text-muted small mt-2">${falhasCriacao.length} refeição(ões) não chegaram a ser criadas:</p>
+            ${falhasCriacao.map(f => `<div class="resumo-modal-item erro-item"><i class="bi bi-x-circle"></i> ${f}</div>`).join('')}
         `;
     }
 
     modalResultado.setContent(conteudoResultado);
     modalResultado.addFooterBtn('Continuar', 'tingle-btn tingle-btn--primary', () => location.reload());
     modalResultado.open();
+}
+
+function mostrarErro(mensagens) {
+    const modal = new tingle.modal({ footer: true, closeMethods: ['overlay', 'button', 'escape'] });
+    modal.setContent(`
+        <div class="modal-siupt-header erro">
+            <i class="bi bi-x-circle-fill"></i>
+            <h4>Erro ao processar</h4>
+        </div>
+        ${mensagens.map(f => `<div class="resumo-modal-item erro-item"><i class="bi bi-x-circle"></i> ${f}</div>`).join('')}
+    `);
+    modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--primary', () => modal.close());
+    modal.open();
 }
