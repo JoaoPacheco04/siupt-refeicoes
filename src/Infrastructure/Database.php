@@ -313,7 +313,7 @@ class Database {
                 $precoTotal += $preco;
             }
 
-            $qrcode = bin2hex(random_bytes(24)); // 48 caracteres, imprevisível
+            $qrcode = bin2hex(random_bytes(24)); // 48 caracteres
 
             $stmt = $pdo->prepare("INSERT INTO restaurante_pedido (RP_U_ID, RP_DATA_REFEICAO, RP_PRECO_TOTAL, RP_QRCODE, RP_UTILIZADO)
                                     VALUES (?, ?, ?, ?, 0)");
@@ -397,7 +397,7 @@ $pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?
             return 'utilizado';
         }
         if ($pedido['RP_DATA_REFEICAO'] < date('Y-m-d')) {
-            return 'vencido';
+            return 'expirado';
         }
         return 'ativo';
     }

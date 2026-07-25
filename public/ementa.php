@@ -3,7 +3,7 @@ require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 
-$utilizador = exigirLogin(); // qualquer utilizador autenticado pode encomendar
+$utilizador = exigirLogin(); 
 
 $hoje = new DateTime();
 $diaSemanaHoje = (int) $hoje->format('N');
@@ -12,7 +12,6 @@ $sexta   = (clone $segunda)->modify('+4 days');
 
 $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
 
-// ── Carregar limites em batch (evita N+1 no check todosPratosForaDePrazo) ──
 $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
 $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
 
@@ -41,7 +40,7 @@ $extras = Database::listarPratosExtras();
 $tipoMenuCompletoId = Database::obterTipoIdPorNome('Menu Completo');
 $prazotexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia anterior';
 
-// ── Batch de preços (evita N+1) ───────────────────────────────────────────
+// ── Batch de preços ───────────────────────────────────────────
 $tipoIdsSemana = array_unique(array_column($pratos, 'RM_TP_ID'));
 $tipoIdsExtras = array_unique(array_column($extras, 'RM_TP_ID'));
 $tipoIdsTodos  = array_unique(array_merge(

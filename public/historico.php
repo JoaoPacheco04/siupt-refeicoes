@@ -3,7 +3,7 @@ session_start();
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
-$utilizador = exigirLogin(); // qualquer utilizador autenticado
+$utilizador = exigirLogin(); 
 
 $pedidos = Database::listarPedidosDoUtilizador($utilizador['id']);
 
