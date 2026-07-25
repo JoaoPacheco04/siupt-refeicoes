@@ -119,7 +119,6 @@
     border-radius: 8px;
     padding: 0.6rem 0.9rem;
     font-size: 0.875rem;
-    font-family: 'Plus Jakarta Sans', sans-serif;
     color: #1e2a3b;
     outline: none;
     transition: border-color 0.15s, box-shadow 0.15s;
@@ -234,4 +233,89 @@
 .resultado-linhas li .item-tipo {
     font-size: 0.74rem;
     color: #8a99ad;
+}
+
+.validacoes-lista-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    margin: 1.75rem 0 0.75rem 0;
+}
+
+.lista-validacoes {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.lista-validacoes-vazia {
+    text-align: center;
+    color: #8a99ad;
+    padding: 2rem 0;
+    font-size: 0.85rem;
+    margin: 0;
+}
+
+.validacao-item {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #f0f2f5;
+    font-size: 0.85rem;
+}
+
+.validacao-item:last-child {
+    border-bottom: none;
+}
+
+.validacao-hora {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    color: #3a78b5;
+    min-width: 42px;
+}
+
+.validacao-nome {
+    flex: 1;
+    color: #1e2a3b;
+    font-weight: 600;
+}
+
+.validacao-pedido {
+    color: #8a99ad;
+    font-size: 0.78rem;
+}
+
+@keyframes fadeInHighlight {
+    from { background: #dcfce7; }
+    to   { background: transparent; }
+}
+
+.validacao-nova {
+    animation: fadeInHighlight 1.5s ease;
+}
+
+.btn-validar-seguinte {
+    width: 100%;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    transition: background 0.15s;
+}
+
+.btn-validar-seguinte:hover {
+    background: #219a52;
 }

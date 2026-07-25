@@ -117,3 +117,13 @@
 .tingle-btn--default:hover {
     background: #e5e7eb !important;
 }
+
+.codigo-curto {
+    font-family: 'Manrope', monospace;
+    font-size: 1.1rem;
+    font-weight: 800;
+    letter-spacing: 3px;
+    color: #1a3a63;
+    text-align: center;
+    margin-top: 0.5rem;
+}

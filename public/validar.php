@@ -5,6 +5,7 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('funcionario');
 $validacoesHoje = Database::contarValidacoesHoje((int) $utilizador['id']);
+$listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -60,6 +61,10 @@ $validacoesHoje = Database::contarValidacoesHoje((int) $utilizador['id']);
         </div>
         <div id="qr-reader"></div>
 
+        <button id="btnValidarSeguinte" class="btn-validar-seguinte" style="display:none;">
+            <i class="bi bi-arrow-repeat"></i> Validar seguinte
+        </button>
+
         <div class="scan-separador">ou</div>
 
         <!-- Input manual -->
@@ -80,6 +85,26 @@ $validacoesHoje = Database::contarValidacoesHoje((int) $utilizador['id']);
         <div class="resultado-nome" id="resultadoNome"></div>
         <ul class="resultado-linhas" id="resultadoLinhas"></ul>
     </div>
+
+    <!-- Lista de validações de hoje -->
+    <h2 class="validacoes-lista-titulo">Validações de hoje</h2>
+    <div id="listaValidacoes" class="lista-validacoes">
+        <?php if (empty($listaValidacoes)): ?>
+            <p class="lista-validacoes-vazia" id="listaVazia">
+                <i class="bi bi-inbox"></i> Ainda não validaste nenhuma refeição hoje.
+            </p>
+        <?php else: ?>
+            <?php foreach ($listaValidacoes as $v):
+                $hora = date('H:i', strtotime($v['RV_DATA_VALIDACAO']));
+            ?>
+            <div class="validacao-item">
+                <div class="validacao-hora"><?= $hora ?></div>
+                <div class="validacao-nome"><?= htmlspecialchars($v['U_NOME']) ?></div>
+                <div class="validacao-pedido">#<?= $v['RP_ID'] ?></div>
+            </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
+    </div>
 </main>
 </div>
 
@@ -95,8 +120,9 @@ const resultadoEstado = document.getElementById('resultadoEstado');
 const resultadoNome   = document.getElementById('resultadoNome');
 const resultadoLinhas = document.getElementById('resultadoLinhas');
 const contadorEl      = document.getElementById('contadorValidacoes');
+const listaEl         = document.getElementById('listaValidacoes');
 
-let scanAtivo = true; // evitar chamadas duplicadas enquanto a câmara está a ler
+let cameraDisponivel = false;
 
 // ---- Iniciar scanner de câmara ----
 const html5QrCode = new Html5Qrcode("qr-reader");
@@ -106,17 +132,25 @@ html5QrCode.start(
     { facingMode: "environment" },
     configScan,
     (decodedText) => {
-        if (!scanAtivo) return;
-        scanAtivo = false;
+        // Pausa a câmara assim que lê algo — não volta a ler nada até o
+        // funcionário carregar em "Validar seguinte"
+        html5QrCode.pause(true);
+        document.getElementById('btnValidarSeguinte').style.display = 'inline-flex';
         validarQrCode(decodedText);
-        // Reativar scan após 3 segundos
-        setTimeout(() => { scanAtivo = true; }, 3000);
     },
     () => { /* erro de leitura, ignorar */ }
-).catch(err => {
-    // Câmara não disponível — esconder o reader, o input manual ainda funciona
+).then(() => {
+    cameraDisponivel = true;
+}).catch(err => {
     document.getElementById('qr-reader').style.display = 'none';
     console.warn('Câmara não disponível:', err);
+});
+
+document.getElementById('btnValidarSeguinte').addEventListener('click', () => {
+    if (!cameraDisponivel) return;
+    html5QrCode.resume();
+    document.getElementById('btnValidarSeguinte').style.display = 'none';
+    resultadoCard.classList.remove('visivel');
 });
 
 // ---- Input manual ----
@@ -153,6 +187,28 @@ async function validarQrCode(qrcode) {
     if (typeof dados.validacoes_hoje === 'number') {
         contadorEl.textContent = dados.validacoes_hoje;
     }
+
+    // Só acrescenta à lista se a validação foi mesmo bem-sucedida agora
+    if (dados.status === 'valido') {
+        adicionarAListaValidacoes(dados);
+    }
+}
+
+// ---- Acrescentar entrada nova ao topo da lista ----
+function adicionarAListaValidacoes(dados) {
+    const vazia = document.getElementById('listaVazia');
+    if (vazia) vazia.remove();
+
+    const hora = new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+    const item = document.createElement('div');
+    item.className = 'validacao-item validacao-nova';
+    item.innerHTML = `
+        <div class="validacao-hora">${hora}</div>
+        <div class="validacao-nome">${escHtml(dados.nome ?? '')}</div>
+        <div class="validacao-pedido">#${dados.pedido_id ?? ''}</div>
+    `;
+    listaEl.prepend(item);
 }
 
 // ---- Mostrar resultado ----
@@ -217,7 +273,6 @@ function mostrarResultado(status, dados = {}) {
     resultadoEstado.textContent = cfg.estado;
     resultadoNome.textContent   = cfg.nome;
 
-    // Linhas da compra (apenas em validações bem-sucedidas)
     if (status === 'valido' && Array.isArray(dados.linhas) && dados.linhas.length > 0) {
         dados.linhas.forEach(linha => {
             const li = document.createElement('li');

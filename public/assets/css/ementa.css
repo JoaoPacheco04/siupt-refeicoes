@@ -188,11 +188,15 @@
 }
 
 .dia-componentes {
-    display: flex;
+    display: none;
     gap: 1rem;
     flex-wrap: wrap;
     padding-top: 0.5rem;
     border-top: 1px dashed #e5e9ef;
+}
+
+.dia-componentes.visivel {
+    display: flex;
 }
 
 .componente-opcao {
@@ -232,6 +236,7 @@
     color: #2c4a6e;
     font-size: 0.8rem;
 }
+
 .extras-secao {
     margin-top: 1.5rem;
 }
@@ -338,8 +343,15 @@
 }
 
 @keyframes pulse-green {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45); }
-    50% { box-shadow: 0 0 0 7px rgba(34, 197, 94, 0); }
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.45);
+    }
+
+    50% {
+        box-shadow: 0 0 0 7px rgba(34, 197, 94, 0);
+    }
 }
 
 .btn-comprar {
@@ -424,14 +436,6 @@
     main.ementa-main {
         padding-bottom: 150px !important;
     }
-}
-
-.dia-componentes {
-    display: none;
-}
-
-.dia-componentes.visivel {
-    display: flex;
 }
 
 .menu-completo-toggle:has(input:disabled) {

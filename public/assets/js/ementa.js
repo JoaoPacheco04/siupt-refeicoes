@@ -91,8 +91,9 @@ function coletarSelecoes() {
         const menuCompletoBox     = card.querySelector('.checkbox-menu-completo');
         const menuCompletoChecked = menuCompletoBox?.checked ?? false;
 
+        const precoMcRaw = menuCompletoBox?.dataset?.precoMc;
         const precoItem = menuCompletoChecked
-            ? parseFloat(menuCompletoBox.dataset.precoMc || radioPrato.dataset.preco)
+            ? (precoMcRaw !== undefined && precoMcRaw !== '' ? parseFloat(precoMcRaw) : parseFloat(radioPrato.dataset.preco))
             : parseFloat(radioPrato.dataset.preco);
 
         const itens = [{
@@ -278,6 +279,7 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
             <div class="qr-resultado">
                 <p class="text-muted small mb-1">Pedido #${c.pedido_id}</p>
                 <div id="qr-${idx}" style="display:inline-block;"></div>
+                <p class="codigo-curto">${c.codigo_curto ?? ''}</p>
             </div>
         `).join('');
 

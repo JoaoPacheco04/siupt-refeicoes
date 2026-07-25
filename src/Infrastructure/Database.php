@@ -136,21 +136,42 @@ class Database {
 
     /**
      * Devolve as datas (de uma lista) para as quais o utilizador já tem pedido ativo.
-     * Usado para mostrar aviso de duplicado na ementa.
      */
-   public static function listarDatasComPedidoAtivo(int $utilizadorId, array $datas): array {
-    if (empty($datas)) return [];
-    $ph = implode(',', array_fill(0, count($datas), '?'));
-    $hoje = date('Y-m-d');
-    $stmt = self::conexao()->prepare("
-        SELECT DISTINCT RP_DATA_REFEICAO
-        FROM restaurante_pedido
-        WHERE RP_U_ID = ? AND RP_DATA_REFEICAO IN ($ph)
-          AND RP_UTILIZADO = 0 AND RP_PAGO = 1 AND RP_DATA_REFEICAO >= ?
-    ");
-    $stmt->execute(array_merge([$utilizadorId], $datas, [$hoje]));
-    return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
-}
+    public static function listarDatasComPedidoAtivo(int $utilizadorId, array $datas): array {
+        if (empty($datas)) return [];
+        $ph = implode(',', array_fill(0, count($datas), '?'));
+        $hoje = date('Y-m-d');
+        $stmt = self::conexao()->prepare("
+            SELECT DISTINCT RP_DATA_REFEICAO
+            FROM restaurante_pedido
+            WHERE RP_U_ID = ? AND RP_DATA_REFEICAO IN ($ph)
+              AND RP_UTILIZADO = 0 AND RP_PAGO = 1 AND RP_DATA_REFEICAO >= ?
+        ");
+        $stmt->execute(array_merge([$utilizadorId], $datas, [$hoje]));
+        return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    }
+
+    /**
+     * Devolve os itens extras já comprados (pago, ativo) numa lista de datas,
+     * como "rm_id|data", para evitar duplicados de extras.
+     */
+    public static function listarItensExtrasComprados(int $utilizadorId, array $datas): array {
+        if (empty($datas)) return [];
+        $ph = implode(',', array_fill(0, count($datas), '?'));
+        $stmt = self::conexao()->prepare("
+            SELECT DISTINCT rc.RC_RM_ID, rp.RP_DATA_REFEICAO
+            FROM restaurante_compra rc
+            JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
+            WHERE rp.RP_U_ID = ? AND rp.RP_UTILIZADO = 0 AND rp.RP_PAGO = 1
+              AND rp.RP_DATA_REFEICAO IN ($ph)
+        ");
+        $stmt->execute(array_merge([$utilizadorId], $datas));
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $resultado[] = $row['RC_RM_ID'] . '|' . $row['RP_DATA_REFEICAO'];
+        }
+        return $resultado;
+    }
 
     public static function obterDataLimite(int $tipoRefeicaoId): array|false {
         $stmt = self::conexao()->prepare("SELECT RDL_HORA, RDL_DIA_ANTECEDENCIA FROM restaurante_data_limite WHERE RDL_RTP_ID = ?");
@@ -158,20 +179,14 @@ class Database {
         return $stmt->fetch();
     }
 
-    /**
-     * Devolve uma string legível com o prazo de compra dos pratos principais (Carne/Peixe/Vegetariano).
-     * Exemplo: "até às 14h30 do dia anterior" ou "até às 10h00 com 2 dias de antecedência".
-     * Retorna null se não houver regra configurada.
-     */
     public static function obterDataLimitePrincipalTexto(): ?string {
-        // Tenta obter o prazo pelo primeiro tipo principal encontrado
         foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipo) {
             $tipoId = self::obterTipoIdPorNome($tipo);
             if ($tipoId === null) continue;
             $limite = self::obterDataLimite($tipoId);
             if (!$limite) continue;
 
-            $hora = rtrim(substr($limite['RDL_HORA'], 0, 5), ':'); // "14:30:00" -> "14:30"
+            $hora = rtrim(substr($limite['RDL_HORA'], 0, 5), ':');
             $dias = (int) $limite['RDL_DIA_ANTECEDENCIA'];
 
             if ($dias === 1) {
@@ -188,7 +203,7 @@ class Database {
     public static function foraDePrazo(int $tipoRefeicaoId, string $dataRefeicao): bool {
         $limite = self::obterDataLimite($tipoRefeicaoId);
         if (!$limite) {
-            return false; // sem regra definida = sem restrição (ex: pratos extras)
+            return false;
         }
         $dataLimite = date(
             'Y-m-d ' . $limite['RDL_HORA'],
@@ -228,8 +243,6 @@ class Database {
 
                 $menuCompleto = !empty($item['menu_completo']);
 
-                // Menu completo só faz sentido para pratos da ementa (com data),
-                // não para extras (que já têm preço próprio fixo)
                 if ($menuCompleto && $prato['RM_DATA'] === null) {
                     $pdo->rollBack();
                     return 'menu_completo_invalido_para_extra';
@@ -240,8 +253,6 @@ class Database {
                     return 'fora_de_prazo';
                 }
 
-                // Se for menu completo, o preço vem do tipo "Menu Completo",
-                // não do tipo do prato individual (bundle a preço fixo)
                 if ($menuCompleto) {
                     $tipoPrecoId = self::obterTipoIdPorNome('Menu Completo');
                     if ($tipoPrecoId === null) {
@@ -273,6 +284,16 @@ class Database {
             $stmt->execute([$utilizadorId, $dataRefeicao, $precoTotal, $qrcode]);
             $pedidoId = (int) $pdo->lastInsertId();
 
+            // Código curto aleatório — verifica colisão antes de gravar (extremamente raro, mas seguro)
+do {
+    $codigoCurto = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+    $existe = $pdo->prepare("SELECT 1 FROM restaurante_pedido WHERE RP_CODIGO_CURTO = ?");
+    $existe->execute([$codigoCurto]);
+} while ($existe->fetch());
+
+$pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?")
+    ->execute([$codigoCurto, $pedidoId]);
+
             $stmtLinha = $pdo->prepare("INSERT INTO restaurante_compra (RC_RP_ID, RC_MENU_COMPLETO, RC_RM_ID, RC_PRECO)
                                          VALUES (?, ?, ?, ?)");
             foreach ($linhasValidadas as $linha) {
@@ -289,6 +310,17 @@ class Database {
 
     public static function obterPedido(int $pedidoId): array|false {
         $stmt = self::conexao()->prepare("SELECT * FROM restaurante_pedido WHERE RP_ID = ?");
+        $stmt->execute([$pedidoId]);
+        return $stmt->fetch();
+    }
+
+    public static function obterPedidoComEmail(int $pedidoId): array|false {
+        $stmt = self::conexao()->prepare("
+            SELECT rp.*, u.U_EMAIL, u.U_NOME
+            FROM restaurante_pedido rp
+            JOIN users u ON rp.RP_U_ID = u.U_ID
+            WHERE rp.RP_ID = ?
+        ");
         $stmt->execute([$pedidoId]);
         return $stmt->fetch();
     }
@@ -321,20 +353,18 @@ class Database {
     }
 
     // "Vencido" não é guardado — é sempre calculado no momento da leitura.
-    // Um pedido é vencido apenas se a data de refeição já passou (ontem ou antes),
-    // nunca no próprio dia (onde ainda pode ser levantado).
-   public static function calcularEstadoPedido(array $pedido): string {
-    if (!$pedido['RP_PAGO']) {
-        return 'nao_pago';
+    public static function calcularEstadoPedido(array $pedido): string {
+        if (!$pedido['RP_PAGO']) {
+            return 'nao_pago';
+        }
+        if ($pedido['RP_UTILIZADO']) {
+            return 'utilizado';
+        }
+        if ($pedido['RP_DATA_REFEICAO'] < date('Y-m-d')) {
+            return 'vencido';
+        }
+        return 'ativo';
     }
-    if ($pedido['RP_UTILIZADO']) {
-        return 'utilizado';
-    }
-    if ($pedido['RP_DATA_REFEICAO'] < date('Y-m-d')) {
-        return 'vencido';
-    }
-    return 'ativo';
-}
 
     // ============================================
     // Pagamento (simulado)
@@ -347,14 +377,23 @@ class Database {
         ")->execute([$pedidoId, $ref, $estado]);
     }
 
+    public static function marcarPedidoComoPago(int $pedidoId): void {
+        self::conexao()->prepare("UPDATE restaurante_pedido SET RP_PAGO = 1 WHERE RP_ID = ?")
+            ->execute([$pedidoId]);
+    }
+
     // ============================================
-    // Validação por QR code (lado do funcionário)
+    // Validação por QR code ou código curto (lado do funcionário)
     // ============================================
     public static function validarPorQrCode(string $qrcode, int $funcionarioId): array {
         $pdo = self::conexao();
 
-        $stmt = $pdo->prepare("SELECT rp.*, u.U_NOME FROM restaurante_pedido rp JOIN users u ON rp.RP_U_ID = u.U_ID WHERE rp.RP_QRCODE = ?");
-        $stmt->execute([$qrcode]);
+        $stmt = $pdo->prepare("
+            SELECT rp.*, u.U_NOME FROM restaurante_pedido rp 
+            JOIN users u ON rp.RP_U_ID = u.U_ID 
+            WHERE rp.RP_QRCODE = ? OR rp.RP_CODIGO_CURTO = ?
+        ");
+        $stmt->execute([$qrcode, strtoupper(trim($qrcode))]);
         $pedido = $stmt->fetch();
 
         if (!$pedido) {
@@ -395,27 +434,16 @@ class Database {
         return (int) $stmt->fetchColumn();
     }
 
-    public static function marcarPedidoComoPago(int $pedidoId): void {
-    self::conexao()->prepare("UPDATE restaurante_pedido SET RP_PAGO = 1 WHERE RP_ID = ?")
-        ->execute([$pedidoId]);
+    public static function listarValidacoesHoje(int $funcionarioId): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, u.U_NOME
+            FROM restaurante_validacao rv
+            JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
+            JOIN users u ON rp.RP_U_ID = u.U_ID
+            WHERE rv.RV_FUNCIONARIO_ID = ? AND CAST(rv.RV_DATA_VALIDACAO AS DATE) = CAST(GETDATE() AS DATE)
+            ORDER BY rv.RV_DATA_VALIDACAO DESC
+        ");
+        $stmt->execute([$funcionarioId]);
+        return $stmt->fetchAll();
     }
-
-    public static function listarItensExtrasComprados(int $utilizadorId, array $datas): array {
-    if (empty($datas)) return [];
-    $ph = implode(',', array_fill(0, count($datas), '?'));
-    $stmt = self::conexao()->prepare("
-        SELECT DISTINCT rc.RC_RM_ID, rp.RP_DATA_REFEICAO
-        FROM restaurante_compra rc
-        JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
-        WHERE rp.RP_U_ID = ? AND rp.RP_UTILIZADO = 0 AND rp.RP_PAGO = 1
-          AND rp.RP_DATA_REFEICAO IN ($ph)
-    ");
-    $stmt->execute(array_merge([$utilizadorId], $datas));
-    $resultado = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $resultado[] = $row['RC_RM_ID'] . '|' . $row['RP_DATA_REFEICAO'];
-    }
-    return $resultado;
-}
-    
 }

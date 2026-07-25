@@ -150,18 +150,21 @@ foreach ($pedidos as $p) {
             </div>
             <div class="compra-lado-direito">
                 <?php if ($estado === 'ativo'): ?>
-                    <button class="btn-ver-qr"
-                            id="btn-qr-<?= $p['RP_ID'] ?>"
-                            data-qrcode="<?= htmlspecialchars($p['RP_QRCODE']) ?>"
-                            data-data="<?= date('d/m/Y', strtotime($p['RP_DATA_REFEICAO'])) ?>"
-                            data-descricao="<?= htmlspecialchars($descricao) ?>"
-                            title="Ver QR code">
-                        <i class="bi bi-qr-code"></i>
-                        QR code
-                    </button>
-                <?php elseif ($estado === 'nao_pago'): ?>
-                    <span class="text-muted small">Pagamento não confirmado</span>
-                <?php endif; ?>
+                   <button class="btn-ver-qr"
+        id="btn-qr-<?= $p['RP_ID'] ?>"
+        data-qrcode="<?= htmlspecialchars($p['RP_QRCODE']) ?>"
+        data-codigo-curto="<?= htmlspecialchars($p['RP_CODIGO_CURTO'] ?? '') ?>"
+        data-data="<?= date('d/m/Y', strtotime($p['RP_DATA_REFEICAO'])) ?>"
+        data-descricao="<?= htmlspecialchars($descricao) ?>"
+        title="Ver QR code">
+    <i class="bi bi-qr-code"></i>
+    QR code
+</button>
+                <<?php elseif ($estado === 'nao_pago'): ?>
+    <button class="btn-pagar-agora" data-pedido-id="<?= $p['RP_ID'] ?>">
+        <i class="bi bi-credit-card"></i> Pagar agora
+    </button>
+<?php endif; ?>
                 <span class="estado-badge <?= $info['class'] ?>"><?= $info['label'] ?></span>
             </div>
         </div>

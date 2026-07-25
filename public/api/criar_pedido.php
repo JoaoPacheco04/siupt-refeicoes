@@ -50,6 +50,7 @@ if (is_string($resultado) && isset($mensagens[$resultado])) {
         'status' => 'ok',
         'pedido_id' => $resultado,
         'qrcode' => $pedido['RP_QRCODE'],
+        'codigo_curto' => $pedido['RP_CODIGO_CURTO'],
         'preco_total' => $pedido['RP_PRECO_TOTAL'],
     ]);
 } else {

@@ -5,7 +5,7 @@ require_once __DIR__ . '/../../src/Services/PagamentoService.php';
 
 header('Content-Type: application/json');
 
-$utilizador = exigirLogin('aluno');
+$utilizador = exigirLogin('aluno', true);
 
 $pedidoIdsRaw = $_POST['pedido_ids'] ?? '';
 $sucesso = ($_POST['resultado'] ?? '') === 'sucesso';
@@ -29,7 +29,12 @@ foreach ($pedidoIds as $id) {
     }
 
     $r = PagamentoService::processar($id, $sucesso, $refGatewayBatch);
-    $resultados[] = ['pedido_id' => $id, 'status' => $r['status'], 'qrcode' => $pedido['RP_QRCODE']];
+    $resultados[] = [
+        'pedido_id' => $id,
+        'status' => $r['status'],
+        'qrcode' => $pedido['RP_QRCODE'],
+        'codigo_curto' => $pedido['RP_CODIGO_CURTO'],
+    ];
 }
 
 echo json_encode([
