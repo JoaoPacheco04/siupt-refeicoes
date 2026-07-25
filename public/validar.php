@@ -111,7 +111,8 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 <!-- html5-qrcode -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
-const API_URL = 'api/validar_qrcode.php';
+const API_URL    = 'api/validar_qrcode.php';
+const CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 
 // ---- Estado do resultado ----
 const resultadoCard   = document.getElementById('resultadoCard');
@@ -174,7 +175,7 @@ async function validarQrCode(qrcode) {
         const resp = await fetch(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ qrcode })
+            body: new URLSearchParams({ qrcode, csrf_token: CSRF_TOKEN })
         });
         dados = await resp.json();
     } catch (e) {

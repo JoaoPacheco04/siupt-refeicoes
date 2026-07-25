@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 header('Content-Type: application/json');
 
 $utilizador = exigirLogin('aluno', true);
+verificarCsrfToken(true);
 
 $dataRefeicao = $_POST['data_refeicao'] ?? '';
 $itensJson = $_POST['itens'] ?? '';
@@ -37,7 +38,7 @@ $mensagens = [
     'sem_itens' => 'Nenhum item selecionado',
     'prato_invalido' => 'Prato não encontrado',
     'menu_completo_invalido_para_extra' => 'Menu completo só é válido para pratos da ementa',
-    'fora_de_prazo' => 'Fora do prazo de compra (corte às 14h30 do dia anterior)',
+    'fora_de_prazo' => 'Fora do prazo de compra para este prato',
     'menu_completo_nao_configurado' => 'Preço do menu completo não está configurado',
     'sem_preco_definido' => 'Preço não definido para este prato',
 ];

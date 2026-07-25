@@ -35,3 +35,34 @@ function exigirLogin(?string $tipo_exigido = null, bool $isApi = false): array {
         'tipo' => $_SESSION['user_tipo'],
     ];
 }
+
+// ============================================
+// CSRF
+// ============================================
+
+function gerarCsrfToken(): string {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+    return $_SESSION['csrf_token'];
+}
+
+function verificarCsrfToken(bool $isApi = false): void {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    $tokenRecebido = $_POST['csrf_token'] ?? '';
+    if (empty($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $tokenRecebido)) {
+        if ($isApi) {
+            http_response_code(403);
+            header('Content-Type: application/json');
+            echo json_encode(['status' => 'erro', 'mensagem' => 'Token de segurança inválido.']);
+            exit;
+        }
+        http_response_code(403);
+        exit('Acesso negado: token CSRF inválido.');
+    }
+}

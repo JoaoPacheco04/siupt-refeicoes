@@ -1,0 +1,15 @@
+# Configuração sensível — NUNCA commitar credenciais
+config/config.php
+
+# Logs gerados pelos scripts
+scripts/*.log
+
+# Ficheiros do sistema
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo

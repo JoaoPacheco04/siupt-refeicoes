@@ -2,7 +2,7 @@
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
-session_start();
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 
 $erro = '';
 

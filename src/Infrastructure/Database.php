@@ -145,7 +145,7 @@ class Database {
             SELECT DISTINCT RP_DATA_REFEICAO
             FROM restaurante_pedido
             WHERE RP_U_ID = ? AND RP_DATA_REFEICAO IN ($ph)
-              AND RP_UTILIZADO = 0 AND RP_PAGO = 1 AND RP_DATA_REFEICAO >= ?
+              AND RP_PAGO = 1 AND RP_DATA_REFEICAO >= ?
         ");
         $stmt->execute(array_merge([$utilizadorId], $datas, [$hoje]));
         return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
@@ -162,8 +162,8 @@ class Database {
             SELECT DISTINCT rc.RC_RM_ID, rp.RP_DATA_REFEICAO
             FROM restaurante_compra rc
             JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
-            WHERE rp.RP_U_ID = ? AND rp.RP_UTILIZADO = 0 AND rp.RP_PAGO = 1
-              AND rp.RP_DATA_REFEICAO IN ($ph)
+           WHERE rp.RP_U_ID = ? AND rp.RP_PAGO = 1
+          AND rp.RP_DATA_REFEICAO IN ($ph)
         ");
         $stmt->execute(array_merge([$utilizadorId], $datas));
         $resultado = [];
@@ -177,6 +177,42 @@ class Database {
         $stmt = self::conexao()->prepare("SELECT RDL_HORA, RDL_DIA_ANTECEDENCIA FROM restaurante_data_limite WHERE RDL_RTP_ID = ?");
         $stmt->execute([$tipoRefeicaoId]);
         return $stmt->fetch();
+    }
+
+    /**
+     * Busca limites de vários tipos numa única query (evita N+1 na ementa).
+     * Retorna [tipo_id => ['RDL_HORA' => ..., 'RDL_DIA_ANTECEDENCIA' => ...]]
+     */
+    public static function obterDataLimitesBatch(array $tipoIds): array {
+        if (empty($tipoIds)) return [];
+        $tipoIds = array_values(array_unique(array_map('intval', $tipoIds)));
+        $ph = implode(',', array_fill(0, count($tipoIds), '?'));
+        $stmt = self::conexao()->prepare("
+            SELECT RDL_RTP_ID, RDL_HORA, RDL_DIA_ANTECEDENCIA
+            FROM restaurante_data_limite
+            WHERE RDL_RTP_ID IN ($ph)
+        ");
+        $stmt->execute($tipoIds);
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $resultado[(int) $row['RDL_RTP_ID']] = $row;
+        }
+        return $resultado;
+    }
+
+    /**
+     * Versão de foraDePrazo que usa dados já carregados em batch (sem query extra).
+     */
+    public static function foraDePrazoBatch(int $tipoRefeicaoId, string $dataRefeicao, array $limitesBatch): bool {
+        $limite = $limitesBatch[$tipoRefeicaoId] ?? null;
+        if (!$limite) {
+            return false;
+        }
+        $dataLimite = date(
+            'Y-m-d ' . $limite['RDL_HORA'],
+            strtotime($dataRefeicao . ' -' . $limite['RDL_DIA_ANTECEDENCIA'] . ' days')
+        );
+        return date('Y-m-d H:i:s') > $dataLimite;
     }
 
     public static function obterDataLimitePrincipalTexto(): ?string {

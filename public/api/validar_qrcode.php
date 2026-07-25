@@ -5,6 +5,7 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 header('Content-Type: application/json');
 
 $utilizador = exigirLogin('funcionario', true);
+verificarCsrfToken(true);
 $qrcode = trim($_POST['qrcode'] ?? '');
 
 if ($qrcode === '') {

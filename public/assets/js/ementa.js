@@ -2,6 +2,15 @@ const btnComprar = document.getElementById('btnComprar');
 const totalSelecionadasEl = document.getElementById('totalSelecionadas');
 const totalValorEl = document.getElementById('totalValor');
 
+// Escape de HTML para usar em innerHTML (previne XSS)
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 // ── Permitir desmarcar o prato principal ao clicar de novo ─────────────────
 const ultimoSelecionado = {};
 
@@ -157,7 +166,7 @@ btnComprar.addEventListener('click', () => {
 
     const totalGeral = selecoes.reduce((soma, g) => soma + g.itens.reduce((s, i) => s + i.preco, 0), 0);
     const listaHtml = selecoes
-        .map(g => g.itens.map(i => `<div class="resumo-modal-item"><span>${i.nome}</span><span>${i.preco.toFixed(2)}€</span></div>`).join(''))
+        .map(g => g.itens.map(i => `<div class="resumo-modal-item"><span>${escHtml(i.nome)}</span><span>${i.preco.toFixed(2)}€</span></div>`).join(''))
         .join('');
 
     const modal = new tingle.modal({
@@ -197,7 +206,8 @@ async function processarPedidos(selecoes, totalGeral) {
         try {
             const body = new URLSearchParams({
                 data_refeicao: grupo.data,
-                itens: JSON.stringify(grupo.itens.map(i => ({ rm_id: i.rm_id, menu_completo: i.menu_completo })))
+                itens: JSON.stringify(grupo.itens.map(i => ({ rm_id: i.rm_id, menu_completo: i.menu_completo }))),
+                csrf_token: window.CSRF_TOKEN
             });
 
             const resposta = await fetch('api/criar_pedido.php', {
@@ -257,7 +267,8 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 pedido_ids: pedidoIds.join(','),
-                resultado: sucesso ? 'sucesso' : 'falha'
+                resultado: sucesso ? 'sucesso' : 'falha',
+                csrf_token: window.CSRF_TOKEN
             })
         });
         dados = await resposta.json();

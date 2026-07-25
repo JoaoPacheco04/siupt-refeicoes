@@ -1,7 +1,7 @@
 <?php
-session_start();
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
+
 
 $utilizador = exigirLogin(); // qualquer utilizador autenticado pode encomendar
 
@@ -12,22 +12,29 @@ $sexta   = (clone $segunda)->modify('+4 days');
 
 $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
 
+// ── Carregar limites em batch (evita N+1 no check todosPratosForaDePrazo) ──
+$tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
+$dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
+
 // Se a semana atual não tem nada disponível para comprar (vazia, ou tudo já
 // fora de prazo de compra), avança automaticamente para a semana seguinte
-function todosPratosForaDePrazo(array $pratos): bool {
+function todosPratosForaDePrazo(array $pratos, array $limitesBatch): bool {
     if (empty($pratos)) return true;
     foreach ($pratos as $p) {
-        if (!Database::foraDePrazo((int) $p['RM_TP_ID'], $p['RM_DATA'])) {
+        if (!Database::foraDePrazoBatch((int) $p['RM_TP_ID'], $p['RM_DATA'], $limitesBatch)) {
             return false;
         }
     }
     return true;
 }
 
-if (todosPratosForaDePrazo($pratos)) {
+if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $segunda->modify('+7 days');
     $sexta->modify('+7 days');
     $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+    // Recarregar limites para a nova semana (tipos podem ser diferentes)
+    $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
+    $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
 }
 
 $extras = Database::listarPratosExtras();
@@ -294,6 +301,7 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
 <script>
     window.extrasJaComprados = <?= json_encode($itensExtrasComprados) ?>;
+    window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 </script>
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 <script src="assets/js/vendor/qrcode.min.js"></script>

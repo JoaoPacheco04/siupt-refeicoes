@@ -1,3 +1,12 @@
+// Escape de HTML para usar em innerHTML (previne XSS)
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 // ── Filtros de estado ────────────────────────────────────────────────────
 const cards     = document.querySelectorAll('.compra-card');
 const semFiltro = document.querySelector('.historico-sem-filtro');
@@ -43,12 +52,12 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
     modal.setContent(`
         <div class="modal-siupt-header sucesso">
             <i class="bi bi-qr-code-scan"></i>
-            <h4>QR code — ${data}</h4>
+            <h4>QR code — ${escHtml(data)}</h4>
         </div>
-        <p class="text-muted small text-center mb-1">${descricao}</p>
+        <p class="text-muted small text-center mb-1">${escHtml(descricao)}</p>
         <div class="text-center py-2">
             <div id="qr-historico" style="display:inline-block;"></div>
-            <p class="codigo-curto">${codigoCurto ?? ''}</p>
+            <p class="codigo-curto">${escHtml(codigoCurto ?? '')}</p>
         </div>
         <p class="text-muted small text-center mt-1">
             <i class="bi bi-info-circle"></i>
@@ -104,7 +113,8 @@ async function confirmarPagamentoHistorico(pedidoId, sucesso, modalPagamento) {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({
                 pedido_ids: pedidoId,
-                resultado: sucesso ? 'sucesso' : 'falha'
+                resultado: sucesso ? 'sucesso' : 'falha',
+                csrf_token: window.CSRF_TOKEN
             })
         });
         dados = await resposta.json();
