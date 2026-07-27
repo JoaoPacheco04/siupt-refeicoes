@@ -315,16 +315,25 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
     modalResultado.setContent(conteudo);
     modalResultado.addFooterBtn('Continuar', 'tingle-btn tingle-btn--primary', () => location.reload());
     modalResultado.open();
-
     confirmados.forEach((c, idx) => {
-        new QRCode(document.getElementById(`qr-${idx}`), {
-            text: c.qrcode,
-            width: 160,
-            height: 160,
-            colorDark: '#1e2a3b',
-            colorLight: '#ffffff'
-        });
+        const el = document.getElementById(`qr-${idx}`);
+        if (!el) {
+            console.warn(`QR do pedido #${c.pedido_id} não desenhado — elemento não encontrado.`);
+            return;
+        }
+        try {
+            new QRCode(el, {
+                text: c.qrcode,
+                width: 160,
+                height: 160,
+                colorDark: '#1e2a3b',
+                colorLight: '#ffffff'
+            });
+        } catch (err) {
+            console.error(`Falha ao desenhar QR do pedido #${c.pedido_id}:`, err);
+        }
     });
+
 }
 
 function mostrarErro(mensagens) {

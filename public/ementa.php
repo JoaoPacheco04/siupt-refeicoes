@@ -50,6 +50,7 @@ $tipoIdsTodos  = array_unique(array_merge(
 ));
 $hojeStr = date('Y-m-d');
 $precosBatch = Database::obterPrecosVigentesBatch($tipoIdsTodos, $hojeStr);
+$limitesBatch = Database::obterDataLimitesBatch($tipoIdsTodos);
 
 // ── Agrupar pratos por dia e por tipo ────────────────────────────────────
 $diasEmenta = [];
@@ -163,12 +164,20 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
     <?php foreach ($diasEmenta as $data => $tiposDoDia):
         $numDia = $numerosDia[(int) date('N', strtotime($data))];
+
         $pratosPrincipais = [];
         foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipoPrincipal) {
             if (!empty($tiposDoDia[$tipoPrincipal])) {
                 $pratosPrincipais[$tipoPrincipal] = $tiposDoDia[$tipoPrincipal][0];
             }
         }
+
+        $diaBloqueado = $data < $hojeStr;
+        if (!$diaBloqueado && !empty($pratosPrincipais)) {
+            $primeiroPrato = reset($pratosPrincipais);
+            $diaBloqueado = Database::foraDePrazoBatch($primeiroPrato['tp_id'], $data, $limitesBatch);
+        }
+
         $componentesExtra = [];
         foreach (['Sopa', 'Sobremesa', 'Bebida'] as $tipoComponente) {
             if (!empty($tiposDoDia[$tipoComponente])) {
@@ -177,11 +186,11 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         }
     ?>
     <?php $jaComprado = isset($datasComPedido[$data]); ?>
-    <div class="dia-card<?= $data < $hojeStr ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?>" data-data="<?= $data ?>">
+    <div class="dia-card<?= $diaBloqueado ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?>" data-data="<?= $data ?>">
         <div class="dia-card-header">
             <span class="dia-abrev"><?= $numDia ?></span>
             <span class="dia-data"><?= date('d/m', strtotime($data)) ?></span>
-            <?php if ($data < $hojeStr): ?>
+            <?php if ($diaBloqueado): ?>
             <span class="dia-passado-badge">fora de prazo</span>
             <?php elseif ($jaComprado): ?>
             <span class="dia-comprado-badge"><i class="bi bi-check-circle-fill"></i> já comprado</span>
@@ -204,7 +213,7 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
                            data-rm-id="<?= $prato['rm_id'] ?>"
                            data-preco="<?= $prato['preco'] ?>"
                            data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $prato['nome']) ?>"
-                           <?= ($data < $hojeStr || $jaComprado) ? 'disabled' : '' ?>>
+                           <?= ($diaBloqueado || $jaComprado) ? 'disabled' : '' ?>>
                     <span class="prato-opcao-label">
                         <strong><?= htmlspecialchars($tipoNome) ?></strong>
                         <small><?= htmlspecialchars($prato['nome']) ?></small>
@@ -216,7 +225,7 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
         <?php
         $precoMC = $precosMenuCompleto[$data] ?? null;
-        if ($precoMC !== null && !$jaComprado): ?>
+        if ($precoMC !== null && !$jaComprado && !$diaBloqueado): ?>
         <label class="menu-completo-toggle">
             <input type="checkbox" class="checkbox-menu-completo"
                    data-preco-mc="<?= $precoMC ?>">
@@ -224,18 +233,18 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         </label>
         <?php endif; ?>
 
-        <?php if (!empty($componentesExtra) && !$jaComprado): ?>
+        <?php if (!empty($componentesExtra) && !$jaComprado && !$diaBloqueado): ?>
         <div class="dia-componentes"> 
             <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
-    <label class="componente-opcao">
-        <input type="checkbox" class="checkbox-componente"
-               data-rm-id="<?= $comp['rm_id'] ?>"
-               data-preco="<?= $comp['preco'] ?>"
-               data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
-        <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
-        <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
-    </label>
-<?php endforeach; ?>
+            <label class="componente-opcao">
+                <input type="checkbox" class="checkbox-componente"
+                       data-rm-id="<?= $comp['rm_id'] ?>"
+                       data-preco="<?= $comp['preco'] ?>"
+                       data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
+                <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
+                <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
+            </label>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -262,17 +271,17 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
         <div class="extras-lista">
             <?php foreach ($extras as $e):
-    $precoExtra = $precosBatch[(int) $e['RM_TP_ID']] ?? 0;
-?>
-    <label class="componente-opcao">
-        <input type="checkbox" class="checkbox-extra"
-               data-rm-id="<?= $e['RM_ID'] ?>"
-               data-preco="<?= $precoExtra ?>"
-               data-nome="<?= htmlspecialchars($e['RM_NOME']) ?>">
-        <span class="nome-extra"><?= htmlspecialchars($e['RM_NOME']) ?></span>
-        <span class="preco-extra"><?= number_format($precoExtra, 2, ',', '') ?>€</span>
-    </label>
-<?php endforeach; ?>
+                $precoExtra = $precosBatch[(int) $e['RM_TP_ID']] ?? 0;
+            ?>
+            <label class="componente-opcao">
+                <input type="checkbox" class="checkbox-extra"
+                       data-rm-id="<?= $e['RM_ID'] ?>"
+                       data-preco="<?= $precoExtra ?>"
+                       data-nome="<?= htmlspecialchars($e['RM_NOME']) ?>">
+                <span class="nome-extra"><?= htmlspecialchars($e['RM_NOME']) ?></span>
+                <span class="preco-extra"><?= number_format($precoExtra, 2, ',', '') ?>€</span>
+            </label>
+            <?php endforeach; ?>
         </div>
     </div>
     <?php endif; ?>

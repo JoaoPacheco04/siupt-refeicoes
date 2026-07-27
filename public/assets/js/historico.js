@@ -68,13 +68,22 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
     modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--primary', () => modal.close());
     modal.open();
 
-    new QRCode(document.getElementById('qr-historico'), {
-        text: qrcode,
-        width: 200,
-        height: 200,
-        colorDark: '#1e2a3b',
-        colorLight: '#ffffff'
-    });
+    const elQr = document.getElementById('qr-historico');
+if (elQr) {
+    try {
+        new QRCode(elQr, {
+            text: qrcode,
+            width: 200,
+            height: 200,
+            colorDark: '#1e2a3b',
+            colorLight: '#ffffff'
+        });
+    } catch (err) {
+        console.error('Falha ao desenhar QR code:', err);
+    }
+} else {
+    console.warn('Elemento qr-historico não encontrado.');
+}
 }
 // ── Retomar pagamento de um pedido pendente ────────────────────────────────
 document.querySelectorAll('.btn-pagar-agora').forEach(btn => {
