@@ -4,6 +4,33 @@
     padding: 1.25rem 1.5rem;
 }
 
+/* ── Banner semana avançada (melhoria #1) ─────────────────────── */
+.banner-semana-avancada {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid #3b82f6;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-size: 0.82rem;
+    color: #1d4ed8;
+    margin-bottom: 0.75rem;
+    animation: slideDown 0.3s ease;
+}
+
+.banner-semana-avancada i {
+    font-size: 1rem;
+    flex-shrink: 0;
+    color: #3b82f6;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 .ementa-cabecalho {
     margin-bottom: 1rem;
 }
@@ -140,6 +167,14 @@
     margin-bottom: 0.6rem;
 }
 
+/* ── Ícone tipo de prato (melhoria #2) ────────────────────────── */
+.prato-tipo-icone {
+    font-size: 1.35rem;
+    line-height: 1;
+    flex-shrink: 0;
+    user-select: none;
+}
+
 .prato-opcao {
     flex: 1;
     min-width: 140px;
@@ -150,12 +185,20 @@
     border-radius: 8px;
     padding: 0.6rem 0.75rem;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
 
+/* ── Micro-animação ao selecionar prato (melhoria #6) ─────────── */
 .prato-opcao:has(input:checked) {
     border-color: #3a78b5;
     background: #eaf3fb;
+    animation: prato-pop 0.2s ease;
+}
+
+@keyframes prato-pop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.025); }
+    100% { transform: scale(1); }
 }
 
 .prato-opcao-label {
@@ -187,16 +230,42 @@
     cursor: pointer;
 }
 
-.dia-componentes {
-    display: none;
-    gap: 1rem;
-    flex-wrap: wrap;
+/* ── Hint + transição suave nos componentes (melhorias #3 e #5) ─ */
+.dia-componentes-wrap {
     padding-top: 0.5rem;
     border-top: 1px dashed #e5e9ef;
+    margin-top: 0.2rem;
+}
+
+.componentes-hint {
+    font-size: 0.75rem;
+    color: #8a99ad;
+    margin: 0 0 0.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: opacity 0.2s;
+}
+
+.dia-componentes-wrap.tem-prato .componentes-hint {
+    display: none;
+}
+
+.dia-componentes {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.28s ease, opacity 0.22s ease;
+    pointer-events: none;
 }
 
 .dia-componentes.visivel {
-    display: flex;
+    max-height: 300px;
+    opacity: 1;
+    pointer-events: auto;
 }
 
 .componente-opcao {
@@ -241,16 +310,36 @@
     margin-top: 1.5rem;
 }
 
+/* ── Select de data dos extras (melhoria #7) ─────────────────── */
 .extras-data-escolha {
-    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.85rem;
     font-size: 0.85rem;
+    font-weight: 600;
+    color: #1e2a3b;
 }
 
 .extras-data-escolha select {
-    margin-left: 0.5rem;
-    padding: 0.3rem 0.5rem;
-    border-radius: 4px;
-    border: 1px solid #dee2e6;
+    padding: 0.4rem 2rem 0.4rem 0.75rem;
+    border-radius: 6px;
+    border: 1.5px solid #dee2e6;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 16 16'%3E%3Cpath fill='%236a7280' d='M7.247 11.14L2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E") no-repeat right 0.65rem center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    font-size: 0.83rem;
+    font-family: inherit;
+    color: #1e2a3b;
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.extras-data-escolha select:focus {
+    outline: none;
+    border-color: #3a78b5;
+    box-shadow: 0 0 0 3px rgba(58, 120, 181, 0.12);
 }
 
 .extras-lista {
@@ -292,6 +381,18 @@
     align-items: center;
     gap: 1.25rem;
     color: #fff;
+}
+
+/* ── Bounce no contador quando muda (melhoria #8) ────────────── */
+@keyframes contador-bounce {
+    0%   { transform: scale(1); }
+    40%  { transform: scale(1.35); }
+    70%  { transform: scale(0.9); }
+    100% { transform: scale(1); }
+}
+
+.resumo-count span.bounce {
+    animation: contador-bounce 0.3s ease;
 }
 
 .resumo-count {
@@ -409,8 +510,22 @@
         padding: 0.85rem 1rem;
     }
 
+    /* ── Touch areas mobile (melhoria #4) ──────────────────────── */
     .prato-opcao {
         min-width: 100%;
+        min-height: 54px;
+        padding: 0.85rem 1rem;
+    }
+
+    .componente-opcao {
+        min-height: 50px;
+        padding: 0.75rem 1rem;
+    }
+
+    .prato-opcao:active,
+    .componente-opcao:active {
+        transform: scale(0.97);
+        transition: transform 0.08s;
     }
 
     .resumo-fixo {
@@ -441,4 +556,10 @@
 .menu-completo-toggle:has(input:disabled) {
     opacity: 0.4;
     cursor: not-allowed;
+}
+
+.dia-card .aviso-duplicado,
+.dia-card .aviso-duplicado a,
+.dia-card .aviso-duplicado * {
+    pointer-events: auto !important;
 }

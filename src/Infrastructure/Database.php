@@ -253,96 +253,117 @@ class Database {
     // ============================================
 
     /**
-     * $itens = [ ['rm_id' => int, 'menu_completo' => bool], ... ]
-     */
-    public static function criarPedido(int $utilizadorId, string $dataRefeicao, array $itens): int|string {
-        if (empty($itens)) {
-            return 'sem_itens';
-        }
-
-        $pdo = self::conexao();
-        $pdo->beginTransaction();
-
-        try {
-            $precoTotal = 0;
-            $linhasValidadas = [];
-
-            foreach ($itens as $item) {
-                $stmt = $pdo->prepare("SELECT RM_ID, RM_TP_ID, RM_DATA FROM restaurante_menu WHERE RM_ID = ?");
-                $stmt->execute([$item['rm_id']]);
-                $prato = $stmt->fetch();
-
-                if (!$prato) {
-                    $pdo->rollBack();
-                    return 'prato_invalido';
-                }
-
-                $menuCompleto = !empty($item['menu_completo']);
-
-                if ($menuCompleto && $prato['RM_DATA'] === null) {
-                    $pdo->rollBack();
-                    return 'menu_completo_invalido_para_extra';
-                }
-
-                if (self::foraDePrazo((int) $prato['RM_TP_ID'], $dataRefeicao)) {
-                    $pdo->rollBack();
-                    return 'fora_de_prazo';
-                }
-
-                if ($menuCompleto) {
-                    $tipoPrecoId = self::obterTipoIdPorNome('Menu Completo');
-                    if ($tipoPrecoId === null) {
-                        $pdo->rollBack();
-                        return 'menu_completo_nao_configurado';
-                    }
-                } else {
-                    $tipoPrecoId = (int) $prato['RM_TP_ID'];
-                }
-
-                $preco = self::obterPrecoVigente($tipoPrecoId, $dataRefeicao);
-                if ($preco === null) {
-                    $pdo->rollBack();
-                    return 'sem_preco_definido';
-                }
-
-                $linhasValidadas[] = [
-                    'rm_id' => $prato['RM_ID'],
-                    'menu_completo' => $menuCompleto,
-                    'preco' => $preco,
-                ];
-                $precoTotal += $preco;
-            }
-
-            $qrcode = bin2hex(random_bytes(24)); // 48 caracteres
-
-            $stmt = $pdo->prepare("INSERT INTO restaurante_pedido (RP_U_ID, RP_DATA_REFEICAO, RP_PRECO_TOTAL, RP_QRCODE, RP_UTILIZADO)
-                                    VALUES (?, ?, ?, ?, 0)");
-            $stmt->execute([$utilizadorId, $dataRefeicao, $precoTotal, $qrcode]);
-            $pedidoId = (int) $pdo->lastInsertId();
-
-            // Código curto aleatório — verifica colisão antes de gravar (extremamente raro, mas seguro)
-do {
-    $codigoCurto = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
-    $existe = $pdo->prepare("SELECT 1 FROM restaurante_pedido WHERE RP_CODIGO_CURTO = ?");
-    $existe->execute([$codigoCurto]);
-} while ($existe->fetch());
-
-$pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?")
-    ->execute([$codigoCurto, $pedidoId]);
-
-            $stmtLinha = $pdo->prepare("INSERT INTO restaurante_compra (RC_RP_ID, RC_MENU_COMPLETO, RC_RM_ID, RC_PRECO)
-                                         VALUES (?, ?, ?, ?)");
-            foreach ($linhasValidadas as $linha) {
-                $stmtLinha->execute([$pedidoId, $linha['menu_completo'] ? 1 : 0, $linha['rm_id'], $linha['preco']]);
-            }
-
-            $pdo->commit();
-            return $pedidoId;
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            throw $e;
-        }
+ * $itens = [ ['rm_id' => int, 'menu_completo' => bool], ... ]
+ */
+public static function criarPedido(int $utilizadorId, string $dataRefeicao, array $itens): int|string {
+    if (empty($itens)) {
+        return 'sem_itens';
     }
+
+    $pdo = self::conexao();
+    $pdo->beginTransaction();
+
+    try {
+        // Impede pedido duplicado para o mesmo dia — lock para reduzir corrida entre pedidos simultâneos
+        $stmtDup = $pdo->prepare("
+            SELECT COUNT(*) FROM restaurante_pedido WITH (UPDLOCK, HOLDLOCK)
+            WHERE RP_U_ID = ? AND RP_DATA_REFEICAO = ? AND RP_PAGO = 1
+        ");
+        $stmtDup->execute([$utilizadorId, $dataRefeicao]);
+        if ((int) $stmtDup->fetchColumn() > 0) {
+            $pdo->rollBack();
+            return 'pedido_duplicado';
+        }
+
+        $precoTotal = 0;
+        $linhasValidadas = [];
+
+        foreach ($itens as $item) {
+            $stmt = $pdo->prepare("SELECT RM_ID, RM_TP_ID, RM_DATA FROM restaurante_menu WHERE RM_ID = ?");
+            $stmt->execute([$item['rm_id']]);
+            $prato = $stmt->fetch();
+
+            if (!$prato) {
+                $pdo->rollBack();
+                return 'prato_invalido';
+            }
+
+            $menuCompleto = !empty($item['menu_completo']);
+
+            if ($menuCompleto && $prato['RM_DATA'] === null) {
+                $pdo->rollBack();
+                return 'menu_completo_invalido_para_extra';
+            }
+
+            // Corte de horário para extras "de hoje" (pratos sem RM_DATA)
+            if ($prato['RM_DATA'] === null && self::extraForaDeHorarioHoje($dataRefeicao)) {
+                $pdo->rollBack();
+                return 'extra_fora_de_horario';
+            }
+
+            if (self::foraDePrazo((int) $prato['RM_TP_ID'], $dataRefeicao)) {
+                $pdo->rollBack();
+                return 'fora_de_prazo';
+            }
+
+            if ($menuCompleto) {
+                $tipoPrecoId = self::obterTipoIdPorNome('Menu Completo');
+                if ($tipoPrecoId === null) {
+                    $pdo->rollBack();
+                    return 'menu_completo_nao_configurado';
+                }
+            } else {
+                $tipoPrecoId = (int) $prato['RM_TP_ID'];
+            }
+
+            $preco = self::obterPrecoVigente($tipoPrecoId, $dataRefeicao);
+            if ($preco === null) {
+                $pdo->rollBack();
+                return 'sem_preco_definido';
+            }
+
+            $linhasValidadas[] = [
+                'rm_id' => $prato['RM_ID'],
+                'menu_completo' => $menuCompleto,
+                'preco' => $preco,
+            ];
+            $precoTotal += $preco;
+        }
+
+        $qrcode = bin2hex(random_bytes(24)); // 48 caracteres
+
+        $stmt = $pdo->prepare("INSERT INTO restaurante_pedido (RP_U_ID, RP_DATA_REFEICAO, RP_PRECO_TOTAL, RP_QRCODE, RP_UTILIZADO)
+                                VALUES (?, ?, ?, ?, 0)");
+        $stmt->execute([$utilizadorId, $dataRefeicao, $precoTotal, $qrcode]);
+        $pedidoId = (int) $pdo->lastInsertId();
+
+        // Código curto aleatório — verifica colisão antes de gravar (extremamente raro, mas seguro)
+        $tentativas = 0;
+        do {
+            if (++$tentativas > 10) {
+                throw new RuntimeException('Não foi possível gerar um código curto único após 10 tentativas.');
+            }
+            $codigoCurto = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+            $existe = $pdo->prepare("SELECT 1 FROM restaurante_pedido WHERE RP_CODIGO_CURTO = ?");
+            $existe->execute([$codigoCurto]);
+        } while ($existe->fetch());
+
+        $pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?")
+            ->execute([$codigoCurto, $pedidoId]);
+
+        $stmtLinha = $pdo->prepare("INSERT INTO restaurante_compra (RC_RP_ID, RC_MENU_COMPLETO, RC_RM_ID, RC_PRECO)
+                                     VALUES (?, ?, ?, ?)");
+        foreach ($linhasValidadas as $linha) {
+            $stmtLinha->execute([$pedidoId, $linha['menu_completo'] ? 1 : 0, $linha['rm_id'], $linha['preco']]);
+        }
+
+        $pdo->commit();
+        return $pedidoId;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
 
     public static function obterPedido(int $pedidoId): array|false {
         $stmt = self::conexao()->prepare("SELECT * FROM restaurante_pedido WHERE RP_ID = ?");
@@ -482,4 +503,14 @@ $pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?
         $stmt->execute([$funcionarioId]);
         return $stmt->fetchAll();
     }
+
+    public static function extraForaDeHorarioHoje(string $dataRefeicao): bool {
+    if ($dataRefeicao !== date('Y-m-d')) {
+        return false; 
+    }
+    if (!defined('EXTRA_HORA_LIMITE_HOJE')) {
+        return false;
+    }
+    return date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
+}
 }

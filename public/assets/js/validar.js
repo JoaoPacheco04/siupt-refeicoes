@@ -126,12 +126,12 @@ function mostrarResultado(status, dados = {}) {
             estado: 'QR code já utilizado',
             nome: dados.nome ?? ''
         },
-        vencido: {
+        expirado: {
             classe: 'erro',
             icone: '❌',
             estado: 'Pedido expirado (data de refeição já passou)',
             nome: dados.nome ?? ''
-        },
+},
         invalido: {
             classe: 'erro',
             icone: '🚫',

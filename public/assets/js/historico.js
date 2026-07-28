@@ -69,21 +69,21 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
     modal.open();
 
     const elQr = document.getElementById('qr-historico');
-if (elQr) {
-    try {
-        new QRCode(elQr, {
-            text: qrcode,
-            width: 200,
-            height: 200,
-            colorDark: '#1e2a3b',
-            colorLight: '#ffffff'
-        });
-    } catch (err) {
-        console.error('Falha ao desenhar QR code:', err);
+    if (elQr) {
+        try {
+            new QRCode(elQr, {
+                text: qrcode,
+                width: 200,
+                height: 200,
+                colorDark: '#1e2a3b',
+                colorLight: '#ffffff'
+            });
+        } catch (err) {
+            console.error('Falha ao desenhar QR code:', err);
+        }
+    } else {
+        console.warn('Elemento qr-historico não encontrado.');
     }
-} else {
-    console.warn('Elemento qr-historico não encontrado.');
-}
 }
 // ── Retomar pagamento de um pedido pendente ────────────────────────────────
 document.querySelectorAll('.btn-pagar-agora').forEach(btn => {
@@ -131,7 +131,7 @@ async function confirmarPagamentoHistorico(pedidoId, sucesso, modalPagamento) {
         dados = { status: 'erro', detalhe: [] };
     }
 
-    const confirmado = (dados.detalhe || []).some(d => d.status === 'confirmado');
+    const confirmado = (dados.detalhe || []).find(d => d.status === 'confirmado');
 
     const modalResultado = new tingle.modal({
         footer: true,
@@ -139,19 +139,48 @@ async function confirmarPagamentoHistorico(pedidoId, sucesso, modalPagamento) {
         cssClass: ['tingle-siupt']
     });
 
-    modalResultado.setContent(confirmado ? `
-        <div class="modal-siupt-header sucesso">
-            <i class="bi bi-check-circle-fill"></i>
-            <h4>Pagamento confirmado!</h4>
-        </div>
-        <p class="text-muted small">O QR code já está disponível.</p>
-    ` : `
-        <div class="modal-siupt-header erro">
-            <i class="bi bi-x-circle-fill"></i>
-            <h4>Pagamento não confirmado</h4>
-        </div>
-        <p class="text-muted small">Podes tentar novamente quando quiseres.</p>
-    `);
+    if (confirmado) {
+        modalResultado.setContent(`
+            <div class="modal-siupt-header sucesso">
+                <i class="bi bi-check-circle-fill"></i>
+                <h4>Pagamento confirmado!</h4>
+            </div>
+            <div class="text-center py-2">
+                <div id="qr-hist-pago" style="display:inline-block;"></div>
+                <p class="codigo-curto">${escHtml(confirmado.codigo_curto ?? '')}</p>
+            </div>
+            <p class="text-muted small text-center">
+                <i class="bi bi-info-circle"></i>
+                Apresenta este código na cantina no momento da recolha.
+            </p>
+        `);
+    } else {
+        modalResultado.setContent(`
+            <div class="modal-siupt-header erro">
+                <i class="bi bi-x-circle-fill"></i>
+                <h4>Pagamento não confirmado</h4>
+            </div>
+            <p class="text-muted small">Podes tentar novamente quando quiseres.</p>
+        `);
+    }
+
     modalResultado.addFooterBtn('Continuar', 'tingle-btn tingle-btn--primary', () => location.reload());
     modalResultado.open();
+
+    if (confirmado) {
+        const elQrPago = document.getElementById('qr-hist-pago');
+        if (elQrPago) {
+            try {
+                new QRCode(elQrPago, {
+                    text: confirmado.qrcode,
+                    width: 180,
+                    height: 180,
+                    colorDark: '#1e2a3b',
+                    colorLight: '#ffffff'
+                });
+            } catch (err) {
+                console.error('Falha ao desenhar QR após pagamento:', err);
+            }
+        }
+    }
 }
