@@ -41,15 +41,11 @@ document.querySelectorAll('.radio-prato-principal').forEach(radio => {
 // ── Visibilidade dos componentes (Sopa/Sobremesa/Bebida) ──────────────────
 function syncComponentesVisibility(card) {
     const menuCompletoBox = card.querySelector('.checkbox-menu-completo');
-    const componentes     = card.querySelector('.dia-componentes');
-    const wrap            = card.querySelector('.dia-componentes-wrap');
+    const componentes = card.querySelector('.dia-componentes');
     if (!componentes) return;
 
-    const temPrato = card.querySelector('.radio-prato-principal:checked') !== null;
-    const mostrar  = temPrato && !(menuCompletoBox?.checked ?? false);
-
+    const mostrar = !(menuCompletoBox?.checked ?? false);
     componentes.classList.toggle('visivel', mostrar);
-    if (wrap) wrap.classList.toggle('tem-prato', temPrato);
 }
 
 document.querySelectorAll('.dia-card').forEach(syncComponentesVisibility);
@@ -147,8 +143,6 @@ function coletarSelecoes() {
     return selecoes;
 }
 
-let _ultimoTotalItens = 0;
-
 function atualizarResumo() {
     const selecoes = coletarSelecoes();
     let totalItens = 0;
@@ -160,15 +154,6 @@ function atualizarResumo() {
             totalValor += item.preco;
         });
     });
-
-    // Bounce no contador quando o valor muda (melhoria #8)
-    if (totalItens !== _ultimoTotalItens) {
-        totalSelecionadasEl.classList.remove('bounce');
-        // força reflow para a animação disparar mesmo se já estava a correr
-        void totalSelecionadasEl.offsetWidth;
-        totalSelecionadasEl.classList.add('bounce');
-        _ultimoTotalItens = totalItens;
-    }
 
     totalSelecionadasEl.textContent = totalItens;
     totalValorEl.textContent = totalValor.toFixed(2).replace('.', ',') + '€';

@@ -18,7 +18,7 @@ unset($p);
 // Ordenar: ativos primeiro (data ascendente — mais urgente no topo),
 // depois os restantes por data descendente
 usort($pedidos, function($a, $b) {
-    $ordemEstado = ['nao_pago' => 0, 'ativo' => 1, 'utilizado' => 2, 'expirado' => 3];
+    $ordemEstado = ['nao_pago' => 0, 'ativo' => 1, 'utilizado' => 2, 'vencido' => 3];
     $oA = $ordemEstado[$a['estado']] ?? 4;
     $oB = $ordemEstado[$b['estado']] ?? 4;
     if ($oA !== $oB) return $oA - $oB;
@@ -29,15 +29,15 @@ usort($pedidos, function($a, $b) {
 
 $estados = [
     'nao_pago'  => ['label' => 'Pagamento pendente', 'class' => 'estado-nao-pago'],
-    'ativo'     => ['label' => 'Ativo',              'class' => 'estado-ativo'],
-    'utilizado' => ['label' => 'Levantado',          'class' => 'estado-utilizado'],
-    'expirado'  => ['label' => 'Vencido',            'class' => 'estado-vencido'],
+    'ativo'     => ['label' => 'Ativo',     'class' => 'estado-ativo'],
+    'utilizado' => ['label' => 'Levantado', 'class' => 'estado-utilizado'],
+    'vencido'   => ['label' => 'Vencido',   'class' => 'estado-vencido'],
 ];
 
 $numerosDia = [1 => '2ª', 2 => '3ª', 3 => '4ª', 4 => '5ª', 5 => '6ª', 6 => 'Sáb', 7 => 'Dom'];
 
 // Contagens para os filtros
-$contagens = ['todos' => count($pedidos), 'nao_pago' => 0, 'ativo' => 0, 'utilizado' => 0, 'expirado' => 0];
+$contagens = ['todos' => count($pedidos), 'nao_pago' => 0, 'ativo' => 0, 'utilizado' => 0, 'vencido' => 0];
 foreach ($pedidos as $p) {
     if (isset($contagens[$p['estado']])) $contagens[$p['estado']]++;
 }
@@ -109,8 +109,8 @@ foreach ($pedidos as $p) {
         <button class="btn-filtro<?= $contagens['utilizado'] === 0 ? ' filtro-vazio' : '' ?>" data-filtro="utilizado" id="filtro-utilizado">
             Levantados <span class="filtro-conta"><?= $contagens['utilizado'] ?></span>
         </button>
-        <button class="btn-filtro<?= $contagens['expirado'] === 0 ? ' filtro-vazio' : '' ?>" data-filtro="expirado" id="filtro-vencido">
-            Vencidos <span class="filtro-conta"><?= $contagens['expirado'] ?></span>
+        <button class="btn-filtro<?= $contagens['vencido'] === 0 ? ' filtro-vazio' : '' ?>" data-filtro="vencido" id="filtro-vencido">
+            Vencidos <span class="filtro-conta"><?= $contagens['vencido'] ?></span>
         </button>
     </div>
     <?php endif; ?>

@@ -27,9 +27,7 @@ function todosPratosForaDePrazo(array $pratos, array $limitesBatch): bool {
     return true;
 }
 
-$semanaAvancada = false;
 if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
-    $semanaAvancada = true;
     $segunda->modify('+7 days');
     $sexta->modify('+7 days');
     $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
@@ -37,13 +35,6 @@ if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
     $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
 }
-
-// Ícones por tipo de prato principal
-$iconePrato = [
-    'Carne'       => '🥩',
-    'Peixe'       => '🐟',
-    'Vegetariano' => '🌿',
-];
 
 $extras = Database::listarPratosExtras();
 $tipoMenuCompletoId = Database::obterTipoIdPorNome('Menu Completo');
@@ -90,13 +81,8 @@ $datasComPedido = array_flip(
 );
 
 // ── Próximos dias úteis para os extras (sem fim de semana) ───────────────
-// Se já passou o horário de corte de hoje, "hoje" já não é opção válida
-$hojeBloqueadoExtras = defined('EXTRA_HORA_LIMITE_HOJE') && date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
 $diasUteisExtras = [];
 $cursor = new DateTime();
-if ($hojeBloqueadoExtras) {
-    $cursor->modify('+1 day'); // pula "hoje" — já passou o horário de corte
-}
 while (count($diasUteisExtras) < 5) {
     if ((int) $cursor->format('N') <= 5) { // 1=Seg … 5=Sex
         $diasUteisExtras[] = $cursor->format('Y-m-d');
@@ -170,13 +156,6 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         <p class="ementa-horario">Prazo de compra: <?= htmlspecialchars($prazotexto) ?></p>
     </div>
 
-    <?php if ($semanaAvancada): ?>
-    <div class="banner-semana-avancada" role="alert">
-        <i class="bi bi-info-circle-fill"></i>
-        A semana atual já está fora de prazo. A mostrar a ementa da <strong>próxima semana</strong>.
-    </div>
-    <?php endif; ?>
-
     <h2 class="ementa-semana">semana de <?= $segunda->format('d') ?> a <?= $sexta->format('d') ?> de <?= $nomeMes ?></h2>
 
     <?php if (empty($diasEmenta)): ?>
@@ -221,10 +200,11 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         </div>
 
         <?php if ($jaComprado): ?>
-<p class="aviso-duplicado">
-    Já tens um pedido ativo para este dia.
-<a href="historico.php" style="pointer-events: auto; position: relative; z-index: 999;">Ver as minhas compras →</a></p>
-<?php endif; ?>
+        <p class="aviso-duplicado">
+            Já tens um pedido ativo para este dia.
+            <a href="historico.php">Ver as minhas compras →</a>
+        </p>
+        <?php endif; ?>
 
         <div class="dia-pratos-principais">
             <?php foreach ($pratosPrincipais as $tipoNome => $prato): ?>
@@ -234,7 +214,6 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
                            data-preco="<?= $prato['preco'] ?>"
                            data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $prato['nome']) ?>"
                            <?= ($diaBloqueado || $jaComprado) ? 'disabled' : '' ?>>
-                    <span class="prato-tipo-icone"><?= $iconePrato[$tipoNome] ?? '' ?></span>
                     <span class="prato-opcao-label">
                         <strong><?= htmlspecialchars($tipoNome) ?></strong>
                         <small><?= htmlspecialchars($prato['nome']) ?></small>
@@ -255,20 +234,17 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         <?php endif; ?>
 
         <?php if (!empty($componentesExtra) && !$jaComprado && !$diaBloqueado): ?>
-        <div class="dia-componentes-wrap">
-            <p class="componentes-hint"><i class="bi bi-hand-index"></i> Seleciona um prato para adicionar extras</p>
-            <div class="dia-componentes">
-                <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
-                <label class="componente-opcao">
-                    <input type="checkbox" class="checkbox-componente"
-                           data-rm-id="<?= $comp['rm_id'] ?>"
-                           data-preco="<?= $comp['preco'] ?>"
-                           data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
-                    <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
-                    <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
-                </label>
-                <?php endforeach; ?>
-            </div>
+        <div class="dia-componentes"> 
+            <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
+            <label class="componente-opcao">
+                <input type="checkbox" class="checkbox-componente"
+                       data-rm-id="<?= $comp['rm_id'] ?>"
+                       data-preco="<?= $comp['preco'] ?>"
+                       data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
+                <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
+                <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
+            </label>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
@@ -284,9 +260,9 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
             <select id="dataExtras">
                 <?php foreach ($diasUteisExtras as $i => $diaUtilStr):
                     $ndExtra = $nomesCompletoDia[(int) (new DateTime($diaUtilStr))->format('N')];
-                    if ($diaUtilStr === $hojeStr)       $label = 'Hoje — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
-                    elseif ($diaUtilStr === $amanhaStr) $label = 'Amanhã — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
-                    else                                $label = $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
+                    if ($i === 0)      $label = 'Hoje — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
+                    elseif ($i === 1) $label = 'Amanhã — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
+                    else              $label = $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
                 ?>
                 <option value="<?= $diaUtilStr ?>"><?= htmlspecialchars($label) ?></option>
                 <?php endforeach; ?>

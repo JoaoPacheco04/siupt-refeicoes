@@ -41,12 +41,12 @@ foreach ($pedidoIds as $id) {
     }
 
     $r = PagamentoService::processar($id, $sucesso, $refGatewayBatch);
-    $entrada = ['pedido_id' => $id, 'status' => $r['status']];
-    if ($r['status'] === 'confirmado') {
-        $entrada['qrcode']       = $pedido['RP_QRCODE'];
-        $entrada['codigo_curto'] = $pedido['RP_CODIGO_CURTO'];
-    }
-    $resultados[] = $entrada;
+    $resultados[] = [
+        'pedido_id'    => $id,
+        'status'       => $r['status'],
+        'qrcode'       => $pedido['RP_QRCODE'],
+        'codigo_curto' => $pedido['RP_CODIGO_CURTO'],
+    ];
 }
 
 echo json_encode([

@@ -117,7 +117,7 @@ document.querySelectorAll('.user-type-option').forEach(opt => {
         document.querySelectorAll('.user-type-option').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
         document.getElementById('labelNumero').textContent =
-            opt.dataset.tipo === 'estudante' ? 'Número de estudante' : 'Número de colaborador';
+            opt.dataset.tipo === 'estudante' ? 'Numero de estudante' : 'Numero de colaborador';
     });
 });
 </script>
