@@ -58,13 +58,12 @@ document.querySelectorAll('.btn-editar-extra').forEach(btn => {
         const precoAtual = precoAtualTexto.endsWith('€')
             ? precoAtualTexto.replace('€', '').replace(',', '.')
             : '';
-        const partilhado = item.dataset.partilhado === '1';
 
-        abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual, partilhado);
+        abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual);
     });
 });
 
-function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual, partilhado) {
+function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual) {
     const modal = new tingle.modal({
         footer: true,
         closeMethods: ['overlay', 'button', 'escape'],
@@ -72,22 +71,11 @@ function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual, partilhado) {
         cssClass: ['tingle-siupt']
     });
 
-    const avisoPartilhado = partilhado ? `
-        <div class="aviso-tipo-partilhado">
-            <i class="bi bi-exclamation-triangle"></i>
-            Este extra partilha o preço com outro prato. Mudar o preço aqui afeta ambos.
-            <button type="button" id="btnSepararTipo" class="btn-separar-tipo">
-                Dar preço próprio a este extra
-            </button>
-        </div>
-    ` : '';
-
     modal.setContent(`
         <div class="modal-siupt-header">
             <i class="bi bi-pencil-square"></i>
             <h4>Editar extra</h4>
         </div>
-        ${avisoPartilhado}
         <div class="form-campo">
             <label for="editNome">Nome</label>
             <input type="text" id="editNome" value="${escHtml(nomeAtual)}">
@@ -112,32 +100,6 @@ function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual, partilhado) {
     });
 
     modal.open();
-
-    if (partilhado) {
-        document.getElementById('btnSepararTipo').addEventListener('click', async () => {
-            await separarTipo(rmId);
-            modal.close();
-        });
-    }
-}
-
-async function separarTipo(rmId) {
-    try {
-        const resposta = await fetch('api/gerir_extras_separar_tipo.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ rm_id: rmId, csrf_token: CSRF_TOKEN })
-        });
-        const dados = await resposta.json();
-
-        if (dados.status === 'ok') {
-            location.reload();
-        } else {
-            mostrarErro(dados.mensagem || 'Não foi possível separar o preço deste extra.');
-        }
-    } catch (err) {
-        mostrarErro('Erro de rede ao separar o preço.');
-    }
 }
 
 async function guardarEdicao(rmId, tipoId, novoNome, novoPreco, nomeAtual, precoAtual) {
@@ -179,6 +141,34 @@ async function guardarEdicao(rmId, tipoId, novoNome, novoPreco, nomeAtual, preco
         mostrarErro('Erro de rede ao guardar as alterações.');
     }
 }
+
+// ── Apagar extra existente ──────────────────────────────────────────────
+document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const item = btn.closest('.extra-item');
+        const rmId = item.dataset.rmId;
+        const nome = item.querySelector('.extra-nome').textContent.trim();
+
+        if (!confirm(`Eliminar "${nome}"? Esta ação não pode ser desfeita.`)) return;
+
+        try {
+            const resposta = await fetch('api/gerir_extras_apagar.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ rm_id: rmId, csrf_token: CSRF_TOKEN })
+            });
+            const dados = await resposta.json();
+
+            if (dados.status === 'ok') {
+                location.reload();
+            } else {
+                mostrarErro(dados.mensagem || 'Não foi possível eliminar o extra.');
+            }
+        } catch (err) {
+            mostrarErro('Erro de rede ao eliminar o extra.');
+        }
+    });
+});
 
 // ── Modal de erro genérico ──────────────────────────────────────────────
 function mostrarErro(mensagem) {

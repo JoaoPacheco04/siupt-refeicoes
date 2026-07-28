@@ -115,33 +115,22 @@ function adicionarAListaValidacoes(dados) {
 
     const hora = new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 
+    const nomesItens = Array.isArray(dados.linhas) && dados.linhas.length > 0
+        ? dados.linhas.map(l => l.RM_NOME).join(', ')
+        : 'Sem itens registados';
+
     const item = document.createElement('div');
     item.className = 'validacao-item validacao-nova';
     item.innerHTML = `
         <div class="validacao-hora">${hora}</div>
-        <div class="validacao-nome">${escHtml(dados.nome ?? '')}</div>
+        <div class="validacao-info">
+            <span class="validacao-nome">${escHtml(dados.nome ?? '')}</span>
+            <span class="validacao-numero">Nº ${escHtml(dados.numero ?? '')}</span>
+            <span class="validacao-refeicao">${escHtml(nomesItens)}</span>
+        </div>
         <div class="validacao-pedido">#${dados.pedido_id ?? ''}</div>
     `;
     listaEl.prepend(item);
-}
-
-// ---- Sons de feedback (melhoria #4) ----
-function tocarSom(sucesso) {
-    try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = sucesso ? 880 : 220;
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-    } catch (e) {
-        // browsers que bloqueiam áudio sem interação prévia — ignora silenciosamente
-    }
 }
 
 // ---- Mostrar resultado ----

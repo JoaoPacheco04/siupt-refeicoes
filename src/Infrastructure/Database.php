@@ -549,17 +549,22 @@ class Database {
     }
 
     public static function listarValidacoesHoje(int $funcionarioId): array {
-        $stmt = self::conexao()->prepare("
-            SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, u.U_NOME
-            FROM restaurante_validacao rv
-            JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
-            JOIN users u ON rp.RP_U_ID = u.U_ID
-            WHERE rv.RV_FUNCIONARIO_ID = ? AND CAST(rv.RV_DATA_VALIDACAO AS DATE) = CAST(GETDATE() AS DATE)
-            ORDER BY rv.RV_DATA_VALIDACAO DESC
-        ");
-        $stmt->execute([$funcionarioId]);
-        return $stmt->fetchAll();
-    }
+    $stmt = self::conexao()->prepare("
+        SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO,
+               rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC,
+               STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS itens
+        FROM restaurante_validacao rv
+        JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
+        JOIN users u ON rp.RP_U_ID = u.U_ID
+        LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+        LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+        WHERE rv.RV_FUNCIONARIO_ID = ? AND CAST(rv.RV_DATA_VALIDACAO AS DATE) = CAST(GETDATE() AS DATE)
+        GROUP BY rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC
+        ORDER BY rv.RV_DATA_VALIDACAO DESC
+    ");
+    $stmt->execute([$funcionarioId]);
+    return $stmt->fetchAll();
+}
 
     public static function extraForaDeHorarioHoje(string $dataRefeicao): bool {
         if ($dataRefeicao !== date('Y-m-d')) {
@@ -658,5 +663,59 @@ class Database {
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+public static function atualizarNomeExtra(int $rmId, string $novoNome): bool {
+    $stmt = self::conexao()->prepare("UPDATE restaurante_menu SET RM_NOME = ? WHERE RM_ID = ? AND RM_DATA IS NULL");
+    $stmt->execute([$novoNome, $rmId]);
+    return $stmt->rowCount() > 0;
+}
+
+public static function atualizarPrecoTipo(int $tipoId, float $novoPreco): void {
+    self::conexao()->prepare("
+        INSERT INTO restaurante_preco_tipo_refeicao (RPTR_TP_ID, RPTR_PRECO, RPTR_DATAINICIO)
+        VALUES (?, ?, ?)
+    ")->execute([$tipoId, $novoPreco, date('Y-m-d')]);
+}
+
+
+public static function apagarExtra(int $rmId): string {
+    $pdo = self::conexao();
+
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM restaurante_compra WHERE RC_RM_ID = ?");
+    $stmt->execute([$rmId]);
+    if ((int) $stmt->fetchColumn() > 0) {
+        return 'ja_comprado';
+    }
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NULL");
+        $stmt->execute([$rmId]);
+        return $stmt->rowCount() > 0 ? 'ok' : 'nao_encontrado';
+    } catch (PDOException $e) {
+        return 'erro_bd';
+    }
+}
+
+/**
+ * Lista validações feitas por um funcionário numa data específica,
+ * incluindo os itens de cada refeição (agregados numa string).
+ */
+public static function listarValidacoesPorData(int $funcionarioId, string $data): array {
+    $stmt = self::conexao()->prepare("
+        SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO,
+               rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC,
+               STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS itens
+        FROM restaurante_validacao rv
+        JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
+        JOIN users u ON rp.RP_U_ID = u.U_ID
+        LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+        LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+        WHERE rv.RV_FUNCIONARIO_ID = ? AND CAST(rv.RV_DATA_VALIDACAO AS DATE) = ?
+        GROUP BY rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC
+        ORDER BY rv.RV_DATA_VALIDACAO DESC
+    ");
+    $stmt->execute([$funcionarioId, $data]);
+    return $stmt->fetchAll();
+}
 
 }

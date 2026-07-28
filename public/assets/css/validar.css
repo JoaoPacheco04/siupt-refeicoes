@@ -245,6 +245,38 @@
     color: #8a99ad;
 }
 
+/* ---- Cabeçalho da lista de validações + botão exportar ---- */
+.validacoes-lista-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1.75rem 0 0.75rem 0;
+}
+
+.validacoes-lista-header .validacoes-lista-titulo {
+    margin: 0;
+}
+
+.btn-exportar-log {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #f0f4f8;
+    color: #1a3a63;
+    border: 1px solid #d1d8e0;
+    border-radius: 6px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s;
+}
+
+.btn-exportar-log:hover {
+    background: #e5ecf3;
+    color: #1a3a63;
+}
+
 .validacoes-lista-titulo {
     font-family: 'Manrope', sans-serif;
     font-size: 1rem;
@@ -288,10 +320,23 @@
     min-width: 42px;
 }
 
-.validacao-nome {
+/* ---- Nome + número do aluno, agrupados ---- */
+.validacao-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.05rem;
+}
+
+.validacao-nome {
     color: #1e2a3b;
     font-weight: 600;
+}
+
+.validacao-numero {
+    font-size: 0.72rem;
+    color: #8a99ad;
+    font-family: 'Courier New', monospace;
 }
 
 .validacao-pedido {
@@ -348,4 +393,30 @@
     font-size: 0.85rem;
     margin: 0;
     line-height: 1.5;
+}
+
+.validacao-refeicao {
+    font-size: 0.76rem;
+    color: #6a7280;
+    margin-top: 0.1rem;
+}
+
+.validacoes-lista-acoes {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-data-log {
+    border: 1px solid #d1d8e0;
+    border-radius: 6px;
+    padding: 0.4rem 0.6rem;
+    font-size: 0.78rem;
+    color: #1e2a3b;
+    outline: none;
+}
+
+.input-data-log:focus {
+    border-color: #73c5d8;
+    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
 }

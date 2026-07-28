@@ -91,7 +91,12 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 </div>
 
     <!-- Lista de validações de hoje -->
+   <div class="validacoes-lista-header">
     <h2 class="validacoes-lista-titulo">Validações de hoje</h2>
+    <a href="api/exportar_validacoes.php" class="btn-exportar-log">
+        <i class="bi bi-download"></i> Exportar
+    </a>
+</div>
     <div id="listaValidacoes" class="lista-validacoes">
         <?php if (empty($listaValidacoes)): ?>
             <p class="lista-validacoes-vazia" id="listaVazia">
@@ -103,7 +108,11 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
             ?>
             <div class="validacao-item">
                 <div class="validacao-hora"><?= $hora ?></div>
-                <div class="validacao-nome"><?= htmlspecialchars($v['U_NOME']) ?></div>
+                <div class="validacao-info">
+                    <span class="validacao-nome"><?= htmlspecialchars($v['U_NOME']) ?></span>
+                    <span class="validacao-numero">Nº <?= htmlspecialchars($v['U_BICC']) ?></span>
+                    <span class="validacao-refeicao"><?= htmlspecialchars($v['itens'] ?? 'Sem itens registados') ?></span>
+                </div>
                 <div class="validacao-pedido">#<?= $v['RP_ID'] ?></div>
             </div>
             <?php endforeach; ?>

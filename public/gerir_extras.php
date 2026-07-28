@@ -5,10 +5,6 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('funcionario');
 
-// A função listarPratosExtrasComPreco() não existe.
-// A lógica atual é listar os extras e depois obter os preços em batch.
-// No entanto, para esta página, precisamos de mais detalhes, como se o tipo é partilhado.
-// Vou criar uma função para isso.
 $extras = Database::listarDetalhesExtrasParaGestao();
 
 ?>
@@ -106,7 +102,10 @@ $extras = Database::listarDetalhesExtrasParaGestao();
                 <?= $e['preco_atual'] !== null ? number_format($e['preco_atual'], 2, ',', '') . '€' : 'sem preço' ?>
             </div>
             <button class="btn-editar-extra" title="Editar">
-                <i class="bi bi-pencil"></i>
+            <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn-apagar-extra" title="Eliminar">
+                <i class="bi bi-trash"></i>
             </button>
         </div>
         <?php endforeach; ?>
