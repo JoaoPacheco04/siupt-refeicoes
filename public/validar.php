@@ -36,6 +36,9 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
             <li id="menu_id_16" class=""><a href="#">Decisão</a></li>
         </ul>
     </nav>
+    <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
+        <i class="bi bi-egg-fried"></i>
+    </a>
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
         <div id="profile-photo" class="profile-avatar">
@@ -69,9 +72,9 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 
         <!-- Input manual -->
         <div class="scan-input-group">
-            <input type="text" id="inputQrManual" class="scan-input"
-                   placeholder="Escreva o código aqui…"
-                   autocomplete="off" spellcheck="false">
+           <input type="text" id="inputQrManual" class="scan-input"
+       placeholder="Código…"
+       autocomplete="off" spellcheck="false">
             <button id="btnValidarManual" class="btn-validar-manual">
                 <i class="bi bi-search"></i> Validar
             </button>
@@ -79,12 +82,13 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
     </div>
 
     <!-- Área de resultado -->
-    <div id="resultadoCard" class="resultado-card">
-        <span class="resultado-icone" id="resultadoIcone"></span>
-        <div class="resultado-estado" id="resultadoEstado"></div>
-        <div class="resultado-nome" id="resultadoNome"></div>
-        <ul class="resultado-linhas" id="resultadoLinhas"></ul>
-    </div>
+<div id="resultadoCard" class="resultado-card">
+    <span class="resultado-icone" id="resultadoIcone"></span>
+    <div class="resultado-estado" id="resultadoEstado"></div>
+    <div class="resultado-nome" id="resultadoNome"></div>
+    <div class="resultado-numero" id="resultadoNumero"></div>
+    <ul class="resultado-linhas" id="resultadoLinhas"></ul>
+</div>
 
     <!-- Lista de validações de hoje -->
     <h2 class="validacoes-lista-titulo">Validações de hoje</h2>

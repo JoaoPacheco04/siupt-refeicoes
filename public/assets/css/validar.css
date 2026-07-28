@@ -209,6 +209,16 @@
     margin-bottom: 0.75rem;
 }
 
+/* Número do aluno — em destaque, para confirmação visual de identidade */
+.resultado-numero {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+    margin-bottom: 0.75rem;
+}
+
 .resultado-linhas {
     list-style: none;
     padding: 0;
@@ -318,4 +328,24 @@
 
 .btn-validar-seguinte:hover {
     background: #219a52;
+}
+
+/* Aviso quando a câmara não está disponível */
+.sem-camara-aviso {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #8a99ad;
+}
+
+.sem-camara-aviso i {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #c4d0df;
+}
+
+.sem-camara-aviso p {
+    font-size: 0.85rem;
+    margin: 0;
+    line-height: 1.5;
 }

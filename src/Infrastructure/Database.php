@@ -67,6 +67,27 @@ class Database {
         return $stmt->fetchAll();
     }
 
+    public static function listarDetalhesExtrasParaGestao(): array {
+        $hoje = date('Y-m-d');
+        $stmt = self::conexao()->prepare("
+            SELECT
+                rm.RM_ID, rm.RM_NOME, rm.RM_TP_ID, rtp.RTP_NOME,
+                (
+                    SELECT TOP 1 RPTR_PRECO
+                    FROM restaurante_preco_tipo_refeicao
+                    WHERE RPTR_TP_ID = rm.RM_TP_ID AND RPTR_DATAINICIO <= ?
+                    ORDER BY RPTR_DATAINICIO DESC
+                ) as preco_atual
+            FROM restaurante_menu rm
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+            WHERE rm.RM_DATA IS NULL
+            ORDER BY rm.RM_NOME
+        ");
+        $stmt->execute([$hoje]);
+        return $stmt->fetchAll();
+    }
+
+
     public static function obterTipoIdPorNome(string $nome): ?int {
         $stmt = self::conexao()->prepare("SELECT RTP_ID FROM restaurante_tipo_refeicao WHERE RTP_NOME = ?");
         $stmt->execute([$nome]);
@@ -264,6 +285,33 @@ class Database {
         $pdo->beginTransaction();
 
         try {
+            // Só bloqueia duplicado se o pedido novo incluir um prato principal
+            // (RM_DATA IS NOT NULL). Extras isolados podem ser comprados mesmo
+            // já havendo um pedido pago para o mesmo dia.
+            $rmIds = array_values(array_unique(array_map(
+                fn($i) => (int) $i['rm_id'],
+                $itens
+            )));
+            $ph = implode(',', array_fill(0, count($rmIds), '?'));
+            $stmtTipo = $pdo->prepare("
+                SELECT COUNT(*) FROM restaurante_menu
+                WHERE RM_ID IN ($ph) AND RM_DATA IS NOT NULL
+            ");
+            $stmtTipo->execute($rmIds);
+            $temPratoPrincipal = (int) $stmtTipo->fetchColumn() > 0;
+
+            if ($temPratoPrincipal) {
+                $stmtDup = $pdo->prepare("
+                    SELECT COUNT(*) FROM restaurante_pedido WITH (UPDLOCK, HOLDLOCK)
+                    WHERE RP_U_ID = ? AND RP_DATA_REFEICAO = ? AND RP_PAGO = 1
+                ");
+                $stmtDup->execute([$utilizadorId, $dataRefeicao]);
+                if ((int) $stmtDup->fetchColumn() > 0) {
+                    $pdo->rollBack();
+                    return 'pedido_duplicado';
+                }
+            }
+
             $precoTotal = 0;
             $linhasValidadas = [];
 
@@ -282,6 +330,27 @@ class Database {
                 if ($menuCompleto && $prato['RM_DATA'] === null) {
                     $pdo->rollBack();
                     return 'menu_completo_invalido_para_extra';
+                }
+
+                // Corte de horário para extras "de hoje" (pratos sem RM_DATA)
+                if ($prato['RM_DATA'] === null && self::extraForaDeHorarioHoje($dataRefeicao)) {
+                    $pdo->rollBack();
+                    return 'extra_fora_de_horario';
+                }
+
+                // Impede comprar o mesmo extra duas vezes para o mesmo dia
+                if ($prato['RM_DATA'] === null) {
+                    $stmtExtraDup = $pdo->prepare("
+                        SELECT COUNT(*) FROM restaurante_compra rc
+                        JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
+                        WHERE rp.RP_U_ID = ? AND rp.RP_PAGO = 1
+                          AND rp.RP_DATA_REFEICAO = ? AND rc.RC_RM_ID = ?
+                    ");
+                    $stmtExtraDup->execute([$utilizadorId, $dataRefeicao, $prato['RM_ID']]);
+                    if ((int) $stmtExtraDup->fetchColumn() > 0) {
+                        $pdo->rollBack();
+                        return 'extra_duplicado';
+                    }
                 }
 
                 if (self::foraDePrazo((int) $prato['RM_TP_ID'], $dataRefeicao)) {
@@ -321,14 +390,18 @@ class Database {
             $pedidoId = (int) $pdo->lastInsertId();
 
             // Código curto aleatório — verifica colisão antes de gravar (extremamente raro, mas seguro)
-do {
-    $codigoCurto = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
-    $existe = $pdo->prepare("SELECT 1 FROM restaurante_pedido WHERE RP_CODIGO_CURTO = ?");
-    $existe->execute([$codigoCurto]);
-} while ($existe->fetch());
+            $tentativas = 0;
+            do {
+                if (++$tentativas > 10) {
+                    throw new RuntimeException('Não foi possível gerar um código curto único após 10 tentativas.');
+                }
+                $codigoCurto = strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
+                $existe = $pdo->prepare("SELECT 1 FROM restaurante_pedido WHERE RP_CODIGO_CURTO = ?");
+                $existe->execute([$codigoCurto]);
+            } while ($existe->fetch());
 
-$pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?")
-    ->execute([$codigoCurto, $pedidoId]);
+            $pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?")
+                ->execute([$codigoCurto, $pedidoId]);
 
             $stmtLinha = $pdo->prepare("INSERT INTO restaurante_compra (RC_RP_ID, RC_MENU_COMPLETO, RC_RM_ID, RC_PRECO)
                                          VALUES (?, ?, ?, ?)");
@@ -388,7 +461,7 @@ $pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?
         return $pedidos;
     }
 
-    // "Vencido" não é guardado — é sempre calculado no momento da leitura.
+    // "Expirado" não é guardado — é sempre calculado no momento da leitura.
     public static function calcularEstadoPedido(array $pedido): string {
         if (!$pedido['RP_PAGO']) {
             return 'nao_pago';
@@ -422,44 +495,49 @@ $pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?
     // Validação por QR code ou código curto (lado do funcionário)
     // ============================================
     public static function validarPorQrCode(string $qrcode, int $funcionarioId): array {
-        $pdo = self::conexao();
+    $pdo = self::conexao();
 
-        $stmt = $pdo->prepare("
-            SELECT rp.*, u.U_NOME FROM restaurante_pedido rp 
-            JOIN users u ON rp.RP_U_ID = u.U_ID 
-            WHERE rp.RP_QRCODE = ? OR rp.RP_CODIGO_CURTO = ?
-        ");
-        $stmt->execute([$qrcode, strtoupper(trim($qrcode))]);
-        $pedido = $stmt->fetch();
+    $stmt = $pdo->prepare("
+        SELECT rp.*, u.U_NOME, u.U_BICC FROM restaurante_pedido rp 
+        JOIN users u ON rp.RP_U_ID = u.U_ID 
+        WHERE rp.RP_QRCODE = ? OR rp.RP_CODIGO_CURTO = ?
+    ");
+    $stmt->execute([$qrcode, strtoupper(trim($qrcode))]);
+    $pedido = $stmt->fetch();
 
-        if (!$pedido) {
-            return ['status' => 'invalido'];
-        }
-
-        $estado = self::calcularEstadoPedido($pedido);
-        if ($estado !== 'ativo') {
-            return ['status' => $estado, 'nome' => $pedido['U_NOME']];
-        }
-
-        $pdo->beginTransaction();
-        try {
-            $stmt = $pdo->prepare("UPDATE restaurante_pedido SET RP_UTILIZADO = 1 WHERE RP_ID = ? AND RP_UTILIZADO = 0");
-            $stmt->execute([$pedido['RP_ID']]);
-
-            if ($stmt->rowCount() === 1) {
-                $pdo->prepare("INSERT INTO restaurante_validacao (RV_RP_ID, RV_FUNCIONARIO_ID) VALUES (?, ?)")
-                    ->execute([$pedido['RP_ID'], $funcionarioId]);
-                $pdo->commit();
-                return ['status' => 'valido', 'nome' => $pedido['U_NOME'], 'pedido_id' => $pedido['RP_ID']];
-            }
-
-            $pdo->rollBack();
-            return ['status' => 'utilizado', 'nome' => $pedido['U_NOME']];
-        } catch (Exception $e) {
-            $pdo->rollBack();
-            return ['status' => 'erro'];
-        }
+    if (!$pedido) {
+        return ['status' => 'invalido'];
     }
+
+    $estado = self::calcularEstadoPedido($pedido);
+    if ($estado !== 'ativo') {
+        return ['status' => $estado, 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
+    }
+
+    $pdo->beginTransaction();
+    try {
+        $stmt = $pdo->prepare("UPDATE restaurante_pedido SET RP_UTILIZADO = 1 WHERE RP_ID = ? AND RP_UTILIZADO = 0");
+        $stmt->execute([$pedido['RP_ID']]);
+
+        if ($stmt->rowCount() === 1) {
+            $pdo->prepare("INSERT INTO restaurante_validacao (RV_RP_ID, RV_FUNCIONARIO_ID) VALUES (?, ?)")
+                ->execute([$pedido['RP_ID'], $funcionarioId]);
+            $pdo->commit();
+            return [
+                'status' => 'valido',
+                'nome' => $pedido['U_NOME'],
+                'numero' => $pedido['U_BICC'],
+                'pedido_id' => $pedido['RP_ID'],
+            ];
+        }
+
+        $pdo->rollBack();
+        return ['status' => 'utilizado', 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return ['status' => 'erro'];
+    }
+}
 
     public static function contarValidacoesHoje(int $funcionarioId): int {
         $stmt = self::conexao()->prepare("
@@ -482,4 +560,103 @@ $pdo->prepare("UPDATE restaurante_pedido SET RP_CODIGO_CURTO = ? WHERE RP_ID = ?
         $stmt->execute([$funcionarioId]);
         return $stmt->fetchAll();
     }
+
+    public static function extraForaDeHorarioHoje(string $dataRefeicao): bool {
+        if ($dataRefeicao !== date('Y-m-d')) {
+            return false;
+        }
+        if (!defined('EXTRA_HORA_LIMITE_HOJE')) {
+            return false;
+        }
+        return date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
+    }
+
+    // ============================================
+    // Gestão de Extras (Funcionário)
+    // ============================================
+
+    /**
+     * Cria um tipo de refeição dedicado para um extra individual — garante que
+     * cada extra tem preço 100% independente, sem partilhar com outros pratos.
+     */
+    public static function criarTipoRefeicaoExtra(string $nomePrato): int {
+        // A coluna RM_PRATO_DIA tem DEFAULT 0, por isso não é preciso especificá-la.
+        $stmt = self::conexao()->prepare("INSERT INTO restaurante_tipo_refeicao (RTP_NOME) VALUES (?)");
+        $stmt->execute(["Extra: {$nomePrato}"]);
+        return (int) self::conexao()->lastInsertId();
+    }
+
+    /**
+     * Cria um novo prato extra (RM_DATA = NULL) com um tipo de refeição dedicado
+     * (criado automaticamente), garantindo preço independente de outros extras.
+     */
+    public static function criarPratoExtra(string $nome, float $precoInicial): int {
+        $pdo = self::conexao();
+        $pdo->beginTransaction();
+
+        try {
+            $tipoId = self::criarTipoRefeicaoExtra($nome);
+
+            $stmt = $pdo->prepare("INSERT INTO restaurante_menu (RM_NOME, RM_TP_ID, RM_DATA) VALUES (?, ?, NULL)");
+            $stmt->execute([$nome, $tipoId]);
+            $rmId = (int) $pdo->lastInsertId();
+
+            $stmtPreco = $pdo->prepare("
+                INSERT INTO restaurante_preco_tipo_refeicao (RPTR_TP_ID, RPTR_PRECO, RPTR_DATAINICIO)
+                VALUES (?, ?, ?)
+            ");
+            $stmtPreco->execute([$tipoId, $precoInicial, date('Y-m-d')]);
+
+            $pdo->commit();
+            return $rmId;
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Migra um extra existente (que partilha tipo com outros pratos) para um
+     * tipo de refeição dedicado, preservando o preço atual como ponto de partida.
+     */
+    public static function separarExtraParaTipoProprio(int $rmId): string|int {
+        $pdo = self::conexao();
+        $pdo->beginTransaction();
+
+        try {
+            $stmt = $pdo->prepare("SELECT RM_NOME, RM_TP_ID FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NULL");
+            $stmt->execute([$rmId]);
+            $prato = $stmt->fetch();
+
+            if (!$prato) {
+                $pdo->rollBack();
+                return 'extra_nao_encontrado';
+            }
+
+            $precoAtual = self::obterPrecoVigente((int) $prato['RM_TP_ID'], date('Y-m-d'));
+            if ($precoAtual === null) {
+                $pdo->rollBack();
+                return 'sem_preco_definido';
+            }
+
+            $novoTipoId = self::criarTipoRefeicaoExtra($prato['RM_NOME']);
+
+            $pdo->prepare("UPDATE restaurante_menu SET RM_TP_ID = ? WHERE RM_ID = ?")->execute([$novoTipoId, $rmId]);
+
+            $pdo->prepare("INSERT INTO restaurante_preco_tipo_refeicao (RPTR_TP_ID, RPTR_PRECO, RPTR_DATAINICIO) VALUES (?, ?, ?)")->execute([$novoTipoId, $precoAtual, date('Y-m-d')]);
+
+            $pdo->commit();
+            return $novoTipoId;
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    public static function listarTiposRefeicao(): array {
+        $stmt = self::conexao()->prepare("SELECT RTP_ID, RTP_NOME FROM restaurante_tipo_refeicao ORDER BY RTP_NOME");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
 }

@@ -15,6 +15,17 @@ if ($dataRefeicao === '' || $itensJson === '') {
     exit;
 }
 
+// Valida formato YYYY-MM-DD e que é uma data de calendário real
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataRefeicao)) {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Formato de data inválido']);
+    exit;
+}
+[$ano, $mes, $dia] = explode('-', $dataRefeicao);
+if (!checkdate((int) $mes, (int) $dia, (int) $ano)) {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Data inválida']);
+    exit;
+}
+
 $itens = json_decode($itensJson, true);
 if (!is_array($itens) || empty($itens)) {
     echo json_encode(['status' => 'erro', 'mensagem' => 'Itens invalidos']);
@@ -39,8 +50,11 @@ $mensagens = [
     'prato_invalido' => 'Prato não encontrado',
     'menu_completo_invalido_para_extra' => 'Menu completo só é válido para pratos da ementa',
     'fora_de_prazo' => 'Fora do prazo de compra para este prato',
+    'extra_fora_de_horario' => 'Já não é possível comprar para hoje — fora do horário de compra',
     'menu_completo_nao_configurado' => 'Preço do menu completo não está configurado',
     'sem_preco_definido' => 'Preço não definido para este prato',
+    'pedido_duplicado' => 'Já tens um pedido pago para este dia',
+    'extra_duplicado' => 'Já compraste este extra para este dia',
 ];
 
 if (is_string($resultado) && isset($mensagens[$resultado])) {

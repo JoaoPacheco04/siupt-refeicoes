@@ -6,11 +6,14 @@ const resultadoCard   = document.getElementById('resultadoCard');
 const resultadoIcone  = document.getElementById('resultadoIcone');
 const resultadoEstado = document.getElementById('resultadoEstado');
 const resultadoNome   = document.getElementById('resultadoNome');
+const resultadoNumero = document.getElementById('resultadoNumero');
 const resultadoLinhas = document.getElementById('resultadoLinhas');
 const contadorEl      = document.getElementById('contadorValidacoes');
 const listaEl         = document.getElementById('listaValidacoes');
+const inputManual     = document.getElementById('inputQrManual');
 
 let cameraDisponivel = false;
+let timeoutRetomarAutomatico = null;
 
 // ---- Iniciar scanner de câmara ----
 const html5QrCode = new Html5Qrcode("qr-reader");
@@ -23,17 +26,38 @@ html5QrCode.start(
         html5QrCode.pause(true);
         document.getElementById('btnValidarSeguinte').style.display = 'inline-flex';
         validarQrCode(decodedText);
+
+        // Melhoria #5 — retoma automaticamente ao fim de 2.5s, sem precisar de toque.
+        // O botão manual "Validar seguinte" continua disponível para quem quiser mais tempo.
+        clearTimeout(timeoutRetomarAutomatico);
+        timeoutRetomarAutomatico = setTimeout(() => {
+            if (!cameraDisponivel) return;
+            html5QrCode.resume();
+            document.getElementById('btnValidarSeguinte').style.display = 'none';
+        }, 2500);
     },
     () => { /* erro de leitura, ignorar */ }
 ).then(() => {
     cameraDisponivel = true;
 }).catch(err => {
-    document.getElementById('qr-reader').style.display = 'none';
     console.warn('Câmara não disponível:', err);
+    mostrarAvisoSemCamara();
 });
+
+function mostrarAvisoSemCamara() {
+    const reader = document.getElementById('qr-reader');
+    reader.innerHTML = `
+        <div class="sem-camara-aviso">
+            <i class="bi bi-camera-video-off"></i>
+            <p>Câmara não disponível neste dispositivo/ligação.<br>
+               Usa o campo abaixo ou um leitor físico.</p>
+        </div>
+    `;
+}
 
 document.getElementById('btnValidarSeguinte').addEventListener('click', () => {
     if (!cameraDisponivel) return;
+    clearTimeout(timeoutRetomarAutomatico); // cancela o auto-resume se o funcionário já clicou manualmente
     html5QrCode.resume();
     document.getElementById('btnValidarSeguinte').style.display = 'none';
     resultadoCard.classList.remove('visivel');
@@ -41,15 +65,18 @@ document.getElementById('btnValidarSeguinte').addEventListener('click', () => {
 
 // ---- Input manual ----
 document.getElementById('btnValidarManual').addEventListener('click', () => {
-    const codigo = document.getElementById('inputQrManual').value.trim();
+    const codigo = inputManual.value.trim();
     if (!codigo) return;
     validarQrCode(codigo);
-    document.getElementById('inputQrManual').value = '';
+    inputManual.value = '';
 });
 
-document.getElementById('inputQrManual').addEventListener('keydown', e => {
+inputManual.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('btnValidarManual').click();
 });
+
+// ---- Foco automático — essencial para scanners físicos tipo emulador de teclado ----
+inputManual.focus();
 
 // ---- Chamada à API ----
 async function validarQrCode(qrcode) {
@@ -77,6 +104,8 @@ async function validarQrCode(qrcode) {
     if (dados.status === 'valido') {
         adicionarAListaValidacoes(dados);
     }
+
+    inputManual.focus();
 }
 
 // ---- Acrescentar entrada nova ao topo da lista ----
@@ -94,6 +123,25 @@ function adicionarAListaValidacoes(dados) {
         <div class="validacao-pedido">#${dados.pedido_id ?? ''}</div>
     `;
     listaEl.prepend(item);
+}
+
+// ---- Sons de feedback (melhoria #4) ----
+function tocarSom(sucesso) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = sucesso ? 880 : 220;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+    } catch (e) {
+        // browsers que bloqueiam áudio sem interação prévia — ignora silenciosamente
+    }
 }
 
 // ---- Mostrar resultado ----
@@ -126,7 +174,7 @@ function mostrarResultado(status, dados = {}) {
             estado: 'QR code já utilizado',
             nome: dados.nome ?? ''
         },
-        vencido: {
+        expirado: {
             classe: 'erro',
             icone: '❌',
             estado: 'Pedido expirado (data de refeição já passou)',
@@ -157,6 +205,7 @@ function mostrarResultado(status, dados = {}) {
     resultadoIcone.textContent  = cfg.icone;
     resultadoEstado.textContent = cfg.estado;
     resultadoNome.textContent   = cfg.nome;
+    resultadoNumero.textContent = dados.numero ? `Nº ${dados.numero}` : '';
 
     if (status === 'valido' && Array.isArray(dados.linhas) && dados.linhas.length > 0) {
         dados.linhas.forEach(linha => {
@@ -167,6 +216,12 @@ function mostrarResultado(status, dados = {}) {
             `;
             resultadoLinhas.appendChild(li);
         });
+    }
+
+    // Melhoria #1 — scroll automático até ao resultado (evita a fila ter de rolar o ecrã)
+    if (status !== 'loading') {
+        resultadoCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        tocarSom(status === 'valido');
     }
 }
 

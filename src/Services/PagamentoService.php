@@ -9,15 +9,22 @@ class PagamentoService {
 
     private static function simular(int $pedidoId, bool $sucesso, ?string $refGatewayBatch = null): array {
         $estado = $sucesso ? 'sucesso' : 'falhado';
+        $pdo = Database::conexao();
 
-        Database::registarTentativaPagamento($pedidoId, $estado, $refGatewayBatch);
+        $pdo->beginTransaction();
+        try {
+            Database::registarTentativaPagamento($pedidoId, $estado, $refGatewayBatch);
 
-        if (!$sucesso) {
-            return ['status' => 'falhado'];
+            if ($sucesso) {
+                Database::marcarPedidoComoPago($pedidoId);
+            }
+
+            $pdo->commit();
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
         }
 
-        Database::marcarPedidoComoPago($pedidoId);
-
-        return ['status' => 'confirmado'];
+        return ['status' => $sucesso ? 'confirmado' : 'falhado'];
     }
 }

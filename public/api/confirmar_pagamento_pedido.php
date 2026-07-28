@@ -11,7 +11,7 @@ verificarCsrfToken(true);
 $pedidoIdsRaw = $_POST['pedido_ids'] ?? '';
 $sucesso = ($_POST['resultado'] ?? '') === 'sucesso';
 
-$pedidoIds = array_filter(array_map('intval', explode(',', $pedidoIdsRaw)));
+$pedidoIds = array_unique(array_filter(array_map('intval', explode(',', $pedidoIdsRaw))));
 
 if (empty($pedidoIds)) {
     echo json_encode(['status' => 'erro', 'mensagem' => 'Falta pedido_ids']);
@@ -41,12 +41,12 @@ foreach ($pedidoIds as $id) {
     }
 
     $r = PagamentoService::processar($id, $sucesso, $refGatewayBatch);
-    $resultados[] = [
-        'pedido_id'    => $id,
-        'status'       => $r['status'],
-        'qrcode'       => $pedido['RP_QRCODE'],
-        'codigo_curto' => $pedido['RP_CODIGO_CURTO'],
-    ];
+    $entrada = ['pedido_id' => $id, 'status' => $r['status']];
+    if ($r['status'] === 'confirmado') {
+        $entrada['qrcode']       = $pedido['RP_QRCODE'];
+        $entrada['codigo_curto'] = $pedido['RP_CODIGO_CURTO'];
+    }
+    $resultados[] = $entrada;
 }
 
 echo json_encode([

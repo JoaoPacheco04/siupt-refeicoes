@@ -27,7 +27,9 @@ function todosPratosForaDePrazo(array $pratos, array $limitesBatch): bool {
     return true;
 }
 
+$semanaAvancada = false;
 if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
+    $semanaAvancada = true;
     $segunda->modify('+7 days');
     $sexta->modify('+7 days');
     $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
@@ -35,6 +37,13 @@ if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
     $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
 }
+
+// Ícones por tipo de prato principal
+$iconePrato = [
+    'Carne'       => '🥩',
+    'Peixe'       => '🐟',
+    'Vegetariano' => '🌿',
+];
 
 $extras = Database::listarPratosExtras();
 $tipoMenuCompletoId = Database::obterTipoIdPorNome('Menu Completo');
@@ -81,8 +90,13 @@ $datasComPedido = array_flip(
 );
 
 // ── Próximos dias úteis para os extras (sem fim de semana) ───────────────
+// Se já passou o horário de corte de hoje, "hoje" já não é opção válida
+$hojeBloqueadoExtras = defined('EXTRA_HORA_LIMITE_HOJE') && date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
 $diasUteisExtras = [];
 $cursor = new DateTime();
+if ($hojeBloqueadoExtras) {
+    $cursor->modify('+1 day'); // pula "hoje" — já passou o horário de corte
+}
 while (count($diasUteisExtras) < 5) {
     if ((int) $cursor->format('N') <= 5) { // 1=Seg … 5=Sex
         $diasUteisExtras[] = $cursor->format('Y-m-d');
@@ -92,6 +106,14 @@ while (count($diasUteisExtras) < 5) {
 
 // Itens extra já comprados — tem de correr DEPOIS de $diasUteisExtras estar preenchido
 $itensExtrasComprados = Database::listarItensExtrasComprados((int) $utilizador['id'], $diasUteisExtras);
+
+// ── Filtrar extras sem preço definido (evita mostrar "0,00€" enganoso) ───
+$extrasComPreco = [];
+foreach ($extras as $e) {
+    $preco = $precosBatch[(int) $e['RM_TP_ID']] ?? null;
+    if ($preco === null) continue;
+    $extrasComPreco[] = $e + ['preco' => $preco];
+}
 
 $numerosDia = [1 => '2ª', 2 => '3ª', 3 => '4ª', 4 => '5ª', 5 => '6ª'];
 $nomesCompletoDia = [1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta'];
@@ -156,6 +178,13 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         <p class="ementa-horario">Prazo de compra: <?= htmlspecialchars($prazotexto) ?></p>
     </div>
 
+    <?php if ($semanaAvancada): ?>
+    <div class="banner-semana-avancada" role="alert">
+        <i class="bi bi-info-circle-fill"></i>
+        A semana atual já está fora de prazo. A mostrar a ementa da <strong>próxima semana</strong>.
+    </div>
+    <?php endif; ?>
+
     <h2 class="ementa-semana">semana de <?= $segunda->format('d') ?> a <?= $sexta->format('d') ?> de <?= $nomeMes ?></h2>
 
     <?php if (empty($diasEmenta)): ?>
@@ -165,10 +194,17 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
     <?php foreach ($diasEmenta as $data => $tiposDoDia):
         $numDia = $numerosDia[(int) date('N', strtotime($data))];
 
+        // Pratos principais — ignora quem não tem preço configurado
         $pratosPrincipais = [];
+        $pratosSemPreco = [];
         foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipoPrincipal) {
             if (!empty($tiposDoDia[$tipoPrincipal])) {
-                $pratosPrincipais[$tipoPrincipal] = $tiposDoDia[$tipoPrincipal][0];
+                $prato = $tiposDoDia[$tipoPrincipal][0];
+                if ($prato['preco'] === null) {
+                    $pratosSemPreco[] = $tipoPrincipal;
+                    continue;
+                }
+                $pratosPrincipais[$tipoPrincipal] = $prato;
             }
         }
 
@@ -202,7 +238,14 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         <?php if ($jaComprado): ?>
         <p class="aviso-duplicado">
             Já tens um pedido ativo para este dia.
-            <a href="historico.php">Ver as minhas compras →</a>
+            <a href="historico.php" style="pointer-events: auto; position: relative; z-index: 999;">Ver as minhas compras →</a>
+        </p>
+        <?php endif; ?>
+
+        <?php if (!empty($pratosSemPreco)): ?>
+        <p class="text-muted small">
+            <i class="bi bi-exclamation-circle"></i>
+            <?= htmlspecialchars(implode(', ', $pratosSemPreco)) ?> indisponível(is) — preço por configurar.
         </p>
         <?php endif; ?>
 
@@ -214,6 +257,7 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
                            data-preco="<?= $prato['preco'] ?>"
                            data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $prato['nome']) ?>"
                            <?= ($diaBloqueado || $jaComprado) ? 'disabled' : '' ?>>
+                    <span class="prato-tipo-icone"><?= $iconePrato[$tipoNome] ?? '' ?></span>
                     <span class="prato-opcao-label">
                         <strong><?= htmlspecialchars($tipoNome) ?></strong>
                         <small><?= htmlspecialchars($prato['nome']) ?></small>
@@ -225,7 +269,7 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
         <?php
         $precoMC = $precosMenuCompleto[$data] ?? null;
-        if ($precoMC !== null && !$jaComprado && !$diaBloqueado): ?>
+        if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !empty($pratosPrincipais)): ?>
         <label class="menu-completo-toggle">
             <input type="checkbox" class="checkbox-menu-completo"
                    data-preco-mc="<?= $precoMC ?>">
@@ -234,23 +278,26 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         <?php endif; ?>
 
         <?php if (!empty($componentesExtra) && !$jaComprado && !$diaBloqueado): ?>
-        <div class="dia-componentes"> 
-            <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
-            <label class="componente-opcao">
-                <input type="checkbox" class="checkbox-componente"
-                       data-rm-id="<?= $comp['rm_id'] ?>"
-                       data-preco="<?= $comp['preco'] ?>"
-                       data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
-                <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
-                <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
-            </label>
-            <?php endforeach; ?>
+        <div class="dia-componentes-wrap">
+            <p class="componentes-hint"><i class="bi bi-hand-index"></i> Seleciona um prato para adicionar extras</p>
+            <div class="dia-componentes">
+                <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
+                <label class="componente-opcao">
+                    <input type="checkbox" class="checkbox-componente"
+                           data-rm-id="<?= $comp['rm_id'] ?>"
+                           data-preco="<?= $comp['preco'] ?>"
+                           data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
+                    <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
+                    <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
+                </label>
+                <?php endforeach; ?>
+            </div>
         </div>
         <?php endif; ?>
     </div>
     <?php endforeach; ?>
 
-    <?php if (!empty($extras)): ?>
+    <?php if (!empty($extrasComPreco)): ?>
     <div class="extras-secao">
         <h2 class="ementa-semana">pratos extras</h2>
         <p class="text-muted small">Disponíveis todos os dias, sem prazo de compra.</p>
@@ -258,11 +305,11 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         <div class="extras-data-escolha">
             <label for="dataExtras">Para quando?</label>
             <select id="dataExtras">
-                <?php foreach ($diasUteisExtras as $i => $diaUtilStr):
+                <?php foreach ($diasUteisExtras as $diaUtilStr):
                     $ndExtra = $nomesCompletoDia[(int) (new DateTime($diaUtilStr))->format('N')];
-                    if ($i === 0)      $label = 'Hoje — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
-                    elseif ($i === 1) $label = 'Amanhã — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
-                    else              $label = $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
+                    if ($diaUtilStr === $hojeStr)       $label = 'Hoje — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
+                    elseif ($diaUtilStr === $amanhaStr) $label = 'Amanhã — ' . $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
+                    else                                $label = $ndExtra . ', ' . date('d', strtotime($diaUtilStr)) . ' ' . $meses[(int)(new DateTime($diaUtilStr))->format('n')];
                 ?>
                 <option value="<?= $diaUtilStr ?>"><?= htmlspecialchars($label) ?></option>
                 <?php endforeach; ?>
@@ -270,16 +317,14 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         </div>
 
         <div class="extras-lista">
-            <?php foreach ($extras as $e):
-                $precoExtra = $precosBatch[(int) $e['RM_TP_ID']] ?? 0;
-            ?>
+            <?php foreach ($extrasComPreco as $e): ?>
             <label class="componente-opcao">
                 <input type="checkbox" class="checkbox-extra"
                        data-rm-id="<?= $e['RM_ID'] ?>"
-                       data-preco="<?= $precoExtra ?>"
+                       data-preco="<?= $e['preco'] ?>"
                        data-nome="<?= htmlspecialchars($e['RM_NOME']) ?>">
                 <span class="nome-extra"><?= htmlspecialchars($e['RM_NOME']) ?></span>
-                <span class="preco-extra"><?= number_format($precoExtra, 2, ',', '') ?>€</span>
+                <span class="preco-extra"><?= number_format($e['preco'], 2, ',', '') ?>€</span>
             </label>
             <?php endforeach; ?>
         </div>
