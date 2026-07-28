@@ -56,38 +56,36 @@ class Database {
     }
 
     public static function listarPratosExtras(): array {
-        $stmt = self::conexao()->prepare("
-            SELECT rm.RM_ID, rm.RM_NOME, rm.RM_TP_ID, rtp.RTP_NOME
-            FROM restaurante_menu rm
-            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
-            WHERE rm.RM_DATA IS NULL
-            ORDER BY rtp.RTP_NOME, rm.RM_NOME
-        ");
-        $stmt->execute();
-        return $stmt->fetchAll();
-    }
+    $stmt = self::conexao()->prepare("
+        SELECT rm.RM_ID, rm.RM_NOME, rm.RM_TP_ID, rtp.RTP_NOME
+        FROM restaurante_menu rm
+        JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+        WHERE rm.RM_DATA IS NULL AND rm.RM_ATIVO = 1
+        ORDER BY rtp.RTP_NOME, rm.RM_NOME
+    ");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
 
     public static function listarDetalhesExtrasParaGestao(): array {
-        $hoje = date('Y-m-d');
-        $stmt = self::conexao()->prepare("
-            SELECT
-                rm.RM_ID, rm.RM_NOME, rm.RM_TP_ID, rtp.RTP_NOME,
-                (
-                    SELECT TOP 1 RPTR_PRECO
-                    FROM restaurante_preco_tipo_refeicao
-                    WHERE RPTR_TP_ID = rm.RM_TP_ID AND RPTR_DATAINICIO <= ?
-                    ORDER BY RPTR_DATAINICIO DESC
-                ) as preco_atual
-            FROM restaurante_menu rm
-            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
-            WHERE rm.RM_DATA IS NULL
-            ORDER BY rm.RM_NOME
-        ");
-        $stmt->execute([$hoje]);
-        return $stmt->fetchAll();
-    }
-
-
+    $hoje = date('Y-m-d');
+    $stmt = self::conexao()->prepare("
+        SELECT
+            rm.RM_ID, rm.RM_NOME, rm.RM_TP_ID, rtp.RTP_NOME, rm.RM_ATIVO,
+            (
+                SELECT TOP 1 RPTR_PRECO
+                FROM restaurante_preco_tipo_refeicao
+                WHERE RPTR_TP_ID = rm.RM_TP_ID AND RPTR_DATAINICIO <= ?
+                ORDER BY RPTR_DATAINICIO DESC
+            ) as preco_atual
+        FROM restaurante_menu rm
+        JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+        WHERE rm.RM_DATA IS NULL
+        ORDER BY rm.RM_ATIVO DESC, rm.RM_NOME
+    ");
+    $stmt->execute([$hoje]);
+    return $stmt->fetchAll();
+}
     public static function obterTipoIdPorNome(string $nome): ?int {
         $stmt = self::conexao()->prepare("SELECT RTP_ID FROM restaurante_tipo_refeicao WHERE RTP_NOME = ?");
         $stmt->execute([$nome]);
@@ -495,49 +493,49 @@ class Database {
     // Validação por QR code ou código curto (lado do funcionário)
     // ============================================
     public static function validarPorQrCode(string $qrcode, int $funcionarioId): array {
-    $pdo = self::conexao();
+        $pdo = self::conexao();
 
-    $stmt = $pdo->prepare("
-        SELECT rp.*, u.U_NOME, u.U_BICC FROM restaurante_pedido rp 
-        JOIN users u ON rp.RP_U_ID = u.U_ID 
-        WHERE rp.RP_QRCODE = ? OR rp.RP_CODIGO_CURTO = ?
-    ");
-    $stmt->execute([$qrcode, strtoupper(trim($qrcode))]);
-    $pedido = $stmt->fetch();
+        $stmt = $pdo->prepare("
+            SELECT rp.*, u.U_NOME, u.U_BICC FROM restaurante_pedido rp 
+            JOIN users u ON rp.RP_U_ID = u.U_ID 
+            WHERE rp.RP_QRCODE = ? OR rp.RP_CODIGO_CURTO = ?
+        ");
+        $stmt->execute([$qrcode, strtoupper(trim($qrcode))]);
+        $pedido = $stmt->fetch();
 
-    if (!$pedido) {
-        return ['status' => 'invalido'];
-    }
-
-    $estado = self::calcularEstadoPedido($pedido);
-    if ($estado !== 'ativo') {
-        return ['status' => $estado, 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
-    }
-
-    $pdo->beginTransaction();
-    try {
-        $stmt = $pdo->prepare("UPDATE restaurante_pedido SET RP_UTILIZADO = 1 WHERE RP_ID = ? AND RP_UTILIZADO = 0");
-        $stmt->execute([$pedido['RP_ID']]);
-
-        if ($stmt->rowCount() === 1) {
-            $pdo->prepare("INSERT INTO restaurante_validacao (RV_RP_ID, RV_FUNCIONARIO_ID) VALUES (?, ?)")
-                ->execute([$pedido['RP_ID'], $funcionarioId]);
-            $pdo->commit();
-            return [
-                'status' => 'valido',
-                'nome' => $pedido['U_NOME'],
-                'numero' => $pedido['U_BICC'],
-                'pedido_id' => $pedido['RP_ID'],
-            ];
+        if (!$pedido) {
+            return ['status' => 'invalido'];
         }
 
-        $pdo->rollBack();
-        return ['status' => 'utilizado', 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        return ['status' => 'erro'];
+        $estado = self::calcularEstadoPedido($pedido);
+        if ($estado !== 'ativo') {
+            return ['status' => $estado, 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
+        }
+
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("UPDATE restaurante_pedido SET RP_UTILIZADO = 1 WHERE RP_ID = ? AND RP_UTILIZADO = 0");
+            $stmt->execute([$pedido['RP_ID']]);
+
+            if ($stmt->rowCount() === 1) {
+                $pdo->prepare("INSERT INTO restaurante_validacao (RV_RP_ID, RV_FUNCIONARIO_ID) VALUES (?, ?)")
+                    ->execute([$pedido['RP_ID'], $funcionarioId]);
+                $pdo->commit();
+                return [
+                    'status' => 'valido',
+                    'nome' => $pedido['U_NOME'],
+                    'numero' => $pedido['U_BICC'],
+                    'pedido_id' => $pedido['RP_ID'],
+                ];
+            }
+
+            $pdo->rollBack();
+            return ['status' => 'utilizado', 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            return ['status' => 'erro'];
+        }
     }
-}
 
     public static function contarValidacoesHoje(int $funcionarioId): int {
         $stmt = self::conexao()->prepare("
@@ -549,22 +547,30 @@ class Database {
     }
 
     public static function listarValidacoesHoje(int $funcionarioId): array {
-    $stmt = self::conexao()->prepare("
-        SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO,
-               rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC,
-               STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS itens
-        FROM restaurante_validacao rv
-        JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
-        JOIN users u ON rp.RP_U_ID = u.U_ID
-        LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
-        LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
-        WHERE rv.RV_FUNCIONARIO_ID = ? AND CAST(rv.RV_DATA_VALIDACAO AS DATE) = CAST(GETDATE() AS DATE)
-        GROUP BY rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC
-        ORDER BY rv.RV_DATA_VALIDACAO DESC
-    ");
-    $stmt->execute([$funcionarioId]);
-    return $stmt->fetchAll();
-}
+        return self::listarValidacoesPorData($funcionarioId, date('Y-m-d'));
+    }
+
+    /**
+     * Lista validações feitas por um funcionário numa data específica,
+     * incluindo os itens de cada refeição (agregados numa string).
+     */
+    public static function listarValidacoesPorData(int $funcionarioId, string $data): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO,
+                   rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC,
+                   STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS itens
+            FROM restaurante_validacao rv
+            JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
+            JOIN users u ON rp.RP_U_ID = u.U_ID
+            LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+            LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            WHERE rv.RV_FUNCIONARIO_ID = ? AND CAST(rv.RV_DATA_VALIDACAO AS DATE) = ?
+            GROUP BY rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC
+            ORDER BY rv.RV_DATA_VALIDACAO DESC
+        ");
+        $stmt->execute([$funcionarioId, $data]);
+        return $stmt->fetchAll();
+    }
 
     public static function extraForaDeHorarioHoje(string $dataRefeicao): bool {
         if ($dataRefeicao !== date('Y-m-d')) {
@@ -664,27 +670,31 @@ class Database {
         return $stmt->fetchAll();
     }
 
-public static function atualizarNomeExtra(int $rmId, string $novoNome): bool {
-    $stmt = self::conexao()->prepare("UPDATE restaurante_menu SET RM_NOME = ? WHERE RM_ID = ? AND RM_DATA IS NULL");
-    $stmt->execute([$novoNome, $rmId]);
-    return $stmt->rowCount() > 0;
-}
+    public static function atualizarNomeExtra(int $rmId, string $novoNome): bool {
+        $stmt = self::conexao()->prepare("UPDATE restaurante_menu SET RM_NOME = ? WHERE RM_ID = ? AND RM_DATA IS NULL");
+        $stmt->execute([$novoNome, $rmId]);
+        return $stmt->rowCount() > 0;
+    }
 
-public static function atualizarPrecoTipo(int $tipoId, float $novoPreco): void {
-    self::conexao()->prepare("
-        INSERT INTO restaurante_preco_tipo_refeicao (RPTR_TP_ID, RPTR_PRECO, RPTR_DATAINICIO)
-        VALUES (?, ?, ?)
-    ")->execute([$tipoId, $novoPreco, date('Y-m-d')]);
-}
+    public static function atualizarPrecoTipo(int $tipoId, float $novoPreco): void {
+        self::conexao()->prepare("
+            INSERT INTO restaurante_preco_tipo_refeicao (RPTR_TP_ID, RPTR_PRECO, RPTR_DATAINICIO)
+            VALUES (?, ?, ?)
+        ")->execute([$tipoId, $novoPreco, date('Y-m-d')]);
+    }
 
-
-public static function apagarExtra(int $rmId): string {
+    public static function apagarExtra(int $rmId): string {
     $pdo = self::conexao();
 
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM restaurante_compra WHERE RC_RM_ID = ?");
     $stmt->execute([$rmId]);
-    if ((int) $stmt->fetchColumn() > 0) {
-        return 'ja_comprado';
+    $jaComprado = (int) $stmt->fetchColumn() > 0;
+
+    if ($jaComprado) {
+        // Não pode ser apagado — desativa em vez disso (soft-delete)
+        $stmt = $pdo->prepare("UPDATE restaurante_menu SET RM_ATIVO = 0 WHERE RM_ID = ? AND RM_DATA IS NULL");
+        $stmt->execute([$rmId]);
+        return $stmt->rowCount() > 0 ? 'desativado' : 'nao_encontrado';
     }
 
     try {
@@ -696,26 +706,87 @@ public static function apagarExtra(int $rmId): string {
     }
 }
 
-/**
- * Lista validações feitas por um funcionário numa data específica,
- * incluindo os itens de cada refeição (agregados numa string).
- */
-public static function listarValidacoesPorData(int $funcionarioId, string $data): array {
-    $stmt = self::conexao()->prepare("
-        SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO,
-               rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC,
-               STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS itens
-        FROM restaurante_validacao rv
-        JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
-        JOIN users u ON rp.RP_U_ID = u.U_ID
-        LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
-        LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
-        WHERE rv.RV_FUNCIONARIO_ID = ? AND CAST(rv.RV_DATA_VALIDACAO AS DATE) = ?
-        GROUP BY rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC
-        ORDER BY rv.RV_DATA_VALIDACAO DESC
-    ");
-    $stmt->execute([$funcionarioId, $data]);
-    return $stmt->fetchAll();
+    public static function reativarExtra(int $rmId): bool {
+    $stmt = self::conexao()->prepare("UPDATE restaurante_menu SET RM_ATIVO = 1 WHERE RM_ID = ? AND RM_DATA IS NULL");
+    $stmt->execute([$rmId]);
+    return $stmt->rowCount() > 0;
 }
 
+    // ============================================
+    // Relatórios (Funcionário/Gestor)
+    // ============================================
+
+    /**
+     * Resumo de vendas de um mês: total vendido, nº de refeições, taxa de não levantados.
+     * $anoMes no formato 'YYYY-MM'.
+     */
+    public static function obterResumoMensal(string $anoMes): array {
+        $inicio = $anoMes . '-01';
+        $fim = date('Y-m-t', strtotime($inicio)); // último dia do mês
+
+        $stmt = self::conexao()->prepare("
+            SELECT
+                COUNT(DISTINCT rp.RP_ID) AS total_pedidos,
+                ISNULL(SUM(rp.RP_PRECO_TOTAL), 0) AS total_vendido,
+                SUM(CASE WHEN rp.RP_UTILIZADO = 1 THEN 1 ELSE 0 END) AS total_levantados,
+                SUM(CASE WHEN rp.RP_UTILIZADO = 0 AND rp.RP_DATA_REFEICAO < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS total_nao_levantados
+            FROM restaurante_pedido rp
+            WHERE rp.RP_PAGO = 1
+              AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
+        ");
+        $stmt->execute([$inicio, $fim]);
+        $resultado = $stmt->fetch();
+
+        return [
+            'total_pedidos' => (int) $resultado['total_pedidos'],
+            'total_vendido' => (float) $resultado['total_vendido'],
+            'total_levantados' => (int) $resultado['total_levantados'],
+            'total_nao_levantados' => (int) $resultado['total_nao_levantados'],
+        ];
+    }
+
+    /**
+     * Vendas agregadas por tipo de prato (Carne/Peixe/Vegetariano/extras, etc.), dentro do mês.
+     * $anoMes no formato 'YYYY-MM'.
+     */
+    public static function obterVendasPorTipoMensal(string $anoMes): array {
+        $inicio = $anoMes . '-01';
+        $fim = date('Y-m-t', strtotime($inicio));
+
+        $stmt = self::conexao()->prepare("
+            SELECT rtp.RTP_NOME, COUNT(*) AS quantidade, SUM(rc.RC_PRECO) AS total
+            FROM restaurante_compra rc
+            JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
+            JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+            WHERE rp.RP_PAGO = 1
+              AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
+            GROUP BY rtp.RTP_NOME
+            ORDER BY total DESC
+        ");
+        $stmt->execute([$inicio, $fim]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Vendas diárias dentro do mês, para o gráfico de evolução.
+     * $anoMes no formato 'YYYY-MM'.
+     */
+    public static function obterVendasDiariasMensal(string $anoMes): array {
+        $inicio = $anoMes . '-01';
+        $fim = date('Y-m-t', strtotime($inicio));
+
+        $stmt = self::conexao()->prepare("
+            SELECT rp.RP_DATA_REFEICAO, COUNT(DISTINCT rp.RP_ID) AS total_pedidos, SUM(rp.RP_PRECO_TOTAL) AS total_vendido
+            FROM restaurante_pedido rp
+            WHERE rp.RP_PAGO = 1
+              AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
+            GROUP BY rp.RP_DATA_REFEICAO
+            ORDER BY rp.RP_DATA_REFEICAO
+        ");
+        $stmt->execute([$inicio, $fim]);
+        return $stmt->fetchAll();
+    }
+
+    
 }

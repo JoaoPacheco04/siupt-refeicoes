@@ -37,7 +37,6 @@ document.querySelectorAll('.btn-ver-qr').forEach(btn => {
         const data        = btn.dataset.data;
         const descricao   = btn.dataset.descricao;
         const codigoCurto = btn.dataset.codigoCurto;
-        console.log('[debug] botão clicado — qrcode do dataset:', qrcode); // NOVO
         mostrarQrCode(qrcode, data, descricao, codigoCurto);
     });
 });
@@ -68,13 +67,7 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
 
     modal.open();
 
-    // NOVO — diagnóstico: corre depois do modal.open(), para o #qr-historico já existir no DOM
-    console.log('[debug] typeof QRCode:', typeof QRCode);
-    console.log('[debug] qrcode a codificar:', qrcode, '| tipo:', typeof qrcode, '| vazio?', !qrcode);
-
     const elQr = document.getElementById('qr-historico');
-    console.log('[debug] elQr encontrado no DOM:', elQr);
-
     if (elQr) {
         try {
             new QRCode(elQr, {
@@ -84,12 +77,11 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
                 colorDark: '#1e2a3b',
                 colorLight: '#ffffff'
             });
-            console.log('[debug] QRCode() correu sem lançar exceção');
         } catch (err) {
-            console.error('[debug] Falha ao desenhar QR code:', err);
+            console.error('Falha ao desenhar QR code:', err);
         }
     } else {
-        console.warn('[debug] Elemento qr-historico não encontrado.');
+        console.warn('Elemento qr-historico não encontrado.');
     }
 }
 

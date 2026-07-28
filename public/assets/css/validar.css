@@ -400,23 +400,3 @@
     color: #6a7280;
     margin-top: 0.1rem;
 }
-
-.validacoes-lista-acoes {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.input-data-log {
-    border: 1px solid #d1d8e0;
-    border-radius: 6px;
-    padding: 0.4rem 0.6rem;
-    font-size: 0.78rem;
-    color: #1e2a3b;
-    outline: none;
-}
-
-.input-data-log:focus {
-    border-color: #73c5d8;
-    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
-}

@@ -1,6 +1,7 @@
 const btnComprar = document.getElementById('btnComprar');
 const totalSelecionadasEl = document.getElementById('totalSelecionadas');
 const totalValorEl = document.getElementById('totalValor');
+let _ultimoTotalItens = 0;   // ← MOVIDO para aqui, antes de qualquer uso
 
 // Escape de HTML para usar em innerHTML (previne XSS)
 function escHtml(str) {
@@ -41,11 +42,15 @@ document.querySelectorAll('.radio-prato-principal').forEach(radio => {
 // ── Visibilidade dos componentes (Sopa/Sobremesa/Bebida) ──────────────────
 function syncComponentesVisibility(card) {
     const menuCompletoBox = card.querySelector('.checkbox-menu-completo');
-    const componentes = card.querySelector('.dia-componentes');
+    const componentes     = card.querySelector('.dia-componentes');
+    const wrap            = card.querySelector('.dia-componentes-wrap');
     if (!componentes) return;
 
-    const mostrar = !(menuCompletoBox?.checked ?? false);
+    const temPrato = card.querySelector('.radio-prato-principal:checked') !== null;
+    const mostrar  = temPrato && !(menuCompletoBox?.checked ?? false);
+
     componentes.classList.toggle('visivel', mostrar);
+    if (wrap) wrap.classList.toggle('tem-prato', temPrato);
 }
 
 document.querySelectorAll('.dia-card').forEach(syncComponentesVisibility);
@@ -155,6 +160,13 @@ function atualizarResumo() {
         });
     });
 
+    if (totalItens !== _ultimoTotalItens) {
+        totalSelecionadasEl.classList.remove('bounce');
+        void totalSelecionadasEl.offsetWidth;
+        totalSelecionadasEl.classList.add('bounce');
+        _ultimoTotalItens = totalItens;
+    }
+
     totalSelecionadasEl.textContent = totalItens;
     totalValorEl.textContent = totalValor.toFixed(2).replace('.', ',') + '€';
     btnComprar.disabled = totalItens === 0;
@@ -188,19 +200,20 @@ btnComprar.addEventListener('click', () => {
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
     modal.addFooterBtn('Confirmar e pagar', 'tingle-btn tingle-btn--primary', async () => {
         modal.close();
-        await processarPedidos(selecoes, totalGeral);
+        await processarPedidos(selecoes);
     });
 
     modal.open();
 });
 
-async function processarPedidos(selecoes, totalGeral) {
+async function processarPedidos(selecoes) {
     btnComprar.disabled = true;
     const btnSpan = btnComprar.querySelector('span');
     if (btnSpan) btnSpan.textContent = 'A criar pedido...';
 
     const pedidoIds = [];
     const falhas = [];
+    let totalConfirmado = 0;
 
     for (const grupo of selecoes) {
         try {
@@ -219,6 +232,7 @@ async function processarPedidos(selecoes, totalGeral) {
 
             if (dados.status === 'ok') {
                 pedidoIds.push(dados.pedido_id);
+                totalConfirmado += grupo.itens.reduce((s, i) => s + i.preco, 0);
             } else {
                 falhas.push(dados.mensagem || 'Erro desconhecido');
             }
@@ -234,10 +248,17 @@ async function processarPedidos(selecoes, totalGeral) {
         return;
     }
 
-    mostrarEcraPagamento(pedidoIds, totalGeral, falhas);
+    mostrarEcraPagamento(pedidoIds, totalConfirmado, falhas);
 }
 
 function mostrarEcraPagamento(pedidoIds, total, falhas) {
+    const avisoFalhas = (falhas && falhas.length > 0)
+        ? `<div class="alert alert-warning small text-start mt-3 mb-0">
+             <i class="bi bi-exclamation-triangle"></i>
+             ${falhas.length} item(ns) não foi possível processar: ${falhas.map(escHtml).join('; ')}
+           </div>`
+        : '';
+
     const modalPagamento = new tingle.modal({ footer: false, closeMethods: [] });
     modalPagamento.setContent(`
         <div class="text-center py-3">
@@ -245,6 +266,7 @@ function mostrarEcraPagamento(pedidoIds, total, falhas) {
             <h4 class="mt-2">A aguardar confirmação</h4>
             <p class="text-muted small">Aceita o pedido de pagamento MB WAY no teu telemóvel.<br>
             Valor a pagar: <strong>${total.toFixed(2).replace('.', ',')}€</strong></p>
+            ${avisoFalhas}
             <div class="d-flex justify-content-center gap-2 mt-3">
                 <button id="simSucesso" class="btn btn-success btn-sm">Simular aceite</button>
                 <button id="simFalha" class="btn btn-outline-danger btn-sm">Simular recusa</button>

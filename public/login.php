@@ -24,6 +24,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($utilizador) {
         $tipo = Database::perfilParaTipo((int) $utilizador['U_PERFIL']);
 
+        session_regenerate_id(true);
+
         $_SESSION['user_id'] = $utilizador['U_ID'];
         $_SESSION['user_nome'] = $utilizador['U_NOME'];
         $_SESSION['user_tipo'] = $tipo;
@@ -117,7 +119,7 @@ document.querySelectorAll('.user-type-option').forEach(opt => {
         document.querySelectorAll('.user-type-option').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
         document.getElementById('labelNumero').textContent =
-            opt.dataset.tipo === 'estudante' ? 'Numero de estudante' : 'Numero de colaborador';
+            opt.dataset.tipo === 'estudante' ? 'Número de estudante' : 'Número de colaborador';
     });
 });
 </script>

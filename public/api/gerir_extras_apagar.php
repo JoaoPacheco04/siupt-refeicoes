@@ -15,13 +15,19 @@ if ($rmId <= 0) {
 }
 
 $mensagens = [
-    'ja_comprado' => 'Este extra já foi comprado por alunos e não pode ser eliminado. Podes renomeá-lo em vez disso.',
     'nao_encontrado' => 'Extra não encontrado',
-    'erro_bd' => 'Não foi possível eliminar — pode haver dados relacionados a impedir.',
+    'erro_bd' => 'Não foi possível processar — pode haver dados relacionados a impedir.',
 ];
 
 $resultado = Database::apagarExtra($rmId);
 
-echo json_encode($resultado === 'ok'
-    ? ['status' => 'ok']
-    : ['status' => 'erro', 'mensagem' => $mensagens[$resultado] ?? 'Erro desconhecido']);
+if ($resultado === 'ok') {
+    echo json_encode(['status' => 'ok']);
+} elseif ($resultado === 'desativado') {
+    echo json_encode([
+        'status' => 'ok',
+        'mensagem' => 'Já foi comprado por alunos, por isso foi apenas descontinuado (deixa de aparecer para compra, mas o histórico mantém-se).',
+    ]);
+} else {
+    echo json_encode(['status' => 'erro', 'mensagem' => $mensagens[$resultado] ?? 'Erro desconhecido']);
+}

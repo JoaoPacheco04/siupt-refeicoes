@@ -170,6 +170,31 @@ document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
     });
 });
 
+// ── Reativar extra descontinuado ────────────────────────────────────────
+document.querySelectorAll('.btn-reativar-extra').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const item = btn.closest('.extra-item');
+        const rmId = item.dataset.rmId;
+
+        try {
+            const resposta = await fetch('api/gerir_extras_reativar.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ rm_id: rmId, csrf_token: CSRF_TOKEN })
+            });
+            const dados = await resposta.json();
+
+            if (dados.status === 'ok') {
+                location.reload();
+            } else {
+                mostrarErro(dados.mensagem || 'Não foi possível reativar o extra.');
+            }
+        } catch (err) {
+            mostrarErro('Erro de rede ao reativar o extra.');
+        }
+    });
+});
+
 // ── Modal de erro genérico ──────────────────────────────────────────────
 function mostrarErro(mensagem) {
     const modal = new tingle.modal({ footer: true, closeMethods: ['overlay', 'button', 'escape'] });

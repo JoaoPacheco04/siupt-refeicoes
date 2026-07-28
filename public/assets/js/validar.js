@@ -132,7 +132,24 @@ function adicionarAListaValidacoes(dados) {
     `;
     listaEl.prepend(item);
 }
-
+// ---- Sons de feedback ----
+function tocarSom(sucesso) {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'sine';
+        osc.frequency.value = sucesso ? 880 : 220;
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+    } catch (e) {
+        // browsers que bloqueiam áudio sem interação prévia — ignora silenciosamente
+    }
+}
 // ---- Mostrar resultado ----
 function mostrarResultado(status, dados = {}) {
     resultadoCard.className = 'resultado-card visivel';

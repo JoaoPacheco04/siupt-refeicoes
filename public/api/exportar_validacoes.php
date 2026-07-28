@@ -4,23 +4,10 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('funcionario');
 
-$data = $_GET['data'] ?? date('Y-m-d');
-
-// Valida formato YYYY-MM-DD e que é uma data de calendário real
-if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
-    http_response_code(400);
-    exit('Data inválida');
-}
-[$ano, $mes, $dia] = explode('-', $data);
-if (!checkdate((int) $mes, (int) $dia, (int) $ano)) {
-    http_response_code(400);
-    exit('Data inválida');
-}
-
-$validacoes = Database::listarValidacoesPorData((int) $utilizador['id'], $data);
+$validacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 
 header('Content-Type: text/csv; charset=utf-8');
-header('Content-Disposition: attachment; filename="validacoes_' . $data . '.csv"');
+header('Content-Disposition: attachment; filename="validacoes_' . date('Y-m-d') . '.csv"');
 
 $saida = fopen('php://output', 'w');
 fwrite($saida, "\xEF\xBB\xBF");

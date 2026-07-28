@@ -1,0 +1,228 @@
+.relatorio-main {
+    background: transparent;
+    min-height: calc(100vh - 36px);
+    padding: 1.5rem 1.5rem 2rem;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.relatorio-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 1rem 0;
+}
+
+.relatorio-seletor-mes {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.relatorio-seletor-mes label {
+    display: none;
+}
+
+.relatorio-seletor-mes input[type="month"] {
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    color: #1e2a3b;
+    outline: none;
+}
+
+.relatorio-seletor-mes input[type="month"]:focus {
+    border-color: #73c5d8;
+    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
+}
+
+.btn-aplicar-mes {
+    background: #1a3a63;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: background 0.15s;
+}
+
+.btn-aplicar-mes:hover {
+    background: #12294a;
+}
+
+.relatorio-subtitulo {
+    font-size: 0.95rem;
+    color: #555;
+    font-weight: 600;
+    text-transform: lowercase;
+    margin: 0 0 1.25rem 0;
+}
+
+/* ---- Cartões de resumo ---- */
+.relatorio-cartoes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.85rem;
+    margin-bottom: 2rem;
+}
+
+.cartao-resumo {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 12px;
+    padding: 1.1rem 0.85rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(15, 31, 56, 0.06);
+}
+
+.cartao-resumo.cartao-aviso {
+    border-color: #fcd34d;
+    background: #fffbeb;
+}
+
+.cartao-icone {
+    font-size: 1.3rem;
+    color: #3a78b5;
+    margin-bottom: 0.4rem;
+}
+
+.cartao-aviso .cartao-icone {
+    color: #d97706;
+}
+
+.cartao-valor {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.35rem;
+    font-weight: 800;
+    color: #1e2a3b;
+}
+
+.cartao-label {
+    font-size: 0.7rem;
+    color: #8a99ad;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-top: 0.15rem;
+}
+
+/* ---- Tabelas de detalhe ---- */
+.relatorio-secao-titulo {
+    font-size: 0.95rem;
+    color: #555;
+    font-weight: 600;
+    text-transform: lowercase;
+    margin: 1.5rem 0 0.75rem 0;
+}
+
+.relatorio-vazio {
+    text-align: center;
+    color: #8a99ad;
+    padding: 2rem 0;
+    font-size: 0.88rem;
+}
+
+.relatorio-tabela {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.relatorio-tabela-linha {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.7rem 1.1rem;
+    border-bottom: 1px solid #f0f2f5;
+    font-size: 0.85rem;
+}
+
+.relatorio-tabela-linha:last-child {
+    border-bottom: none;
+}
+
+.relatorio-tabela-nome {
+    flex: 1;
+    font-weight: 600;
+    color: #1e2a3b;
+}
+
+.relatorio-tabela-qtd {
+    color: #8a99ad;
+    font-size: 0.8rem;
+    min-width: 70px;
+    text-align: right;
+}
+
+.relatorio-tabela-total {
+    font-family: 'Manrope', sans-serif;
+    font-weight: 700;
+    color: #2c4a6e;
+    min-width: 80px;
+    text-align: right;
+}
+
+@media (max-width: 480px) {
+    .relatorio-main {
+        padding: 1rem 0.75rem;
+    }
+
+    .relatorio-cartoes {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .relatorio-seletor-mes {
+        flex-wrap: wrap;
+    }
+}
+
+.relatorio-header-acoes {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.btn-exportar-pdf {
+    background: #dc2626;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+@media print {
+    header, .btn-exportar-pdf, .relatorio-seletor-mes {
+        display: none !important;
+    }
+
+    body {
+        background: #fff;
+    }
+
+    .relatorio-main {
+        max-width: 100%;
+        padding: 0;
+    }
+
+    .cartao-resumo, .relatorio-tabela {
+        box-shadow: none;
+        border: 1px solid #ccc;
+        break-inside: avoid;
+    }
+}

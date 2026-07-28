@@ -41,6 +41,9 @@ $extras = Database::listarDetalhesExtrasParaGestao();
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
+    <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
+        <i class="bi bi-bar-chart-line"></i>
+    </a>
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
         <div id="profile-photo" class="profile-avatar">
@@ -81,32 +84,30 @@ $extras = Database::listarDetalhesExtrasParaGestao();
         <?php if (empty($extras)): ?>
         <p class="extras-vazio"><i class="bi bi-inbox"></i> Ainda não há pratos extras criados.</p>
         <?php else: ?>
-        <?php
-        // Marca quais extras partilham RM_TP_ID com outro prato (ementa normal OU outro extra)
-        $contagemPorTipo = [];
-        foreach ($extras as $e) {
-            $tipoId = (int) $e['RM_TP_ID'];
-            $contagemPorTipo[$tipoId] = ($contagemPorTipo[$tipoId] ?? 0) + 1;
-        }
-        foreach ($extras as $e):
-            $tipoId = (int) $e['RM_TP_ID'];
-            $ehTipoDedicado = str_starts_with($e['RTP_NOME'], 'Extra: ');
-            $partilhado = !$ehTipoDedicado || ($contagemPorTipo[$tipoId] ?? 0) > 1;
-        ?>
-        <div class="extra-item" data-rm-id="<?= $e['RM_ID'] ?>" data-tipo-id="<?= $e['RM_TP_ID'] ?>" data-partilhado="<?= $partilhado ? '1' : '0' ?>">
+        <?php foreach ($extras as $e): ?>
+        <div class="extra-item<?= !$e['RM_ATIVO'] ? ' extra-inativo' : '' ?>" data-rm-id="<?= $e['RM_ID'] ?>" data-tipo-id="<?= $e['RM_TP_ID'] ?>">
             <div class="extra-info">
                 <span class="extra-nome"><?= htmlspecialchars($e['RM_NOME']) ?></span>
-                <span class="extra-tipo"><?= htmlspecialchars($e['RTP_NOME']) ?></span>
+                <span class="extra-tipo">
+                    <?= htmlspecialchars($e['RTP_NOME']) ?>
+                    <?php if (!$e['RM_ATIVO']): ?> · <span class="badge-inativo">Descontinuado</span><?php endif; ?>
+                </span>
             </div>
             <div class="extra-preco">
                 <?= $e['preco_atual'] !== null ? number_format($e['preco_atual'], 2, ',', '') . '€' : 'sem preço' ?>
             </div>
             <button class="btn-editar-extra" title="Editar">
-            <i class="bi bi-pencil"></i>
+                <i class="bi bi-pencil"></i>
             </button>
+            <?php if ($e['RM_ATIVO']): ?>
             <button class="btn-apagar-extra" title="Eliminar">
                 <i class="bi bi-trash"></i>
             </button>
+            <?php else: ?>
+            <button class="btn-reativar-extra" title="Reativar">
+                <i class="bi bi-arrow-counterclockwise"></i>
+            </button>
+            <?php endif; ?>
         </div>
         <?php endforeach; ?>
         <?php endif; ?>

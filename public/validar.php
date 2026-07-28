@@ -39,6 +39,9 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
+    <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
+        <i class="bi bi-bar-chart-line"></i>
+    </a>
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
         <div id="profile-photo" class="profile-avatar">

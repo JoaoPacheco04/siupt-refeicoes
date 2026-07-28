@@ -223,3 +223,32 @@
     background: #fef2f2;
     border-color: #dc2626;
 }
+
+.extra-item.extra-inativo {
+    opacity: 0.55;
+}
+
+.badge-inativo {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+.btn-reativar-extra {
+    background: none;
+    border: 1.5px solid #86efac;
+    border-radius: 6px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #16a34a;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-reativar-extra:hover {
+    background: #f0fdf4;
+    border-color: #16a34a;
+}
