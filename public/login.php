@@ -36,6 +36,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $erro = 'BI/CC ou password incorretos';
 }
+
+mostrar_formulario:
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -90,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
 
         <form method="POST">
+            <input type="hidden" name="tipo_selecionado" id="tipoSelecionado" value="estudante">
             <div class="login-field-label" id="labelNumero">Número de estudante</div>
             <div class="input-icon-group">
                 <i class="bi bi-person-badge"></i>
@@ -118,8 +121,10 @@ document.querySelectorAll('.user-type-option').forEach(opt => {
     opt.addEventListener('click', () => {
         document.querySelectorAll('.user-type-option').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
-        document.getElementById('labelNumero').textContent =
-            opt.dataset.tipo === 'estudante' ? 'Número de estudante' : 'Número de colaborador';
+        const tipo = opt.dataset.tipo;
+        document.getElementById('labelNumero').textContent = tipo === 'estudante' ? 'Número de estudante' : 'Número de colaborador';
+        // Atualiza o valor do campo hidden que será enviado com o formulário
+        document.getElementById('tipoSelecionado').value = tipo;
     });
 });
 </script>

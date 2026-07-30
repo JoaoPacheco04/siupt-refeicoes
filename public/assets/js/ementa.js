@@ -1,7 +1,7 @@
 const btnComprar = document.getElementById('btnComprar');
 const totalSelecionadasEl = document.getElementById('totalSelecionadas');
 const totalValorEl = document.getElementById('totalValor');
-let _ultimoTotalItens = 0;   // ← MOVIDO para aqui, antes de qualquer uso
+let _ultimoTotalItens = 0;
 
 // Escape de HTML para usar em innerHTML (previne XSS)
 function escHtml(str) {
@@ -85,7 +85,10 @@ function syncExtrasDisponiveis() {
         if (jaComprado) cb.checked = false;
 
         const label = cb.closest('.componente-opcao');
-        if (label) label.classList.toggle('ja-comprado', jaComprado);
+        if (label) {
+            label.classList.toggle('ja-comprado', jaComprado);
+            label.title = jaComprado ? 'Já compraste este extra para este dia' : '';
+        }
     });
 
     atualizarResumo();

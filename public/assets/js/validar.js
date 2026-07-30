@@ -27,8 +27,6 @@ html5QrCode.start(
         document.getElementById('btnValidarSeguinte').style.display = 'inline-flex';
         validarQrCode(decodedText);
 
-        // Melhoria #5 — retoma automaticamente ao fim de 2.5s, sem precisar de toque.
-        // O botão manual "Validar seguinte" continua disponível para quem quiser mais tempo.
         clearTimeout(timeoutRetomarAutomatico);
         timeoutRetomarAutomatico = setTimeout(() => {
             if (!cameraDisponivel) return;
@@ -75,7 +73,6 @@ inputManual.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('btnValidarManual').click();
 });
 
-// ---- Foco automático — essencial para scanners físicos tipo emulador de teclado ----
 inputManual.focus();
 
 // ---- Chamada à API ----
@@ -132,7 +129,6 @@ function adicionarAListaValidacoes(dados) {
     `;
     listaEl.prepend(item);
 }
-// ---- Sons de feedback ----
 function tocarSom(sucesso) {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -147,7 +143,7 @@ function tocarSom(sucesso) {
         osc.start();
         osc.stop(ctx.currentTime + 0.25);
     } catch (e) {
-        // browsers que bloqueiam áudio sem interação prévia — ignora silenciosamente
+        
     }
 }
 // ---- Mostrar resultado ----

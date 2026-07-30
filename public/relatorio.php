@@ -23,6 +23,18 @@ $mesesNomes = [
 ];
 [$anoSelecionado, $mesSelecionado] = explode('-', $anoMes);
 $nomeMesSelecionado = $mesesNomes[$mesSelecionado] ?? $mesSelecionado;
+
+// Comparação com o mês anterior
+$diferencaMes = $resumo['total_vendido'] - $resumo['total_vendido_mes_anterior'];
+$percentagemMes = $resumo['total_vendido_mes_anterior'] > 0
+    ? ($diferencaMes / $resumo['total_vendido_mes_anterior']) * 100
+    : null;
+
+// Separa pratos da ementa normal dos extras
+$pratosEmenta = array_values(array_filter($vendasPorTipo, fn($t) => !str_starts_with($t['RTP_NOME'], 'Extra: ')));
+$extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) => str_starts_with($t['RTP_NOME'], 'Extra: ')));
+$totalExtras = array_sum(array_column($extrasVendas, 'total'));
+$qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -90,6 +102,12 @@ $nomeMesSelecionado = $mesesNomes[$mesSelecionado] ?? $mesSelecionado;
             <div class="cartao-icone"><i class="bi bi-bag-check-fill"></i></div>
             <div class="cartao-valor"><?= number_format($resumo['total_vendido'], 2, ',', '.') ?>€</div>
             <div class="cartao-label">total vendido</div>
+            <?php if ($percentagemMes !== null): ?>
+            <div class="cartao-comparacao <?= $percentagemMes >= 0 ? 'positiva' : 'negativa' ?>">
+                <i class="bi bi-arrow-<?= $percentagemMes >= 0 ? 'up' : 'down' ?>-short"></i>
+                <?= number_format(abs($percentagemMes), 1, ',', '.') ?>% vs. mês anterior
+            </div>
+            <?php endif; ?>
         </div>
         <div class="cartao-resumo">
             <div class="cartao-icone"><i class="bi bi-receipt"></i></div>
@@ -108,15 +126,42 @@ $nomeMesSelecionado = $mesesNomes[$mesSelecionado] ?? $mesSelecionado;
         </div>
     </div>
 
-    <!-- Vendas por tipo -->
-    <h2 class="relatorio-secao-titulo">vendas por tipo</h2>
-    <?php if (empty($vendasPorTipo)): ?>
-    <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas registadas neste mês.</p>
+    <!-- Vendas por tipo — ementa -->
+    <h2 class="relatorio-secao-titulo">vendas por tipo — ementa</h2>
+    <?php if (empty($pratosEmenta)): ?>
+    <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas de pratos da ementa neste mês.</p>
     <?php else: ?>
     <div class="relatorio-tabela">
-        <?php foreach ($vendasPorTipo as $t): ?>
-        <div class="relatorio-tabela-linha">
-            <span class="relatorio-tabela-nome"><?= htmlspecialchars($t['RTP_NOME']) ?></span>
+        <?php foreach ($pratosEmenta as $i => $t): ?>
+        <div class="relatorio-tabela-linha<?= $i === 0 ? ' relatorio-tabela-destaque' : '' ?>">
+            <span class="relatorio-tabela-nome">
+                <?= htmlspecialchars($t['RTP_NOME']) ?>
+                <?php if ($i === 0): ?><i class="bi bi-star-fill relatorio-icone-destaque"></i><?php endif; ?>
+            </span>
+            <span class="relatorio-tabela-qtd"><?= $t['quantidade'] ?>x</span>
+            <span class="relatorio-tabela-total"><?= number_format((float) $t['total'], 2, ',', '.') ?>€</span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Vendas por tipo — extras -->
+    <h2 class="relatorio-secao-titulo">
+        vendas por tipo — extras
+        <?php if (!empty($extrasVendas)): ?>
+        <span class="relatorio-subtotal">(total: <?= number_format($totalExtras, 2, ',', '.') ?>€, <?= $qtdExtras ?>x)</span>
+        <?php endif; ?>
+    </h2>
+    <?php if (empty($extrasVendas)): ?>
+    <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas de extras neste mês.</p>
+    <?php else: ?>
+    <div class="relatorio-tabela">
+        <?php foreach ($extrasVendas as $i => $t): ?>
+        <div class="relatorio-tabela-linha<?= $i === 0 ? ' relatorio-tabela-destaque' : '' ?>">
+            <span class="relatorio-tabela-nome">
+                <?= htmlspecialchars(str_replace('Extra: ', '', $t['RTP_NOME'])) ?>
+                <?php if ($i === 0): ?><i class="bi bi-star-fill relatorio-icone-destaque"></i><?php endif; ?>
+            </span>
             <span class="relatorio-tabela-qtd"><?= $t['quantidade'] ?>x</span>
             <span class="relatorio-tabela-total"><?= number_format((float) $t['total'], 2, ',', '.') ?>€</span>
         </div>

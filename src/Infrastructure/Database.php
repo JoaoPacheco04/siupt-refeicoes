@@ -40,6 +40,16 @@ class Database {
         return $perfil === self::PERFIL_FUNCIONARIO ? 'funcionario' : 'aluno';
     }
 
+    /**
+     * Decide o tipo de acesso ao SIUPT Refeições — NÃO usa U_PERFIL diretamente,
+     * porque "funcionário" no SIUPT pode incluir professores e outros colaboradores
+     * que compram refeições como qualquer aluno, não validam. Só quem está
+     * registado em restaurante_validador_cantina tem acesso à validação.
+     */
+    public static function tipoAcessoSiupt(array $utilizador): string {
+        return !empty($utilizador['U_VALIDADOR_CANTINA']) ? 'funcionario' : 'aluno';
+    }
+
     // ============================================
     // Menu e preços
     // ============================================
@@ -721,29 +731,32 @@ class Database {
      * $anoMes no formato 'YYYY-MM'.
      */
     public static function obterResumoMensal(string $anoMes): array {
-        $inicio = $anoMes . '-01';
-        $fim = date('Y-m-t', strtotime($inicio)); // último dia do mês
+    $inicio = $anoMes . '-01';
+    $fim = date('Y-m-t', strtotime($inicio));
 
-        $stmt = self::conexao()->prepare("
-            SELECT
-                COUNT(DISTINCT rp.RP_ID) AS total_pedidos,
-                ISNULL(SUM(rp.RP_PRECO_TOTAL), 0) AS total_vendido,
-                SUM(CASE WHEN rp.RP_UTILIZADO = 1 THEN 1 ELSE 0 END) AS total_levantados,
-                SUM(CASE WHEN rp.RP_UTILIZADO = 0 AND rp.RP_DATA_REFEICAO < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS total_nao_levantados
-            FROM restaurante_pedido rp
-            WHERE rp.RP_PAGO = 1
-              AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
-        ");
-        $stmt->execute([$inicio, $fim]);
-        $resultado = $stmt->fetch();
+    $stmt = self::conexao()->prepare("
+        SELECT
+            COUNT(DISTINCT rp.RP_ID) AS total_pedidos,
+            ISNULL(SUM(rp.RP_PRECO_TOTAL), 0) AS total_vendido,
+            SUM(CASE WHEN rp.RP_UTILIZADO = 1 THEN 1 ELSE 0 END) AS total_levantados,
+            SUM(CASE WHEN rp.RP_UTILIZADO = 0 AND rp.RP_DATA_REFEICAO < CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) AS total_nao_levantados
+        FROM restaurante_pedido rp
+        WHERE rp.RP_PAGO = 1
+          AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
+    ");
+    $stmt->execute([$inicio, $fim]);
+    $resultado = $stmt->fetch();
 
-        return [
-            'total_pedidos' => (int) $resultado['total_pedidos'],
-            'total_vendido' => (float) $resultado['total_vendido'],
-            'total_levantados' => (int) $resultado['total_levantados'],
-            'total_nao_levantados' => (int) $resultado['total_nao_levantados'],
-        ];
-    }
+    $mesAnterior = date('Y-m', strtotime($inicio . ' -1 month'));
+
+    return [
+        'total_pedidos' => (int) $resultado['total_pedidos'],
+        'total_vendido' => (float) $resultado['total_vendido'],
+        'total_levantados' => (int) $resultado['total_levantados'],
+        'total_nao_levantados' => (int) $resultado['total_nao_levantados'],
+        'total_vendido_mes_anterior' => self::obterTotalVendidoMensal($mesAnterior),
+    ];
+}
 
     /**
      * Vendas agregadas por tipo de prato (Carne/Peixe/Vegetariano/extras, etc.), dentro do mês.
@@ -788,5 +801,58 @@ class Database {
         return $stmt->fetchAll();
     }
 
+    /**
+ * Versão simplificada de obterResumoMensal, só com o total vendido —
+ * usada para comparação com o mês anterior, sem recursão nem repetição de queries pesadas.
+ */
+public static function obterTotalVendidoMensal(string $anoMes): float {
+    $inicio = $anoMes . '-01';
+    $fim = date('Y-m-t', strtotime($inicio));
+
+    $stmt = self::conexao()->prepare("
+        SELECT ISNULL(SUM(RP_PRECO_TOTAL), 0) AS total
+        FROM restaurante_pedido
+        WHERE RP_PAGO = 1 AND RP_DATA_REFEICAO BETWEEN ? AND ?
+    ");
+    $stmt->execute([$inicio, $fim]);
+    return (float) $stmt->fetchColumn();
+}
+
+
+public static function cancelarPedidoPendente(int $pedidoId, int $utilizadorId): bool {
+    $pdo = self::conexao();
+    $pdo->beginTransaction();
+
+    try {
+      
+        $stmt = $pdo->prepare("
+            SELECT RP_ID FROM restaurante_pedido
+            WHERE RP_ID = ? AND RP_U_ID = ? AND RP_PAGO = 0
+        ");
+        $stmt->execute([$pedidoId, $utilizadorId]);
+        if (!$stmt->fetch()) {
+            $pdo->rollBack();
+            return false;
+        }
+
+        $pdo->prepare("DELETE FROM restaurante_pagamento WHERE RPG_RP_ID = ?")
+            ->execute([$pedidoId]);
+
+        $pdo->prepare("DELETE FROM restaurante_compra WHERE RC_RP_ID = ?")
+            ->execute([$pedidoId]);
+
+        $stmt = $pdo->prepare("
+            DELETE FROM restaurante_pedido
+            WHERE RP_ID = ? AND RP_U_ID = ? AND RP_PAGO = 0
+        ");
+        $stmt->execute([$pedidoId, $utilizadorId]);
+
+        $pdo->commit();
+        return $stmt->rowCount() > 0;
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return false;
+    }
+}
     
 }

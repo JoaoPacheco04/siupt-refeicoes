@@ -118,6 +118,16 @@
     background: #e5e7eb !important;
 }
 
+.tingle-btn--danger {
+    background: #dc2626 !important;
+    color: #fff !important;
+    border: none !important;
+}
+
+.tingle-btn--danger:hover {
+    background: #b91c1c !important;
+}
+
 .codigo-curto {
     font-family: 'Manrope', monospace;
     font-size: 1.1rem;

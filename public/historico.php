@@ -31,7 +31,7 @@ $estados = [
     'nao_pago'  => ['label' => 'Pagamento pendente', 'class' => 'estado-nao-pago'],
     'ativo'     => ['label' => 'Ativo',              'class' => 'estado-ativo'],
     'utilizado' => ['label' => 'Levantado',          'class' => 'estado-utilizado'],
-    'expirado'  => ['label' => 'Vencido',            'class' => 'estado-vencido'],
+    'expirado'  => ['label' => 'Expirado',           'class' => 'estado-vencido'],
 ];
 
 $numerosDia = [1 => '2ª', 2 => '3ª', 3 => '4ª', 4 => '5ª', 5 => '6ª', 6 => 'Sáb', 7 => 'Dom'];
@@ -163,6 +163,9 @@ foreach ($pedidos as $p) {
                 <?php elseif ($estado === 'nao_pago'): ?>
                     <button class="btn-pagar-agora" data-pedido-id="<?= $p['RP_ID'] ?>">
                         <i class="bi bi-credit-card"></i> Pagar agora
+                    </button>
+                    <button class="btn-cancelar-pendente" data-pedido-id="<?= $p['RP_ID'] ?>" title="Cancelar pedido">
+                        <i class="bi bi-trash3-fill"></i>
                     </button>
                 <?php endif; ?>
                 <span class="estado-badge <?= $info['class'] ?>"><?= $info['label'] ?></span>
