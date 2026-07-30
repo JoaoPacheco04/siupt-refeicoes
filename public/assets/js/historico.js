@@ -322,3 +322,100 @@ async function cancelarPedido(pedidoId, modal) {
         alert('Ocorreu um erro de comunicação. Tenta novamente.');
     }
 }
+
+document.querySelectorAll('.btn-avaliar').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const pedidoId = btn.dataset.pedidoId;
+        mostrarModalAvaliacao(pedidoId);
+    });
+});
+
+function mostrarModalAvaliacao(pedidoId) {
+    const modal = new tingle.modal({
+        footer: true,
+        closeMethods: ['overlay', 'button', 'escape'],
+        cssClass: ['tingle-siupt']
+    });
+
+    let estrelaSelecionada = 0;
+
+    modal.setContent(`
+        <div class="modal-siupt-header">
+            <i class="bi bi-star-fill"></i>
+            <h4>Avaliar refeição</h4>
+        </div>
+        <div class="avaliacao-estrelas-input" id="estrelasInput">
+            ${[1,2,3,4,5].map(n => `<i class="bi bi-star" data-valor="${n}"></i>`).join('')}
+        </div>
+    `);
+
+    modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
+    modal.addFooterBtn('Enviar avaliação', 'tingle-btn tingle-btn--primary', async () => {
+        if (estrelaSelecionada === 0) { alert('Escolhe pelo menos 1 estrela.'); return; }
+        await enviarAvaliacao(pedidoId, estrelaSelecionada, modal);
+    });
+
+    modal.open();
+
+    const icones = modal.modal.querySelectorAll('#estrelasInput i');
+    icones.forEach(icone => {
+        icone.addEventListener('click', () => {
+            estrelaSelecionada = parseInt(icone.dataset.valor);
+            icones.forEach(i => i.className = parseInt(i.dataset.valor) <= estrelaSelecionada ? 'bi bi-star-fill' : 'bi bi-star');
+
+            // Só mostra o checkbox com 1 estrela — sinal claro de "algo correu mal"
+            problemaWrap.style.display = estrelaSelecionada === 1 ? 'flex' : 'none';
+            if (estrelaSelecionada !== 1) {
+                document.getElementById('reportarProblemaInput').checked = false;
+            }
+        });
+    });
+}
+
+document.querySelectorAll('.btn-transferir').forEach(btn => {
+    btn.addEventListener('click', () => {
+        mostrarModalTransferir(btn.dataset.pedidoId);
+    });
+});
+
+function mostrarModalTransferir(pedidoId) {
+    const modal = new tingle.modal({ footer: true, closeMethods: ['overlay', 'button', 'escape'], cssClass: ['tingle-siupt'] });
+
+    modal.setContent(`
+        <div class="modal-siupt-header">
+            <i class="bi bi-send"></i>
+            <h4>Transferir refeição</h4>
+        </div>
+        <p class="text-muted small">Introduz o número de estudante/colaborador de quem vai receber.</p>
+        <input type="text" id="biccDestinoInput" class="form-control" placeholder="Número">
+    `);
+
+    modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
+    modal.addFooterBtn('Transferir', 'tingle-btn tingle-btn--primary', async () => {
+        const bicc = document.getElementById('biccDestinoInput').value.trim();
+        if (!bicc) return;
+        await transferirPedido(pedidoId, bicc, modal);
+    });
+
+    modal.open();
+}
+
+async function transferirPedido(pedidoId, biccDestino, modal) {
+    try {
+        const resposta = await fetch('api/transferir_pedido.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ pedido_id: pedidoId, bicc_destino: biccDestino, csrf_token: window.CSRF_TOKEN })
+        });
+        const dados = await resposta.json();
+        modal.close();
+        if (dados.status === 'ok') {
+            location.reload();
+        } else {
+            alert(dados.mensagem || 'Não foi possível transferir.');
+        }
+    } catch (e) {
+        modal.close();
+        alert('Erro de rede ao transferir.');
+    }
+}

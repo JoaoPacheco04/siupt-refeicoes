@@ -115,7 +115,7 @@ $datasComPedido = array_flip(
  * Se o horário de corte para o dia de hoje já passou, começa a contar
  * a partir de amanhã.
  */
-$hojeBloqueadoExtras = defined('EXTRA_HORA_LIMITE_HOJE') && date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
+$hojeBloqueadoExtras = date('H:i:s') > '10:00:00';
 $diasUteisExtras = [];
 $cursor = new DateTime();
 if ($hojeBloqueadoExtras) {
@@ -139,6 +139,20 @@ foreach ($extras as $e) {
     $extrasComPreco[] = $e + ['preco' => $preco];
 }
 
+// ── Médias de avaliação por nome do prato (histórico) ────────────────────
+$nomesParaAvaliar = [];
+foreach ($diasEmenta as $tiposDoDia) {
+    foreach ($tiposDoDia as $itens) {
+        foreach ($itens as $item) {
+            $nomesParaAvaliar[] = $item['nome'];
+        }
+    }
+}
+foreach ($extrasComPreco as $e) {
+    $nomesParaAvaliar[] = $e['RM_NOME'];
+}
+$mediasAvaliacoes = Database::obterMediaAvaliacoesPorNomes($nomesParaAvaliar);
+
 // Variáveis auxiliares para a apresentação da data na interface.
 $numerosDia = [1 => '2ª', 2 => '3ª', 3 => '4ª', 4 => '5ª', 5 => '6ª'];
 $nomesCompletoDia = [1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta'];
@@ -146,6 +160,8 @@ $meses = [1=>'jan',2=>'fev',3=>'mar',4=>'abr',5=>'mai',6=>'jun',
           7=>'jul',8=>'ago',9=>'set',10=>'out',11=>'nov',12=>'dez'];
 $nomeMes = $meses[(int) $sexta->format('n')];
 $amanhaStr = date('Y-m-d', strtotime('+1 day'));
+
+$pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
 ?>
 
 <!DOCTYPE html>
@@ -202,6 +218,17 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
         <h1 class="ementa-titulo">ementa</h1>
         <p class="ementa-horario">Prazo de compra: <?= htmlspecialchars($prazotexto) ?></p>
     </div>
+
+    <?php if ($pedidosPorAvaliar > 0): ?>
+    <div class="banner-avaliar-pendente" id="bannerAvaliar" data-total="<?= $pedidosPorAvaliar ?>">
+        <i class="bi bi-star"></i>
+        Tens <?= $pedidosPorAvaliar ?> refeição(ões) por avaliar.
+        <a href="historico.php">Avaliar agora →</a>
+        <button type="button" class="btn-fechar-banner" id="btnFecharBanner" title="Fechar">
+            <i class="bi bi-x"></i>
+        </button>
+    </div>
+    <?php endif; ?>
 
     <?php if ($semanaAvancada): ?>
     <div class="banner-semana-avancada" role="alert">
@@ -286,6 +313,13 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
                     <span class="prato-opcao-label">
                         <strong><?= htmlspecialchars($tipoNome) ?></strong>
                         <small><?= htmlspecialchars($prato['nome']) ?></small>
+                        <?php if (isset($mediasAvaliacoes[$prato['nome']])):
+                            $av = $mediasAvaliacoes[$prato['nome']];
+                        ?>
+                        <span class="prato-avaliacao" title="<?= $av['total'] ?> avaliação(ões)">
+                            <?= str_repeat('★', round($av['media'])) . str_repeat('☆', 5 - round($av['media'])) ?>
+                        </span>
+                        <?php endif; ?>
                         <span class="prato-opcao-preco"><?= number_format($prato['preco'], 2, ',', '') ?>€</span>
                     </span>
                 </label>
@@ -349,6 +383,13 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
                        data-preco="<?= $e['preco'] ?>"
                        data-nome="<?= htmlspecialchars($e['RM_NOME']) ?>">
                 <span class="nome-extra"><?= htmlspecialchars($e['RM_NOME']) ?></span>
+                <?php if (isset($mediasAvaliacoes[$e['RM_NOME']])):
+                    $av = $mediasAvaliacoes[$e['RM_NOME']];
+                ?>
+                <span class="prato-avaliacao" title="<?= $av['total'] ?> avaliação(ões)">
+                    <?= str_repeat('★', round($av['media'])) . str_repeat('☆', 5 - round($av['media'])) ?>
+                </span>
+                <?php endif; ?>
                 <span class="preco-extra"><?= number_format($e['preco'], 2, ',', '') ?>€</span>
             </label>
             <?php endforeach; ?>

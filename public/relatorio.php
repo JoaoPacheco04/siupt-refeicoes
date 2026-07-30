@@ -28,6 +28,7 @@ if (!preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
 $resumo = Database::obterResumoMensal($anoMes);
 $vendasPorTipo = Database::obterVendasPorTipoMensal($anoMes);
 $vendasDiarias = Database::obterVendasDiariasMensal($anoMes);
+$mediaAvaliacoes = Database::obterMediaAvaliacoesMensal($anoMes);
 
 $mesesNomes = [
     '01' => 'Janeiro', '02' => 'Fevereiro', '03' => 'Março', '04' => 'Abril',
@@ -52,6 +53,11 @@ $pratosEmenta = array_values(array_filter($vendasPorTipo, fn($t) => !str_starts_
 $extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) => str_starts_with($t['RTP_NOME'], 'Extra: ')));
 $totalExtras = array_sum(array_column($extrasVendas, 'total'));
 $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
+
+$LIMITE_LINHAS = 10;
+$pratosEmentaMostrar = array_slice($pratosEmenta, 0, $LIMITE_LINHAS);
+$extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
+
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -99,19 +105,42 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
 <main class="relatorio-main">
     <div class="relatorio-header-acoes">
         <h1 class="relatorio-titulo">relatório mensal</h1>
-        <button onclick="window.print()" class="btn-exportar-pdf" id="btnExportarPdf">
-            <i class="bi bi-file-earmark-pdf"></i> Exportar PDF
-        </button>
+        <div class="relatorio-acoes-grupo">
+            <a href="api/exportar_relatorio.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv">
+                <i class="bi bi-filetype-csv"></i> CSV
+            </a>
+            <a href="api/exportar_relatorio_pdf.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-pdf">
+                <i class="bi bi-file-earmark-pdf"></i> PDF
+            </a>
+        </div>
     </div>
 
     <!-- Seleção do mês do relatório -->
-    <form method="get" class="relatorio-seletor-mes">
-        <label for="mes">Mês</label>
-        <input type="month" id="mes" name="mes" value="<?= htmlspecialchars($anoMes) ?>" max="<?= date('Y-m') ?>">
-        <button type="submit" class="btn-aplicar-mes">
-            <i class="bi bi-arrow-repeat"></i> Aplicar
-        </button>
-    </form>
+    <?php
+    $mesAnteriorStr = date('Y-m', strtotime($anoMes . '-01 -1 month'));
+    $mesSeguinteStr = date('Y-m', strtotime($anoMes . '-01 +1 month'));
+    $temMesSeguinte = $mesSeguinteStr <= date('Y-m'); // não permite ir além do mês atual
+    ?>
+    
+    <div class="relatorio-seletor-mes">
+        <a href="?mes=<?= $mesAnteriorStr ?>" class="btn-nav-mes" title="Mês anterior">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        <form method="get" style="display:contents;">
+            <label for="mes">Mês</label>
+            <input type="month" id="mes" name="mes" value="<?= htmlspecialchars($anoMes) ?>" max="<?= date('Y-m') ?>"
+                   onchange="this.form.submit()">
+        </form>
+        <?php if ($temMesSeguinte): ?>
+        <a href="?mes=<?= $mesSeguinteStr ?>" class="btn-nav-mes" title="Mês seguinte">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        <?php else: ?>
+        <span class="btn-nav-mes btn-nav-mes-desativado" title="Não é possível avançar para o futuro">
+            <i class="bi bi-chevron-right"></i>
+        </span>
+        <?php endif; ?>
+    </div>
 
     <h2 class="relatorio-subtitulo"><?= htmlspecialchars($nomeMesSelecionado . ' ' . $anoSelecionado) ?></h2>
 
@@ -142,6 +171,11 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
             <div class="cartao-icone"><i class="bi bi-exclamation-triangle-fill"></i></div>
             <div class="cartao-valor"><?= $resumo['total_nao_levantados'] ?></div>
             <div class="cartao-label">não levantadas</div>
+        </div>
+        <div class="cartao-resumo">
+            <div class="cartao-icone"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="cartao-valor"><?= number_format($resumo['preco_medio'], 2, ',', '.') ?>€</div>
+            <div class="cartao-label">preço médio/pedido</div>
         </div>
     </div>
 
@@ -201,6 +235,21 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
             <span class="relatorio-tabela-total"><?= number_format((float) $d['total_vendido'], 2, ',', '.') ?>€</span>
         </div>
         <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
+    <!-- Avaliações dos alunos -->
+    <h2 class="relatorio-secao-titulo">avaliações dos alunos</h2>
+
+    <?php if ($mediaAvaliacoes['total'] === 0): ?>
+    <p class="relatorio-vazio"><i class="bi bi-star"></i> Sem avaliações registadas neste mês.</p>
+    <?php else: ?>
+    <div class="avaliacao-resumo-card">
+        <div class="avaliacao-media-estrelas">
+            <?= str_repeat('★', round($mediaAvaliacoes['media'])) . str_repeat('☆', 5 - round($mediaAvaliacoes['media'])) ?>
+        </div>
+        <div class="avaliacao-media-numero"><?= number_format($mediaAvaliacoes['media'], 1, ',', '.') ?> / 5</div>
+        <div class="avaliacao-media-total"><?= $mediaAvaliacoes['total'] ?> pessoa(s) avaliaram</div>
     </div>
     <?php endif; ?>
 </main>

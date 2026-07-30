@@ -26,6 +26,11 @@
     margin: 0;
 }
 
+.relatorio-acoes-grupo {
+    display: flex;
+    gap: 0.5rem;
+}
+
 .btn-exportar-pdf {
     background: #dc2626;
     color: #fff;
@@ -38,11 +43,51 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
+    text-decoration: none;
+}
+
+.btn-exportar-csv {
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-decoration: none;
 }
 
 /* ======================================================================
    SELETOR DE MÊS
    ====================================================================== */
+
+.btn-nav-mes {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    background: #f0f4f8;
+    color: #1a3a63;
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: background 0.15s;
+}
+
+.btn-nav-mes:hover {
+    background: #e5ecf3;
+}
+
+.btn-nav-mes-desativado {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
 
 .relatorio-seletor-mes {
     display: flex;
@@ -64,11 +109,6 @@
     outline: none;
 }
 
-.relatorio-seletor-mes input[type="month"]:focus {
-    border-color: #73c5d8;
-    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
-}
-
 .btn-aplicar-mes {
     background: #1a3a63;
     color: #fff;
@@ -82,6 +122,11 @@
     align-items: center;
     gap: 0.35rem;
     transition: background 0.15s;
+}
+
+.relatorio-seletor-mes input[type="month"]:focus, .btn-aplicar-mes:focus {
+    border-color: #73c5d8;
+    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
 }
 
 .btn-aplicar-mes:hover {
@@ -102,7 +147,7 @@
 
 .relatorio-cartoes {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     gap: 0.85rem;
     margin-bottom: 2rem;
 }
@@ -246,9 +291,46 @@
     text-align: right;
 }
 
+.relatorio-ver-mais {
+    text-align: center;
+    color: #8a99ad;
+    font-size: 0.78rem;
+    padding: 0.6rem 0;
+    margin: 0;
+}
+
+.avaliacao-resumo-card {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    padding: 1.25rem;
+    text-align: center;
+    margin-bottom: 0.85rem;
+}
+
+.avaliacao-media-estrelas {
+    font-size: 1.6rem;
+    color: #d97706;
+    letter-spacing: 2px;
+}
+
+.avaliacao-media-numero {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: #1e2a3b;
+    margin-top: 0.3rem;
+}
+
 /* ======================================================================
    AJUSTES RESPONSIVOS
    ====================================================================== */
+
+@media (max-width: 900px) {
+    .relatorio-cartoes {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
 
 @media (max-width: 480px) {
     .relatorio-main {
@@ -269,7 +351,7 @@
    ====================================================================== */
 
 @media print {
-    header, .btn-exportar-pdf, .relatorio-seletor-mes {
+    header, .relatorio-acoes-grupo, .relatorio-seletor-mes {
         display: none !important;
     }
 

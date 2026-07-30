@@ -4,7 +4,6 @@
  *
  * Este ficheiro centraliza as configurações da aplicação,
  * incluindo a ligação à base de dados, os caminhos da
- * aplicação e os parâmetros de negócio.
  *
  * @package siupt_refeicoes
  * @author João Pacheco
@@ -31,13 +30,3 @@ define('DB_PASS', '');
  */
 define('APP_BASE_URL', '/siupt-refeicoes/public');
 
-// ==========================================
-// CONFIGURAÇÕES DE NEGÓCIO
-// ==========================================
-
-/**
- * Hora limite para compra de refeições extra no próprio dia.
- *
- * Formato: HH:MM:SS.
- */
-define('EXTRA_HORA_LIMITE_HOJE', '14:00:00');

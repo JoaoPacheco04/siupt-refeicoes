@@ -1,3 +1,19 @@
+// ── Banner "por avaliar" — fechar e lembrar até haver novidade ──────────
+const bannerAvaliar = document.getElementById('bannerAvaliar');
+if (bannerAvaliar) {
+    const totalAtual = bannerAvaliar.dataset.total;
+    const totalFechado = localStorage.getItem('banner_avaliar_fechado');
+
+    if (totalFechado === totalAtual) {
+        bannerAvaliar.style.display = 'none';
+    }
+
+    document.getElementById('btnFecharBanner')?.addEventListener('click', () => {
+        localStorage.setItem('banner_avaliar_fechado', totalAtual);
+        bannerAvaliar.style.display = 'none';
+    });
+}
+
 // Elementos principais da interface
 const btnComprar = document.getElementById('btnComprar');
 const totalSelecionadasEl = document.getElementById('totalSelecionadas');

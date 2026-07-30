@@ -1,0 +1,12 @@
+{
+    "name": "joaopacheco/siupt-refeicoes",
+    "authors": [
+        {
+            "name": "João Pacheco",
+            "email": "157326549+JoaoPacheco04@users.noreply.github.com"
+        }
+    ],
+    "require": {
+        "dompdf/dompdf": "^3.1"
+    }
+}

@@ -25,6 +25,10 @@ $pedidos = Database::listarPedidosDoUtilizador($utilizador['id']);
 $pedidoIds = array_column($pedidos, 'RP_ID');
 $todasLinhas = Database::listarLinhasDePedidos($pedidoIds);
 
+$pedidosUtilizados = array_column(array_filter($pedidos, fn($p) => $p['estado'] === 'utilizado'), 'RP_ID');
+$avaliacoes = Database::listarAvaliacoesPorPedidos($pedidosUtilizados);
+
+
 foreach ($pedidos as &$p) {
     $p['linhas'] = $todasLinhas[(int) $p['RP_ID']] ?? [];
 }
@@ -276,6 +280,9 @@ foreach ($pedidos as $p) {
                         QR code
 
                     </button>
+                    <button class="btn-transferir" data-pedido-id="<?= $p['RP_ID'] ?>" title="Transferir refeição">
+                        <i class="bi bi-send"></i>
+                    </button>
 
                 <?php elseif ($estado === 'nao_pago'): ?>
 
@@ -292,6 +299,19 @@ foreach ($pedidos as $p) {
                         <i class="bi bi-trash3-fill"></i>
 
                     </button>
+
+                <?php elseif ($estado === 'utilizado'): ?>
+
+                    <?php if (isset($avaliacoes[$p['RP_ID']])): ?>
+                        <span class="avaliacao-estrelas-lidas">
+                            <?= str_repeat('★', $avaliacoes[$p['RP_ID']]['RAV_ESTRELAS']) . str_repeat('☆', 5 - $avaliacoes[$p['RP_ID']]['RAV_ESTRELAS']) ?>
+                        </span>
+                    <?php else: ?>
+                        <button class="btn-avaliar" data-pedido-id="<?= $p['RP_ID'] ?>">
+                            <i class="bi bi-star"></i>
+                            Avaliar
+                        </button>
+                    <?php endif; ?>
 
                 <?php endif; ?>
 
