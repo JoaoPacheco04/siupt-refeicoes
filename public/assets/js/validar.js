@@ -1,7 +1,8 @@
+// Configurações globais e referências da API
 const API_URL    = window.API_URL;
 const CSRF_TOKEN = window.CSRF_TOKEN;
 
-// ---- Estado do resultado ----
+// ── Elementos principais da interface de validação ──────────────────────
 const resultadoCard   = document.getElementById('resultadoCard');
 const resultadoIcone  = document.getElementById('resultadoIcone');
 const resultadoEstado = document.getElementById('resultadoEstado');
@@ -15,10 +16,18 @@ const inputManual     = document.getElementById('inputQrManual');
 let cameraDisponivel = false;
 let timeoutRetomarAutomatico = null;
 
-// ---- Iniciar scanner de câmara ----
+/* ======================================================================
+   GESTÃO DO SCANNER DE CÂMARA
+   ====================================================================== */
+
+// ── Inicialização do leitor ótico por câmara ────────────────────────────
 const html5QrCode = new Html5Qrcode("qr-reader");
 const configScan  = { fps: 10, qrbox: { width: 220, height: 220 } };
 
+/**
+ * Inicia o fluxo de captura de vídeo para leitura automática de QR Codes,
+ * gerindo pausas temporizadas e o retomar automático após cada leitura bem-sucedida.
+ */
 html5QrCode.start(
     { facingMode: "environment" },
     configScan,
@@ -34,7 +43,7 @@ html5QrCode.start(
             document.getElementById('btnValidarSeguinte').style.display = 'none';
         }, 2500);
     },
-    () => { /* erro de leitura, ignorar */ }
+    () => { /* Erro de leitura em tempo real ignorado para evitar poluição da consola */ }
 ).then(() => {
     cameraDisponivel = true;
 }).catch(err => {
@@ -42,6 +51,10 @@ html5QrCode.start(
     mostrarAvisoSemCamara();
 });
 
+/**
+ * Apresenta uma mensagem de aviso no elemento do leitor caso
+ * o dispositivo não suporte ou não conceda permissão de câmara.
+ */
 function mostrarAvisoSemCamara() {
     const reader = document.getElementById('qr-reader');
     reader.innerHTML = `
@@ -53,15 +66,26 @@ function mostrarAvisoSemCamara() {
     `;
 }
 
+/**
+ * Permite ao operador retomar manualmente a câmara de forma imediata
+ * sem aguardar pelo temporizador de salto automático.
+ */
 document.getElementById('btnValidarSeguinte').addEventListener('click', () => {
     if (!cameraDisponivel) return;
-    clearTimeout(timeoutRetomarAutomatico); // cancela o auto-resume se o funcionário já clicou manualmente
+    clearTimeout(timeoutRetomarAutomatico);
     html5QrCode.resume();
     document.getElementById('btnValidarSeguinte').style.display = 'none';
     resultadoCard.classList.remove('visivel');
 });
 
-// ---- Input manual ----
+/* ======================================================================
+   INPUT MANUAL DE CÓDIGOS
+   ====================================================================== */
+
+// ── Submissão através do campo de texto ─────────────────────────────────
+/**
+ * Trata o clique no botão para validar o código introduzido manualmente.
+ */
 document.getElementById('btnValidarManual').addEventListener('click', () => {
     const codigo = inputManual.value.trim();
     if (!codigo) return;
@@ -69,13 +93,24 @@ document.getElementById('btnValidarManual').addEventListener('click', () => {
     inputManual.value = '';
 });
 
+/**
+ * Permite submeter o código premindo a tecla "Enter" no teclado físico ou pistola laser.
+ */
 inputManual.addEventListener('keydown', e => {
     if (e.key === 'Enter') document.getElementById('btnValidarManual').click();
 });
 
 inputManual.focus();
 
-// ---- Chamada à API ----
+/* ======================================================================
+   COMUNICAÇÃO COM A API DE VALIDAÇÃO
+   ====================================================================== */
+
+// ── Processamento do QR Code ────────────────────────────────────────────
+/**
+ * Envia o código capturado ou inserido para validação no servidor,
+ * atualizando o estado visual e o contador diário consoante a resposta.
+ */
 async function validarQrCode(qrcode) {
     mostrarResultado('loading');
 
@@ -105,7 +140,13 @@ async function validarQrCode(qrcode) {
     inputManual.focus();
 }
 
-// ---- Acrescentar entrada nova ao topo da lista ----
+/* ======================================================================
+   ATUALIZAÇÃO DA INTERFACE DE RESULTADOS E HISTÓRICO
+   ====================================================================== */
+
+/**
+ * Insere uma nova validação bem-sucedida no topo da lista em tempo real.
+ */
 function adicionarAListaValidacoes(dados) {
     const vazia = document.getElementById('listaVazia');
     if (vazia) vazia.remove();
@@ -129,6 +170,11 @@ function adicionarAListaValidacoes(dados) {
     `;
     listaEl.prepend(item);
 }
+
+/**
+ * Emite um sinal sonoro sintetizado (beep) com frequência diferente
+ * consoante o sucesso ou o insucesso da validação.
+ */
 function tocarSom(sucesso) {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -137,16 +183,20 @@ function tocarSom(sucesso) {
         osc.connect(gain);
         gain.connect(ctx.destination);
         osc.type = 'sine';
-        osc.frequency.value = sucesso ? 880 : 220;
+        osc.frequency.value = sucesso ? 880 : 220; // Tom agudo para sucesso, grave para erro
         gain.gain.setValueAtTime(0.15, ctx.currentTime);
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
         osc.start();
         osc.stop(ctx.currentTime + 0.25);
     } catch (e) {
-        
+        // Ignora falhas de autoplay ou restrições de contexto de áudio do browser
     }
 }
-// ---- Mostrar resultado ----
+
+/**
+ * Altera dinamicamente os elementos visuais do cartão de resultado
+ * com base no estado devolvido pela API (válido, expirado, duplicado, etc.).
+ */
 function mostrarResultado(status, dados = {}) {
     resultadoCard.className = 'resultado-card visivel';
     resultadoLinhas.innerHTML = '';
@@ -220,13 +270,22 @@ function mostrarResultado(status, dados = {}) {
         });
     }
 
-    // Melhoria #1 — scroll automático até ao resultado (evita a fila ter de rolar o ecrã)
+    // Executa scroll automático até ao resultado e reproduz o alerta sonoro
     if (status !== 'loading') {
         resultadoCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
         tocarSom(status === 'valido');
     }
 }
 
+/* ======================================================================
+   FUNÇÕES UTILITÁRIAS
+   ====================================================================== */
+
+// ── Escape de HTML (Prevenção XSS) ──────────────────────────────────────
+/**
+ * Escapa caracteres especiais antes de injetar dados na árvore DOM,
+ * prevenindo ataques de injeção de código (XSS).
+ */
 function escHtml(str) {
     return String(str)
         .replace(/&/g, '&amp;')

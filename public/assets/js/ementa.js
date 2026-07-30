@@ -1,9 +1,16 @@
+// Elementos principais da interface
 const btnComprar = document.getElementById('btnComprar');
 const totalSelecionadasEl = document.getElementById('totalSelecionadas');
 const totalValorEl = document.getElementById('totalValor');
+
+// Guarda o último número de itens para animar o contador apenas quando muda
 let _ultimoTotalItens = 0;
 
 // Escape de HTML para usar em innerHTML (previne XSS)
+/**
+ * Escapa caracteres HTML antes de inserir texto com innerHTML,
+ * prevenindo ataques XSS.
+ */
 function escHtml(str) {
     return String(str)
         .replace(/&/g, '&amp;')
@@ -13,20 +20,35 @@ function escHtml(str) {
 }
 
 // ── Permitir desmarcar o prato principal ao clicar de novo ─────────────────
+/* ======================================================================
+   GESTÃO DA SELEÇÃO DO PRATO PRINCIPAL
+   ====================================================================== */
+
+/**
+ * Permite desmarcar um prato principal clicando novamente
+ * no mesmo radio button.
+ */
 const ultimoSelecionado = {};
 
 document.querySelectorAll('.radio-prato-principal').forEach(radio => {
     const grupo = radio.name;
 
     radio.addEventListener('click', function () {
+
+        // Se o utilizador clicar novamente no prato selecionado, remove a seleção
         if (ultimoSelecionado[grupo] === this) {
             this.checked = false;
             ultimoSelecionado[grupo] = null;
 
             const card = this.closest('.dia-card');
+
             if (card) {
                 const menuCompletoBox = card.querySelector('.checkbox-menu-completo');
-                if (menuCompletoBox) menuCompletoBox.checked = false;
+                if (menuCompletoBox) {
+                    menuCompletoBox.checked = false;
+                }
+
+                // Remove também todos os componentes adicionais
                 card.querySelectorAll('.checkbox-componente').forEach(c => c.checked = false);
                 syncComponentesVisibility(card);
             }
@@ -40,6 +62,15 @@ document.querySelectorAll('.radio-prato-principal').forEach(radio => {
 });
 
 // ── Visibilidade dos componentes (Sopa/Sobremesa/Bebida) ──────────────────
+/* ======================================================================
+   VISIBILIDADE DOS COMPONENTES DO MENU
+   ====================================================================== */
+
+/**
+ * Mostra ou esconde os componentes (sopa, bebida e sobremesa)
+ * conforme exista prato principal selecionado e o utilizador
+ * tenha ou não escolhido menu completo.
+ */
 function syncComponentesVisibility(card) {
     const menuCompletoBox = card.querySelector('.checkbox-menu-completo');
     const componentes     = card.querySelector('.dia-componentes');
@@ -50,29 +81,52 @@ function syncComponentesVisibility(card) {
     const mostrar  = temPrato && !(menuCompletoBox?.checked ?? false);
 
     componentes.classList.toggle('visivel', mostrar);
-    if (wrap) wrap.classList.toggle('tem-prato', temPrato);
+    if (wrap) {
+        wrap.classList.toggle('tem-prato', temPrato);
+    }
 }
 
+// Atualiza todos os cartões ao carregar a página
 document.querySelectorAll('.dia-card').forEach(syncComponentesVisibility);
 
+/**
+ * Sempre que o utilizador ativa/desativa o menu completo,
+ * os componentes individuais deixam de poder ser escolhidos.
+ */
 document.querySelectorAll('.checkbox-menu-completo').forEach(box => {
+
     box.addEventListener('change', () => {
+
         const card = box.closest('.dia-card');
+
         if (card) {
+
             syncComponentesVisibility(card);
+
             if (box.checked) {
                 card.querySelectorAll('.checkbox-componente').forEach(c => c.checked = false);
             }
         }
+
         atualizarResumo();
     });
+
 });
 
+// Sempre que existe alteração nas opções recalcula-se o resumo
 document.querySelectorAll('.checkbox-componente, .checkbox-extra').forEach(el => {
     el.addEventListener('change', atualizarResumo);
 });
 
 // ── Extras já comprados por data — desativa e risca a checkbox ────────────
+/* ======================================================================
+   GESTÃO DOS EXTRAS
+   ====================================================================== */
+
+/**
+ * Desativa automaticamente os extras que o utilizador
+ * já comprou para a data atualmente selecionada.
+ */
 function syncExtrasDisponiveis() {
     const dataSelecionada = document.getElementById('dataExtras')?.value;
     if (!dataSelecionada) return;
@@ -82,7 +136,9 @@ function syncExtrasDisponiveis() {
         const jaComprado = (window.extrasJaComprados || []).includes(chave);
 
         cb.disabled = jaComprado;
-        if (jaComprado) cb.checked = false;
+        if (jaComprado) {
+            cb.checked = false;
+        }
 
         const label = cb.closest('.componente-opcao');
         if (label) {
@@ -97,6 +153,14 @@ function syncExtrasDisponiveis() {
 document.getElementById('dataExtras')?.addEventListener('change', syncExtrasDisponiveis);
 syncExtrasDisponiveis();
 
+/* ======================================================================
+   RECOLHA DAS SELEÇÕES EFETUADAS
+   ====================================================================== */
+
+/**
+ * Constrói uma estrutura contendo todos os pratos,
+ * componentes e extras escolhidos pelo utilizador.
+ */
 function coletarSelecoes() {
     const selecoes = [];
 
@@ -120,6 +184,7 @@ function coletarSelecoes() {
             menu_completo: menuCompletoChecked
         }];
 
+        // Caso não seja menu completo adicionam-se os componentes individuais
         if (!menuCompletoChecked) {
             card.querySelectorAll('.checkbox-componente:checked').forEach(c => {
                 itens.push({
@@ -134,6 +199,7 @@ function coletarSelecoes() {
         selecoes.push({ data, itens });
     });
 
+    // Acrescenta os extras selecionados
     const extrasSelecionados = [...document.querySelectorAll('.checkbox-extra:checked')];
     if (extrasSelecionados.length > 0) {
         const dataExtras = document.getElementById('dataExtras')?.value;
@@ -151,6 +217,14 @@ function coletarSelecoes() {
     return selecoes;
 }
 
+/* ======================================================================
+   ATUALIZAÇÃO DO RESUMO DA COMPRA
+   ====================================================================== */
+
+/**
+ * Recalcula o número de itens e o valor total da compra,
+ * atualizando a interface em tempo real.
+ */
 function atualizarResumo() {
     const selecoes = coletarSelecoes();
     let totalItens = 0;
@@ -163,6 +237,7 @@ function atualizarResumo() {
         });
     });
 
+    // Anima o contador apenas quando existe alteração
     if (totalItens !== _ultimoTotalItens) {
         totalSelecionadasEl.classList.remove('bounce');
         void totalSelecionadasEl.offsetWidth;
@@ -171,17 +246,31 @@ function atualizarResumo() {
     }
 
     totalSelecionadasEl.textContent = totalItens;
-    totalValorEl.textContent = totalValor.toFixed(2).replace('.', ',') + '€';
+    totalValorEl.textContent =
+        totalValor.toFixed(2).replace('.', ',') + '€';
+
     btnComprar.disabled = totalItens === 0;
 }
 
+/* ======================================================================
+   CONFIRMAÇÃO DA COMPRA
+   ====================================================================== */
+
+/**
+ * Abre um modal de confirmação contendo o resumo
+ * da compra antes da criação dos pedidos.
+ */
 btnComprar.addEventListener('click', () => {
     const selecoes = coletarSelecoes();
     if (selecoes.length === 0) return;
 
     const totalGeral = selecoes.reduce((soma, g) => soma + g.itens.reduce((s, i) => s + i.preco, 0), 0);
     const listaHtml = selecoes
-        .map(g => g.itens.map(i => `<div class="resumo-modal-item"><span>${escHtml(i.nome)}</span><span>${i.preco.toFixed(2)}€</span></div>`).join(''))
+        .map(g => {
+            const dataFormatada = new Date(g.data + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'short' });
+            const itensHtml = g.itens.map(i => `<div class="resumo-modal-item"><span>${escHtml(i.nome)}</span><span>${i.preco.toFixed(2)}€</span></div>`).join('');
+            return `<div class="resumo-modal-grupo"><div class="resumo-modal-data">${dataFormatada}</div>${itensHtml}</div>`;
+        })
         .join('');
 
     const modal = new tingle.modal({
@@ -196,8 +285,13 @@ btnComprar.addEventListener('click', () => {
             <i class="bi bi-bag-check"></i>
             <h4>Confirmar compra</h4>
         </div>
-        ${listaHtml}
-        <div class="resumo-modal-total"><span>Total</span><span>${totalGeral.toFixed(2).replace('.', ',')}€</span></div>
+        <div class="resumo-modal-lista">
+            ${listaHtml}
+        </div>
+        <div class="resumo-modal-total">
+            <span>Total</span>
+            <span>${totalGeral.toFixed(2).replace('.', ',')}€</span>
+        </div>
     `);
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
@@ -209,7 +303,16 @@ btnComprar.addEventListener('click', () => {
     modal.open();
 });
 
+/* ======================================================================
+   CRIAÇÃO DOS PEDIDOS
+   ====================================================================== */
+
+/**
+ * Envia cada conjunto de seleções para a API,
+ * criando os respetivos pedidos no servidor.
+ */
 async function processarPedidos(selecoes) {
+
     btnComprar.disabled = true;
     const btnSpan = btnComprar.querySelector('span');
     if (btnSpan) btnSpan.textContent = 'A criar pedido...';
@@ -254,7 +357,16 @@ async function processarPedidos(selecoes) {
     mostrarEcraPagamento(pedidoIds, totalConfirmado, falhas);
 }
 
+/* ======================================================================
+   SIMULAÇÃO DO PAGAMENTO
+   ====================================================================== */
+
+/**
+ * Mostra o ecrã que simula uma confirmação
+ * MB WAY antes da confirmação definitiva.
+ */
 function mostrarEcraPagamento(pedidoIds, total, falhas) {
+
     const avisoFalhas = (falhas && falhas.length > 0)
         ? `<div class="alert alert-warning small text-start mt-3 mb-0">
              <i class="bi bi-exclamation-triangle"></i>
@@ -282,7 +394,13 @@ function mostrarEcraPagamento(pedidoIds, total, falhas) {
     document.getElementById('simFalha').onclick = () => confirmarPagamento(pedidoIds, false, modalPagamento, falhas);
 }
 
+/**
+ * Confirma (ou rejeita) o pagamento através
+ * da API e apresenta os QR Codes dos pedidos
+ * confirmados.
+ */
 async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
+
     modalPagamento.close();
 
     let dados;
@@ -325,7 +443,7 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
                 <h4>Compra confirmada!</h4>
             </div>
             <p>${confirmados.length} pedido(s) confirmado(s). Mostra o QR code na cantina.</p>
-            ${qrHtml}
+            <div class="qr-container">${qrHtml}</div>
         `;
     } else {
         conteudo = `
@@ -342,33 +460,34 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
     modalResultado.open();
     confirmados.forEach((c, idx) => {
         const el = document.getElementById(`qr-${idx}`);
-        if (!el) {
-            console.warn(`QR do pedido #${c.pedido_id} não desenhado — elemento não encontrado.`);
-            return;
-        }
+        if (!el) return;
         try {
-            new QRCode(el, {
-                text: c.qrcode,
-                width: 160,
-                height: 160,
-                colorDark: '#1e2a3b',
-                colorLight: '#ffffff'
-            });
+            new QRCode(el, { text: c.qrcode, width: 160, height: 160, colorDark: '#1e2a3b', colorLight: '#ffffff' });
         } catch (err) {
             console.error(`Falha ao desenhar QR do pedido #${c.pedido_id}:`, err);
         }
     });
-
 }
 
+/* ======================================================================
+   APRESENTAÇÃO DE ERROS
+   ====================================================================== */
+
+/**
+ * Apresenta uma janela modal contendo todas
+ * as mensagens de erro devolvidas pelo servidor.
+ */
 function mostrarErro(mensagens) {
+
     const modal = new tingle.modal({ footer: true, closeMethods: ['overlay', 'button', 'escape'] });
     modal.setContent(`
         <div class="modal-siupt-header erro">
             <i class="bi bi-x-circle-fill"></i>
             <h4>Erro ao processar</h4>
         </div>
-        ${mensagens.map(f => `<div class="resumo-modal-item erro-item"><i class="bi bi-x-circle"></i> ${f}</div>`).join('')}
+        <div class="resumo-modal-lista">
+            ${mensagens.map(f => `<div class="resumo-modal-item erro-item"><i class="bi bi-x-circle"></i> ${escHtml(f)}</div>`).join('')}
+        </div>
     `);
     modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--primary', () => modal.close());
     modal.open();

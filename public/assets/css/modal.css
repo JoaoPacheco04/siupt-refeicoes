@@ -1,3 +1,7 @@
+/* ======================================================================
+   ESTRUTURA BASE DO MODAL (TINGLE OVERRIDES)
+   ====================================================================== */
+
 .tingle-modal-box {
     border-radius: 12px;
     overflow: hidden;
@@ -8,6 +12,10 @@
     padding: 1.75rem 1.75rem 0.5rem;
 }
 
+/* ======================================================================
+   CABEÇALHO PERSONALIZADO DO MODAL
+   ====================================================================== */
+
 .modal-siupt-header {
     display: flex;
     align-items: center;
@@ -15,6 +23,7 @@
     margin-bottom: 1rem;
 }
 
+/* ── Ícones do cabeçalho ───────────────────────── */
 .modal-siupt-header i {
     font-size: 1.6rem;
     color: #1a3a63;
@@ -37,6 +46,10 @@
     font-size: 1.15rem;
     color: #1e2a3b;
 }
+
+/* ======================================================================
+   CONTEÚDO DO MODAL (RESUMOS E AVISOS)
+   ====================================================================== */
 
 .resumo-modal-item {
     display: flex;
@@ -65,6 +78,7 @@
     color: #1a3a63;
 }
 
+/* ── Aviso de e-mail no modal de pagamento ──────── */
 .modal-email-aviso {
     background: #f0f7ff;
     border: 1px solid #bfdbfe;
@@ -84,6 +98,10 @@
     flex-shrink: 0;
     margin-top: 1px;
 }
+
+/* ======================================================================
+   RODAPÉ E BOTÕES DO MODAL (TINGLE OVERRIDES)
+   ====================================================================== */
 
 .tingle-modal-box__footer {
     padding: 0.85rem 1.75rem;
@@ -127,6 +145,10 @@
 .tingle-btn--danger:hover {
     background: #b91c1c !important;
 }
+
+/* ======================================================================
+   ELEMENTOS ESPECÍFICOS (QR CODE, ETC.)
+   ====================================================================== */
 
 .codigo-curto {
     font-family: 'Manrope', monospace;

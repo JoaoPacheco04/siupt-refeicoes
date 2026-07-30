@@ -1,22 +1,36 @@
 <?php
+/**
+ * Página da ementa semanal.
+ *
+ * Apresenta a ementa da semana corrente (ou da próxima, se a atual
+ * já não tiver pratos disponíveis), permitindo ao utilizador selecionar
+ * refeições e extras para compra.
+ */
+
+// Inclui os ficheiros de suporte e infraestrutura necessários.
 require_once __DIR__ . '/../src/Support/Auth.php';
+require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
+// Garante que apenas utilizadores autenticados podem aceder.
+$utilizador = exigirLogin();
 
-$utilizador = exigirLogin(); 
-
+// Calcula as datas de início e fim da semana corrente.
 $hoje = new DateTime();
 $diaSemanaHoje = (int) $hoje->format('N');
 $segunda = (clone $hoje)->modify('-' . ($diaSemanaHoje - 1) . ' days');
 $sexta   = (clone $segunda)->modify('+4 days');
 
+// Obtém os pratos da ementa para a semana calculada.
 $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
 
+// Carrega em lote os limites de compra para os tipos de prato da semana.
 $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
 $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
 
-// Se a semana atual não tem nada disponível para comprar (vazia, ou tudo já
-// fora de prazo de compra), avança automaticamente para a semana seguinte
+/**
+ * Verifica se todos os pratos de uma lista já estão fora do prazo de compra.
+ */
 function todosPratosForaDePrazo(array $pratos, array $limitesBatch): bool {
     if (empty($pratos)) return true;
     foreach ($pratos as $p) {
@@ -27,6 +41,10 @@ function todosPratosForaDePrazo(array $pratos, array $limitesBatch): bool {
     return true;
 }
 
+/**
+ * Se a semana atual não tem pratos disponíveis ou todos estão fora de prazo,
+ * avança automaticamente para a semana seguinte.
+ */
 $semanaAvancada = false;
 if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $semanaAvancada = true;
@@ -38,20 +56,22 @@ if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
 }
 
-// Ícones por tipo de prato principal
+// Configuração dos ícones para cada tipo de prato principal.
 $iconePrato = [
     'Carne'       => '🥩',
     'Peixe'       => '🐟',
     'Vegetariano' => '🌿',
 ];
 
+// Carrega os pratos extras, o ID do tipo "Menu Completo" e o texto do prazo.
 $extras = Database::listarPratosExtras();
 $tipoMenuCompletoId = Database::obterTipoIdPorNome('Menu Completo');
 $prazotexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia anterior';
 
-// ── Batch de preços ───────────────────────────────────────────
+// Carrega todos os preços e limites de uma só vez para evitar múltiplas queries (N+1).
 $tipoIdsSemana = array_unique(array_column($pratos, 'RM_TP_ID'));
 $tipoIdsExtras = array_unique(array_column($extras, 'RM_TP_ID'));
+// Junta todos os IDs de tipo de refeição (semana, extras, menu completo).
 $tipoIdsTodos  = array_unique(array_merge(
     $tipoIdsSemana,
     $tipoIdsExtras,
@@ -61,7 +81,7 @@ $hojeStr = date('Y-m-d');
 $precosBatch = Database::obterPrecosVigentesBatch($tipoIdsTodos, $hojeStr);
 $limitesBatch = Database::obterDataLimitesBatch($tipoIdsTodos);
 
-// ── Agrupar pratos por dia e por tipo ────────────────────────────────────
+// Agrupa os pratos da ementa por data e, dentro de cada data, por tipo.
 $diasEmenta = [];
 foreach ($pratos as $p) {
     $data = $p['RM_DATA'];
@@ -75,6 +95,7 @@ foreach ($pratos as $p) {
 }
 ksort($diasEmenta);
 
+// Define o preço do menu completo para cada dia da ementa.
 $precosMenuCompleto = [];
 if ($tipoMenuCompletoId !== null) {
     $precoMCBase = $precosBatch[$tipoMenuCompletoId] ?? null;
@@ -83,14 +104,17 @@ if ($tipoMenuCompletoId !== null) {
     }
 }
 
-// ── Datas com pedido já ativo (aviso de duplicado — pratos principais) ───
+// Identifica as datas para as quais o utilizador já tem um pedido ativo.
 $datasEmenta = array_keys($diasEmenta);
 $datasComPedido = array_flip(
     Database::listarDatasComPedidoAtivo((int) $utilizador['id'], $datasEmenta)
 );
 
-// ── Próximos dias úteis para os extras (sem fim de semana) ───────────────
-// Se já passou o horário de corte de hoje, "hoje" já não é opção válida
+/**
+ * Calcula os próximos 5 dias úteis para a compra de extras.
+ * Se o horário de corte para o dia de hoje já passou, começa a contar
+ * a partir de amanhã.
+ */
 $hojeBloqueadoExtras = defined('EXTRA_HORA_LIMITE_HOJE') && date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
 $diasUteisExtras = [];
 $cursor = new DateTime();
@@ -104,10 +128,10 @@ while (count($diasUteisExtras) < 5) {
     $cursor->modify('+1 day');
 }
 
-// Itens extra já comprados — tem de correr DEPOIS de $diasUteisExtras estar preenchido
+// Verifica quais itens extra o utilizador já comprou para os dias disponíveis.
 $itensExtrasComprados = Database::listarItensExtrasComprados((int) $utilizador['id'], $diasUteisExtras);
 
-// ── Filtrar extras sem preço definido (evita mostrar "0,00€" enganoso) ───
+// Filtra os extras que não têm um preço definido para não os mostrar na interface.
 $extrasComPreco = [];
 foreach ($extras as $e) {
     $preco = $precosBatch[(int) $e['RM_TP_ID']] ?? null;
@@ -115,6 +139,7 @@ foreach ($extras as $e) {
     $extrasComPreco[] = $e + ['preco' => $preco];
 }
 
+// Variáveis auxiliares para a apresentação da data na interface.
 $numerosDia = [1 => '2ª', 2 => '3ª', 3 => '4ª', 4 => '5ª', 5 => '6ª'];
 $nomesCompletoDia = [1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta'];
 $meses = [1=>'jan',2=>'fev',3=>'mar',4=>'abr',5=>'mai',6=>'jun',
@@ -135,7 +160,7 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
     <link href="assets/css/base.css" rel="stylesheet">
     <link href="assets/css/navbar.css" rel="stylesheet">
     <link href="assets/css/modal.css" rel="stylesheet">
-    <link href="assets/css/ementa.css" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/ementa.css') ?>" rel="stylesheet">
 </head>
 <body>
 
@@ -358,6 +383,6 @@ $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 </script>
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 <script src="assets/js/vendor/qrcode.min.js"></script>
-<script src="assets/js/ementa.js"></script>
+<script src="<?= assetUrl('assets/js/ementa.js') ?>"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
-/* ============================================
-   Página de Validação — Funcionário
-   ============================================ */
+/* ======================================================================
+   ESTRUTURA E CABEÇALHO
+   ====================================================================== */
 
 .validar-main {
     min-height: calc(100vh - 60px);
@@ -24,7 +24,10 @@
     margin: 0 0 1.5rem 0;
 }
 
-/* ---- Contador de validações ---- */
+/* ======================================================================
+   CONTADOR DE VALIDAÇÕES
+   ====================================================================== */
+
 .validacoes-contador {
     display: inline-flex;
     align-items: center;
@@ -49,7 +52,11 @@
     color: #1e2a3b;
 }
 
-/* ---- Área de scan / input ---- */
+/* ======================================================================
+   ÁREA DE SCAN E INPUT
+   ====================================================================== */
+
+/* ── Cartão principal para scan e input manual ─── */
 .scan-card {
     background: #fff;
     border: 1px solid #e5e9ef;
@@ -70,6 +77,7 @@
     gap: 0.4rem;
 }
 
+/* ── Container do leitor de QR Code (câmara) ───── */
 #qr-reader {
     width: 100%;
     border-radius: 10px;
@@ -78,12 +86,13 @@
     min-height: 250px;
 }
 
-/* Override html5-qrcode default styles */
+/* ── Oculta ícones default da biblioteca html5-qrcode ── */
 #qr-reader img[alt="Info icon"],
 #qr-reader img[alt="Camera based scan"] {
     display: none !important;
 }
 
+/* ── Separador "OU" entre câmara e input manual ── */
 .scan-separador {
     text-align: center;
     font-size: 0.78rem;
@@ -108,11 +117,13 @@
 .scan-separador::before { left: 0; }
 .scan-separador::after  { right: 0; }
 
+/* ── Grupo de input manual ─────────────────────── */
 .scan-input-group {
     display: flex;
     gap: 0.6rem;
 }
 
+/* ── Campo de texto para código manual ─────────── */
 .scan-input {
     flex: 1;
     border: 1px solid #d1d8e0;
@@ -131,6 +142,7 @@
     box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
 }
 
+/* ── Botão de validar código manual ────────────── */
 .btn-validar-manual {
     background: #1a3a63;
     color: #fff;
@@ -152,7 +164,11 @@
     transform: translateY(-1px);
 }
 
-/* ---- Resultado ---- */
+/* ======================================================================
+   CARTÃO DE RESULTADO DA VALIDAÇÃO
+   ====================================================================== */
+
+/* ── Base do cartão de resultado ───────────────── */
 .resultado-card {
     border-radius: 14px;
     padding: 1.5rem;
@@ -165,6 +181,7 @@
     display: block;
 }
 
+/* ── Variações de cor por estado ───────────────── */
 .resultado-card.sucesso {
     background: #f0fdf4;
     border: 1.5px solid #86efac;
@@ -180,6 +197,7 @@
     border: 1.5px solid #fcd34d;
 }
 
+/* ── Animação de entrada do cartão ─────────────── */
 @keyframes fadeInUp {
     from { opacity: 0; transform: translateY(12px); }
     to   { opacity: 1; transform: translateY(0); }
@@ -191,6 +209,7 @@
     display: block;
 }
 
+/* ── Texto principal do estado (Válido, Erro, etc.) ── */
 .resultado-estado {
     font-family: 'Manrope', sans-serif;
     font-size: 1.1rem;
@@ -202,6 +221,7 @@
 .resultado-card.erro    .resultado-estado { color: #991b1b; }
 .resultado-card.aviso   .resultado-estado { color: #92400e; }
 
+/* ── Nome e número do utilizador validado ──────── */
 .resultado-nome {
     font-size: 1rem;
     font-weight: 600;
@@ -209,7 +229,7 @@
     margin-bottom: 0.75rem;
 }
 
-/* Número do aluno — em destaque, para confirmação visual de identidade */
+/* ── Número do aluno (destaque para confirmação) ─ */
 .resultado-numero {
     font-size: 1.1rem;
     font-weight: 700;
@@ -219,6 +239,7 @@
     margin-bottom: 0.75rem;
 }
 
+/* ── Lista de itens da refeição validada ───────── */
 .resultado-linhas {
     list-style: none;
     padding: 0;
@@ -245,7 +266,11 @@
     color: #8a99ad;
 }
 
-/* ---- Cabeçalho da lista de validações + botão exportar ---- */
+/* ======================================================================
+   LISTA DE VALIDAÇÕES RECENTES
+   ====================================================================== */
+
+/* ── Cabeçalho da lista (título + botão exportar) ─ */
 .validacoes-lista-header {
     display: flex;
     align-items: center;
@@ -257,6 +282,7 @@
     margin: 0;
 }
 
+/* ── Botão de exportar log ─────────────────────── */
 .btn-exportar-log {
     display: inline-flex;
     align-items: center;
@@ -277,6 +303,7 @@
     color: #1a3a63;
 }
 
+/* ── Título da lista ───────────────────────────── */
 .validacoes-lista-titulo {
     font-family: 'Manrope', sans-serif;
     font-size: 1rem;
@@ -285,6 +312,7 @@
     margin: 1.75rem 0 0.75rem 0;
 }
 
+/* ── Container da lista ────────────────────────── */
 .lista-validacoes {
     background: #fff;
     border: 1px solid #e5e9ef;
@@ -292,6 +320,7 @@
     overflow: hidden;
 }
 
+/* ── Mensagem de lista vazia ───────────────────── */
 .lista-validacoes-vazia {
     text-align: center;
     color: #8a99ad;
@@ -300,6 +329,7 @@
     margin: 0;
 }
 
+/* ── Item individual da lista ──────────────────── */
 .validacao-item {
     display: flex;
     align-items: center;
@@ -313,6 +343,7 @@
     border-bottom: none;
 }
 
+/* ── Hora da validação ─────────────────────────── */
 .validacao-hora {
     font-family: 'Manrope', sans-serif;
     font-weight: 700;
@@ -320,7 +351,7 @@
     min-width: 42px;
 }
 
-/* ---- Nome + número do aluno, agrupados ---- */
+/* ── Informação do utilizador (nome, número, etc.) ── */
 .validacao-info {
     flex: 1;
     display: flex;
@@ -339,11 +370,18 @@
     font-family: 'Courier New', monospace;
 }
 
+.validacao-refeicao {
+    font-size: 0.76rem;
+    color: #6a7280;
+    margin-top: 0.1rem;
+}
+
 .validacao-pedido {
     color: #8a99ad;
     font-size: 0.78rem;
 }
 
+/* ── Animação de destaque para novas validações ── */
 @keyframes fadeInHighlight {
     from { background: #dcfce7; }
     to   { background: transparent; }
@@ -353,6 +391,11 @@
     animation: fadeInHighlight 1.5s ease;
 }
 
+/* ======================================================================
+   ELEMENTOS DE AÇÃO E ESTADOS ESPECÍFICOS
+   ====================================================================== */
+
+/* ── Botão "Validar Próximo" ───────────────────── */
 .btn-validar-seguinte {
     width: 100%;
     background: #27ae60;
@@ -375,7 +418,7 @@
     background: #219a52;
 }
 
-/* Aviso quando a câmara não está disponível */
+/* ── Aviso quando a câmara não está disponível ─── */
 .sem-camara-aviso {
     text-align: center;
     padding: 2.5rem 1rem;
@@ -393,10 +436,4 @@
     font-size: 0.85rem;
     margin: 0;
     line-height: 1.5;
-}
-
-.validacao-refeicao {
-    font-size: 0.76rem;
-    color: #6a7280;
-    margin-top: 0.1rem;
 }

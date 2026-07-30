@@ -1,4 +1,12 @@
 <?php
+/**
+ * Endpoint AJAX responsável por processar o resultado
+ * devolvido pelo gateway de pagamento simulado.
+ *
+ * Recebe um ou mais identificadores de pedidos e atualiza
+ * o respetivo estado, devolvendo uma resposta em formato JSON.
+ */
+
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 require_once __DIR__ . '/../../src/Services/PagamentoService.php';
@@ -11,25 +19,48 @@ verificarCsrfToken(true);
 $pedidoIdsRaw = $_POST['pedido_ids'] ?? '';
 $sucesso = ($_POST['resultado'] ?? '') === 'sucesso';
 
-$pedidoIds = array_unique(array_filter(array_map('intval', explode(',', $pedidoIdsRaw))));
+$pedidoIds = array_unique(
+    array_filter(
+        array_map('intval', explode(',', $pedidoIdsRaw))
+    )
+);
 
 if (empty($pedidoIds)) {
-    echo json_encode(['status' => 'erro', 'mensagem' => 'Falta pedido_ids']);
+    echo json_encode([
+        'status' => 'erro',
+        'mensagem' => 'Falta pedido_ids'
+    ]);
     exit;
 }
 
+/**
+ * Gera uma referência única para identificar o lote
+ * processado pelo gateway de pagamento.
+ */
 $refGatewayBatch = 'SIM-' . uniqid();
+
 $resultados = [];
 
 foreach ($pedidoIds as $id) {
+
     $pedido = Database::obterPedido($id);
 
+    /**
+     * Garante que o pedido existe e pertence
+     * ao utilizador autenticado.
+     */
     if (!$pedido || (int) $pedido['RP_U_ID'] !== (int) $utilizador['id']) {
-        $resultados[] = ['pedido_id' => $id, 'status' => 'nao_autorizado'];
+        $resultados[] = [
+            'pedido_id' => $id,
+            'status' => 'nao_autorizado'
+        ];
         continue;
     }
 
-    // Impede double-payment: se já está pago, devolve estado atual sem reprocessar
+    /**
+     * Evita o processamento repetido de pedidos
+     * que já se encontram pagos.
+     */
     if ((int) $pedido['RP_PAGO'] === 1) {
         $resultados[] = [
             'pedido_id'    => $id,
@@ -41,11 +72,17 @@ foreach ($pedidoIds as $id) {
     }
 
     $r = PagamentoService::processar($id, $sucesso, $refGatewayBatch);
-    $entrada = ['pedido_id' => $id, 'status' => $r['status']];
+
+    $entrada = [
+        'pedido_id' => $id,
+        'status' => $r['status']
+    ];
+
     if ($r['status'] === 'confirmado') {
-        $entrada['qrcode']       = $pedido['RP_QRCODE'];
+        $entrada['qrcode'] = $pedido['RP_QRCODE'];
         $entrada['codigo_curto'] = $pedido['RP_CODIGO_CURTO'];
     }
+
     $resultados[] = $entrada;
 }
 

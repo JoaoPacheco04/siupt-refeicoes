@@ -1,3 +1,7 @@
+/* ======================================================================
+   ESTRUTURA E CABEÇALHO
+   ====================================================================== */
+
 .historico-main {
     background: transparent;
     min-height: calc(100vh - 36px);
@@ -15,7 +19,10 @@
     margin: 0 0 0.85rem 0;
 }
 
-/* ── Filtros ──────────────────────────────────────────── */
+/* ======================================================================
+   FILTROS DE ESTADO
+   ====================================================================== */
+
 .historico-filtros {
     display: flex;
     gap: 0.4rem;
@@ -23,6 +30,7 @@
     margin-bottom: 1.25rem;
 }
 
+/* ── Botão de filtro individual ────────────────── */
 .btn-filtro {
     display: flex;
     align-items: center;
@@ -38,17 +46,20 @@
     transition: all 0.15s;
 }
 
+/* ── Efeito hover no botão de filtro ───────────── */
 .btn-filtro:hover {
     border-color: #3a78b5;
     color: #3a78b5;
 }
 
+/* ── Estilo do filtro ativo ────────────────────── */
 .btn-filtro.ativo-filtro {
     background: #1a3a63;
     border-color: #1a3a63;
     color: #fff;
 }
 
+/* ── Contador de itens em cada filtro ──────────── */
 .filtro-conta {
     display: inline-flex;
     align-items: center;
@@ -66,6 +77,7 @@
     background: rgba(255,255,255,0.25);
 }
 
+/* ── Mensagem quando um filtro não tem resultados ── */
 .historico-sem-filtro {
     text-align: center;
     color: #8a99ad;
@@ -76,6 +88,10 @@
 .historico-sem-filtro i {
     margin-right: 0.35rem;
 }
+
+/* ======================================================================
+   CARTÃO DE PEDIDO
+   ====================================================================== */
 
 .compra-card {
     background: #fff;
@@ -97,6 +113,7 @@
     border-color: #d3dbe6;
 }
 
+/* ── Informação principal do pedido ────────────── */
 .compra-info {
     flex: 1;
     min-width: 200px;
@@ -105,6 +122,7 @@
     gap: 0.9rem;
 }
 
+/* ── Badge com a data da refeição ──────────────── */
 .compra-dia-badge {
     display: flex;
     flex-direction: column;
@@ -140,6 +158,7 @@
     color: #fff;
 }
 
+/* ── Mini badge "hoje" ─────────────────────────── */
 .dia-hoje-mini {
     font-size: 0.54rem;
     font-weight: 700;
@@ -149,12 +168,14 @@
     margin-top: 1px;
 }
 
+/* ── Detalhes do prato e preço ─────────────────── */
 .compra-detalhe {
     display: flex;
     flex-direction: column;
     gap: 0.15rem;
 }
 
+/* ── Nome do prato/descrição ───────────────────── */
 .compra-prato {
     font-family: 'Manrope', sans-serif;
     font-weight: 700;
@@ -162,11 +183,13 @@
     color: #1e2a3b;
 }
 
+/* ── Preço total do pedido ─────────────────────── */
 .compra-preco {
     font-size: 0.8rem;
     color: #8a99ad;
 }
 
+/* ── Ações e estado (lado direito) ─────────────── */
 .compra-lado-direito {
     display: flex;
     align-items: center;
@@ -174,7 +197,7 @@
     flex-shrink: 0;
 }
 
-
+/* ── Badge de estado (Ativo, Levantado, etc.) ──── */
 .estado-badge {
     font-size: 0.72rem;
     font-weight: 700;
@@ -186,6 +209,10 @@
 .estado-ativo     { background: #dcfce7; color: #166534; }
 .estado-utilizado { background: #e5e7eb; color: #4b5563; }
 .estado-vencido   { background: #fee2e2; color: #991b1b; }
+
+/* ======================================================================
+   BOTÕES DE AÇÃO
+   ====================================================================== */
 
 .btn-ver-qr {
     display: inline-flex;
@@ -208,6 +235,7 @@
     transform: translateY(-1px);
 }
 
+/* ── Mensagem de histórico vazio ───────────────── */
 .historico-vazio {
     text-align: center;
     color: #8a99ad;
@@ -221,6 +249,10 @@
     margin-bottom: 0.75rem;
     color: #c4d0df;
 }
+
+/* ======================================================================
+   AJUSTES RESPONSIVOS
+   ====================================================================== */
 
 @media (max-width: 480px) {
     .historico-main {
@@ -238,14 +270,21 @@
     }
 }
 
+/* ======================================================================
+   ESTADOS E AÇÕES ESPECÍFICAS
+   ====================================================================== */
+
+/* ── Estado de pagamento pendente ──────────────── */
 .estado-nao-pago { background: #fef3c7; color: #92400e; }
 
+/* ── Filtro sem itens para mostrar ─────────────── */
 .btn-filtro.filtro-vazio {
     opacity: 0.5;
     pointer-events: none;
     cursor: not-allowed;
 }
 
+/* ── Botão "Pagar agora" ───────────────────────── */
 .btn-pagar-agora {
     display: inline-flex;
     align-items: center;
@@ -267,6 +306,7 @@
     transform: translateY(-1px);
 }
 
+/* ── Botão "Cancelar pedido" ───────────────────── */
 .btn-cancelar-pendente {
     display: inline-flex;
     align-items: center;

@@ -1,4 +1,12 @@
 <?php
+/**
+ * Endpoint AJAX para remoção de um prato extra.
+ *
+ * Remove o prato extra caso não existam compras associadas.
+ * Caso contrário, o prato é apenas descontinuado,
+ * preservando o histórico de pedidos.
+ */
+
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
@@ -10,10 +18,17 @@ verificarCsrfToken(true);
 $rmId = (int) ($_POST['rm_id'] ?? 0);
 
 if ($rmId <= 0) {
-    echo json_encode(['status' => 'erro', 'mensagem' => 'Dados inválidos']);
+    echo json_encode([
+        'status' => 'erro',
+        'mensagem' => 'Dados inválidos'
+    ]);
     exit;
 }
 
+/**
+ * Mapeia os códigos devolvidos pela camada de negócio
+ * para mensagens apresentadas ao utilizador.
+ */
 $mensagens = [
     'nao_encontrado' => 'Extra não encontrado',
     'erro_bd' => 'Não foi possível processar — pode haver dados relacionados a impedir.',
@@ -29,5 +44,8 @@ if ($resultado === 'ok') {
         'mensagem' => 'Já foi comprado por alunos, por isso foi apenas descontinuado (deixa de aparecer para compra, mas o histórico mantém-se).',
     ]);
 } else {
-    echo json_encode(['status' => 'erro', 'mensagem' => $mensagens[$resultado] ?? 'Erro desconhecido']);
+    echo json_encode([
+        'status' => 'erro',
+        'mensagem' => $mensagens[$resultado] ?? 'Erro desconhecido'
+    ]);
 }

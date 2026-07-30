@@ -1,6 +1,15 @@
+// Configurações globais
 const CSRF_TOKEN = window.CSRF_TOKEN;
 
-// Escape de HTML para usar em innerHTML (previne XSS)
+/* ======================================================================
+   FUNÇÕES UTILITÁRIAS
+   ====================================================================== */
+
+// ── Escape de HTML (Prevenção XSS) ──────────────────────────────────────
+/**
+ * Escapa caracteres HTML antes de inserir texto no DOM com innerHTML,
+ * prevenindo ataques de injeção de código (XSS).
+ */
 function escHtml(str) {
     return String(str)
         .replace(/&/g, '&amp;')
@@ -9,9 +18,17 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
-// ── Criar novo extra ────────────────────────────────────────────────────
+/* ======================================================================
+   CRIAÇÃO DE NOVOS EXTRAS
+   ====================================================================== */
+
+// ── Submissão do formulário de novo extra ───────────────────────────────
 const formNovoExtra = document.getElementById('formNovoExtra');
 
+/**
+ * Interceta a submissão do formulário para criar um novo extra,
+ * envia os dados via API e recarrega a página em caso de sucesso.
+ */
 formNovoExtra.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -20,6 +37,7 @@ formNovoExtra.addEventListener('submit', async (e) => {
 
     if (!nome || preco === '') return;
 
+    // Bloqueia o botão para evitar múltiplas submissões acidentais
     const btnSubmit = formNovoExtra.querySelector('button[type="submit"]');
     btnSubmit.disabled = true;
 
@@ -47,14 +65,25 @@ formNovoExtra.addEventListener('submit', async (e) => {
     }
 });
 
-// ── Editar extra existente (nome e/ou preço) ────────────────────────────
+/* ======================================================================
+   EDIÇÃO DE EXTRAS EXISTENTES
+   ====================================================================== */
+
+// ── Abrir modal de edição ───────────────────────────────────────────────
+/**
+ * Captura o clique nos botões de edição de cada item na lista,
+ * extrai os dados atuais da interface e abre a janela de edição.
+ */
 document.querySelectorAll('.btn-editar-extra').forEach(btn => {
     btn.addEventListener('click', () => {
         const item = btn.closest('.extra-item');
         const rmId = item.dataset.rmId;
         const tipoId = item.dataset.tipoId;
+        
         const nomeAtual = item.querySelector('.extra-nome').textContent.trim();
         const precoAtualTexto = item.querySelector('.extra-preco').textContent.trim();
+        
+        // Converte o texto do preço (ex: "1,50€") num formato numérico (ex: "1.50")
         const precoAtual = precoAtualTexto.endsWith('€')
             ? precoAtualTexto.replace('€', '').replace(',', '.')
             : '';
@@ -63,6 +92,10 @@ document.querySelectorAll('.btn-editar-extra').forEach(btn => {
     });
 });
 
+/**
+ * Constrói e apresenta a janela modal com o formulário
+ * pré-preenchido para alterar o nome e/ou preço do extra.
+ */
 function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual) {
     const modal = new tingle.modal({
         footer: true,
@@ -102,9 +135,14 @@ function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual) {
     modal.open();
 }
 
+/**
+ * Processa as alterações, enviando pedidos independentes para
+ * o nome e para o preço apenas se os respetivos valores tiverem mudado.
+ */
 async function guardarEdicao(rmId, tipoId, novoNome, novoPreco, nomeAtual, precoAtual) {
     const pedidos = [];
 
+    // Regista o pedido de alteração de nome se for diferente do atual
     if (novoNome && novoNome !== nomeAtual) {
         pedidos.push(
             fetch('api/gerir_extras_atualizar_nome.php', {
@@ -115,6 +153,7 @@ async function guardarEdicao(rmId, tipoId, novoNome, novoPreco, nomeAtual, preco
         );
     }
 
+    // Regista o pedido de alteração de preço se for diferente do atual
     if (novoPreco !== '' && novoPreco !== precoAtual) {
         pedidos.push(
             fetch('api/gerir_extras_atualizar_preco.php', {
@@ -128,6 +167,7 @@ async function guardarEdicao(rmId, tipoId, novoNome, novoPreco, nomeAtual, preco
     if (pedidos.length === 0) return;
 
     try {
+        // Aguarda que todas as alterações submetidas terminem
         const respostas = await Promise.all(pedidos);
         const resultados = await Promise.all(respostas.map(r => r.json()));
         const falhou = resultados.some(r => r.status !== 'ok');
@@ -142,7 +182,15 @@ async function guardarEdicao(rmId, tipoId, novoNome, novoPreco, nomeAtual, preco
     }
 }
 
+/* ======================================================================
+   ELIMINAÇÃO DE EXTRAS
+   ====================================================================== */
+
 // ── Apagar extra existente ──────────────────────────────────────────────
+/**
+ * Pede confirmação ao utilizador e envia o pedido para
+ * eliminar ou desativar o extra na base de dados.
+ */
 document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
     btn.addEventListener('click', async () => {
         const item = btn.closest('.extra-item');
@@ -170,7 +218,15 @@ document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
     });
 });
 
+/* ======================================================================
+   REATIVAÇÃO DE EXTRAS
+   ====================================================================== */
+
 // ── Reativar extra descontinuado ────────────────────────────────────────
+/**
+ * Permite voltar a tornar disponível um extra que tinha sido
+ * apagado/desativado anteriormente.
+ */
 document.querySelectorAll('.btn-reativar-extra').forEach(btn => {
     btn.addEventListener('click', async () => {
         const item = btn.closest('.extra-item');
@@ -195,7 +251,15 @@ document.querySelectorAll('.btn-reativar-extra').forEach(btn => {
     });
 });
 
+/* ======================================================================
+   APRESENTAÇÃO DE ERROS
+   ====================================================================== */
+
 // ── Modal de erro genérico ──────────────────────────────────────────────
+/**
+ * Apresenta uma janela modal estandardizada contendo
+ * a mensagem de erro que tenha ocorrido num dos processos.
+ */
 function mostrarErro(mensagem) {
     const modal = new tingle.modal({ footer: true, closeMethods: ['overlay', 'button', 'escape'] });
     modal.setContent(`

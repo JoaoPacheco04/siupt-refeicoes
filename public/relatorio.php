@@ -1,17 +1,30 @@
 <?php
+/**
+ * Página de relatório mensal.
+ *
+ * Apresenta um resumo estatístico das vendas da cantina
+ * para o mês selecionado, incluindo indicadores gerais,
+ * vendas por tipo de refeição e vendas diárias.
+ */
+
 session_start();
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
+require_once __DIR__ . '/../src/Support/Assets.php';
 
 $utilizador = exigirLogin('funcionario');
-
+/**
+ * Obtém o mês pretendido através da query string.
+ * Caso o formato seja inválido, utiliza o mês atual.
+ */
 $anoMes = $_GET['mes'] ?? date('Y-m');
-
-// Valida formato YYYY-MM
 if (!preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
     $anoMes = date('Y-m');
 }
 
+/**
+ * Carrega toda a informação necessária para o relatório.
+ */
 $resumo = Database::obterResumoMensal($anoMes);
 $vendasPorTipo = Database::obterVendasPorTipoMensal($anoMes);
 $vendasDiarias = Database::obterVendasDiariasMensal($anoMes);
@@ -24,13 +37,17 @@ $mesesNomes = [
 [$anoSelecionado, $mesSelecionado] = explode('-', $anoMes);
 $nomeMesSelecionado = $mesesNomes[$mesSelecionado] ?? $mesSelecionado;
 
-// Comparação com o mês anterior
+/**
+ * Calcula a variação do valor vendido relativamente ao mês anterior.
+ */
 $diferencaMes = $resumo['total_vendido'] - $resumo['total_vendido_mes_anterior'];
 $percentagemMes = $resumo['total_vendido_mes_anterior'] > 0
     ? ($diferencaMes / $resumo['total_vendido_mes_anterior']) * 100
     : null;
 
-// Separa pratos da ementa normal dos extras
+/**
+ * Separa as vendas entre pratos da ementa e pratos extra.
+ */
 $pratosEmenta = array_values(array_filter($vendasPorTipo, fn($t) => !str_starts_with($t['RTP_NOME'], 'Extra: ')));
 $extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) => str_starts_with($t['RTP_NOME'], 'Extra: ')));
 $totalExtras = array_sum(array_column($extrasVendas, 'total'));
@@ -46,11 +63,12 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="assets/css/base.css" rel="stylesheet">
     <link href="assets/css/navbar.css" rel="stylesheet">
-    <link href="assets/css/relatorio.css" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/relatorio.css') ?>" rel="stylesheet">
 </head>
 <body>
 
 <div id="bodycontainer">
+<!-- Cabeçalho da aplicação -->
 <header>
     <a id="home" href="validar.php" title="Voltar ao início">
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
@@ -86,6 +104,7 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
         </button>
     </div>
 
+    <!-- Seleção do mês do relatório -->
     <form method="get" class="relatorio-seletor-mes">
         <label for="mes">Mês</label>
         <input type="month" id="mes" name="mes" value="<?= htmlspecialchars($anoMes) ?>" max="<?= date('Y-m') ?>">
@@ -96,7 +115,7 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
 
     <h2 class="relatorio-subtitulo"><?= htmlspecialchars($nomeMesSelecionado . ' ' . $anoSelecionado) ?></h2>
 
-    <!-- Cartões de resumo -->
+    <!-- Indicadores principais do mês -->
     <div class="relatorio-cartoes">
         <div class="cartao-resumo">
             <div class="cartao-icone"><i class="bi bi-bag-check-fill"></i></div>
@@ -126,7 +145,7 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
         </div>
     </div>
 
-    <!-- Vendas por tipo — ementa -->
+    <!-- Vendas por tipo de refeição da ementa -->
     <h2 class="relatorio-secao-titulo">vendas por tipo — ementa</h2>
     <?php if (empty($pratosEmenta)): ?>
     <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas de pratos da ementa neste mês.</p>
@@ -145,7 +164,7 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
     </div>
     <?php endif; ?>
 
-    <!-- Vendas por tipo — extras -->
+    <!-- Vendas de pratos extra -->
     <h2 class="relatorio-secao-titulo">
         vendas por tipo — extras
         <?php if (!empty($extrasVendas)): ?>
@@ -169,7 +188,7 @@ $qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
     </div>
     <?php endif; ?>
 
-    <!-- Vendas diárias -->
+    <!-- Resumo diário de vendas -->
     <h2 class="relatorio-secao-titulo">vendas diárias</h2>
     <?php if (empty($vendasDiarias)): ?>
     <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas registadas neste mês.</p>

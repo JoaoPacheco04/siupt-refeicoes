@@ -1,3 +1,7 @@
+/* ======================================================================
+   ESTRUTURA GERAL DO CABEÇALHO
+   ====================================================================== */
+
 #bodycontainer {
     display: flex;
     flex-direction: column;
@@ -15,6 +19,10 @@ header {
     flex-shrink: 0;
 }
 
+/* ======================================================================
+   LOGÓTIPO
+   ====================================================================== */
+
 a#home {
     display: flex;
     align-items: center;
@@ -28,6 +36,10 @@ a#home {
     display: block;
     margin-top: 4px;
 }
+
+/* ======================================================================
+   MENU DE NAVEGAÇÃO PRINCIPAL
+   ====================================================================== */
 
 header nav {
     flex: 1;
@@ -73,6 +85,10 @@ header nav {
     background: transparent;
 }
 
+/* ======================================================================
+   SELETOR DE IDIOMA
+   ====================================================================== */
+
 #form_new_user_lang {
     display: flex;
     align-items: center;
@@ -99,6 +115,10 @@ header nav {
     border-color: #73c5d8;
 }
 
+/* ======================================================================
+   ÁREA DO PERFIL DO UTILIZADOR
+   ====================================================================== */
+
 #profile {
     display: flex;
     align-items: center;
@@ -107,6 +127,7 @@ header nav {
     transform: translateY(5px);
 }
 
+/* ── Avatar do utilizador ──────────────────────── */
 #profile-photo,
 .profile-avatar {
     width: 35px;
@@ -132,6 +153,7 @@ header nav {
     border-radius: 3px;
 }
 
+/* ── Botão de terminar sessão (logout) ─────────── */
 #quit {
     width: 20px;
     height: 20px;
@@ -149,6 +171,33 @@ header nav {
 #quit:hover {
     opacity: 0.75;
 }
+
+/* ======================================================================
+   ÍCONES DE NAVEGAÇÃO (HISTÓRICO, RELATÓRIO, ETC.)
+   ====================================================================== */
+
+.nav-icon-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 3px;
+    color: #4b5563;
+    text-decoration: none;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+
+.nav-icon-link:hover {
+    background: rgba(115, 197, 216, 0.15);
+    color: #2c4060;
+}
+
+/* ======================================================================
+   AJUSTES RESPONSIVOS
+   ====================================================================== */
 
 @media (max-width: 768px) {
     #mainmenu {
@@ -193,23 +242,4 @@ header nav {
         height: 19px;
         background-size: 19px 19px;
     }
-}
-
-.nav-icon-link {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 3px;
-    color: #4b5563;
-    text-decoration: none;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    transition: background 0.15s, color 0.15s;
-}
-
-.nav-icon-link:hover {
-    background: rgba(115, 197, 216, 0.15);
-    color: #2c4060;
 }

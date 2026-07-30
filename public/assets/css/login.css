@@ -1,7 +1,15 @@
+/* ======================================================================
+   ESTRUTURA GERAL DA PÁGINA
+   ====================================================================== */
+
 .login-page {
     display: flex;
     min-height: 100vh;
 }
+
+/* ======================================================================
+   PAINEL ESQUERDO (IMAGEM DE FUNDO)
+   ====================================================================== */
 
 .login-left {
     flex: 1;
@@ -52,6 +60,10 @@
     opacity: 0.85;
 }
 
+/* ======================================================================
+   PAINEL DIREITO (FORMULÁRIO DE LOGIN)
+   ====================================================================== */
+
 .login-right {
     flex: 1;
     display: flex;
@@ -83,6 +95,10 @@
     margin-bottom: 1.75rem;
 }
 
+/* ======================================================================
+   CAMPOS E CONTROLOS DO FORMULÁRIO
+   ====================================================================== */
+
 .login-field-label {
     font-size: 0.75rem;
     font-weight: 600;
@@ -92,6 +108,7 @@
     margin-bottom: 0.4rem;
 }
 
+/* ── Seletor de tipo de utilizador (aluno/funcionário) ── */
 .user-type-toggle {
     display: flex;
     gap: 0.75rem;
@@ -123,6 +140,7 @@
     font-weight: 600;
 }
 
+/* ── Campos de input com ícone ───────────────────────── */
 .input-icon-group {
     position: relative;
     margin-bottom: 1.25rem;
@@ -155,6 +173,7 @@
     text-decoration: none;
 }
 
+/* ── Botão principal de submissão ────────────────────── */
 .btn-siupt {
     background: #1a3a63;
     border-color: #1a3a63;
@@ -167,6 +186,10 @@
     background: #12294a;
     border-color: #12294a;
 }
+
+/* ======================================================================
+   AJUSTES RESPONSIVOS
+   ====================================================================== */
 
 @media (max-width: 768px) {
     .login-page {

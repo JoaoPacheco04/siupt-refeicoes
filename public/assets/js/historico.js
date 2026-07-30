@@ -1,4 +1,12 @@
-// Escape de HTML para usar em innerHTML (previne XSS)
+/* ======================================================================
+   FUNÇÕES UTILITÁRIAS
+   ====================================================================== */
+
+// ── Escape de HTML (Prevenção XSS) ──────────────────────────────────────
+/**
+ * Escapa caracteres HTML antes de inserir texto no DOM,
+ * prevenindo ataques de injeção de código (XSS).
+ */
 function escHtml(str) {
     return String(str)
         .replace(/&/g, '&amp;')
@@ -7,31 +15,52 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
-// ── Filtros de estado ────────────────────────────────────────────────────
+/* ======================================================================
+   FILTROS DE ESTADO (HISTÓRICO)
+   ====================================================================== */
+
+// ── Alternar visualização por estado do pedido ──────────────────────────
 const cards     = document.querySelectorAll('.compra-card');
 const semFiltro = document.querySelector('.historico-sem-filtro');
 
+/**
+ * Filtra os cartões de histórico com base no estado selecionado
+ * (Todos, Pendente, Confirmado, Cancelado) e exibe uma mensagem
+ * de aviso caso não existam resultados para o filtro aplicado.
+ */
 document.querySelectorAll('.btn-filtro').forEach(btn => {
     btn.addEventListener('click', () => {
         const filtro = btn.dataset.filtro;
 
+        // Atualiza a interface visual dos botões de filtro
         document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('ativo-filtro'));
         btn.classList.add('ativo-filtro');
 
         let visiveis = 0;
+        
+        // Percorre todos os cartões e mostra/esconde consoante o estado
         cards.forEach(card => {
             const mostrar = filtro === 'todos' || card.dataset.estado === filtro;
             card.style.display = mostrar ? '' : 'none';
             if (mostrar) visiveis++;
         });
 
+        // Mostra o "empty state" (mensagem de sem resultados) se tudo for filtrado
         if (semFiltro) semFiltro.style.display = visiveis === 0 ? '' : 'none';
     });
 });
 
-// ── Modal QR code ────────────────────────────────────────────────────────
-let qrModalCounter = 0;
+/* ======================================================================
+   VISUALIZAÇÃO DE QR CODES
+   ====================================================================== */
 
+// ── Abrir modal do QR Code ──────────────────────────────────────────────
+let qrModalCounter = 0; // Garante a criação de IDs únicos para a biblioteca QRCode.js
+
+/**
+ * Associa o evento de clique aos botões de visualização, extraindo
+ * os dados necessários (data attributes) do próprio botão HTML.
+ */
 document.querySelectorAll('.btn-ver-qr').forEach(btn => {
     btn.addEventListener('click', () => {
         const qrcode      = btn.dataset.qrcode;
@@ -42,6 +71,10 @@ document.querySelectorAll('.btn-ver-qr').forEach(btn => {
     });
 });
 
+/**
+ * Constrói uma janela modal e utiliza a biblioteca QRCode.js
+ * para desenhar visualmente o código de levantamento na cantina.
+ */
 function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
     const idUnico = `qr-historico-${++qrModalCounter}`;
 
@@ -89,7 +122,15 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
     }
 }
 
-// ── Retomar pagamento de um pedido pendente ────────────────────────────────
+/* ======================================================================
+   RETOMAR PAGAMENTOS PENDENTES
+   ====================================================================== */
+
+// ── Iniciar fluxo de pagamento ──────────────────────────────────────────
+/**
+ * Permite ao utilizador retomar o fluxo de pagamento para um
+ * pedido que tenha ficado esquecido ou falhado no estado pendente.
+ */
 document.querySelectorAll('.btn-pagar-agora').forEach(btn => {
     btn.addEventListener('click', () => {
         const pedidoId = btn.dataset.pedidoId;
@@ -97,12 +138,16 @@ document.querySelectorAll('.btn-pagar-agora').forEach(btn => {
     });
 });
 
+/**
+ * Apresenta o ecrã de simulação de pagamento MB WAY.
+ */
 function mostrarEcraPagamentoHistorico(pedidoId) {
     const modalPagamento = new tingle.modal({
         footer: false,
         closeMethods: [],
         onClose: function () { modalPagamento.destroy(); }
     });
+    
     modalPagamento.setContent(`
         <div class="text-center py-3">
             <i class="bi bi-phone" style="font-size:2.5rem;color:#3d8bb5;"></i>
@@ -122,6 +167,10 @@ function mostrarEcraPagamentoHistorico(pedidoId) {
 
 let qrPagoCounter = 0;
 
+/**
+ * Processa o resultado da simulação na API. Em caso de sucesso,
+ * apresenta o novo QR Code validado; em caso de falha, exibe aviso.
+ */
 async function confirmarPagamentoHistorico(pedidoId, sucesso, modalPagamento) {
     modalPagamento.close();
 
@@ -176,9 +225,11 @@ async function confirmarPagamentoHistorico(pedidoId, sucesso, modalPagamento) {
         `);
     }
 
+    // Ao fechar e continuar, a página recarrega para atualizar o estado dos botões
     modalResultado.addFooterBtn('Continuar', 'tingle-btn tingle-btn--primary', () => location.reload());
     modalResultado.open();
 
+    // Renderiza o QR apenas se o estado for confirmado e após o modal estar aberto no DOM
     if (confirmado) {
         const elQrPago = document.getElementById(idUnicoPago);
         if (elQrPago) {
@@ -197,7 +248,15 @@ async function confirmarPagamentoHistorico(pedidoId, sucesso, modalPagamento) {
     }
 }
 
-// ── Cancelar pedido pendente ─────────────────────────────────────────────
+/* ======================================================================
+   CANCELAMENTO DE PEDIDOS
+   ====================================================================== */
+
+// ── Iniciar fluxo de cancelamento ───────────────────────────────────────
+/**
+ * Captura o clique e inicia a janela de confirmação de perigo 
+ * antes de eliminar um pedido pendente (para evitar cliques acidentais).
+ */
 document.querySelectorAll('.btn-cancelar-pendente').forEach(btn => {
     btn.addEventListener('click', () => {
         const pedidoId = btn.dataset.pedidoId;
@@ -205,6 +264,9 @@ document.querySelectorAll('.btn-cancelar-pendente').forEach(btn => {
     });
 });
 
+/**
+ * Exibe o modal para confirmar a intenção de cancelar.
+ */
 function mostrarConfirmacaoCancelar(pedidoId) {
     const modal = new tingle.modal({
         footer: true,
@@ -231,10 +293,14 @@ function mostrarConfirmacaoCancelar(pedidoId) {
     modal.open();
 }
 
+/**
+ * Envia o pedido de cancelamento à API.
+ * Em caso de sucesso, remove visualmente o cartão do DOM sem necessidade
+ * de recarregar a página inteira, tornando a interface mais fluida.
+ */
 async function cancelarPedido(pedidoId, modal) {
     modal.close();
 
-    let dados;
     try {
         const resposta = await fetch('api/cancelar_pedido_pendente.php', {
             method: 'POST',
@@ -244,9 +310,10 @@ async function cancelarPedido(pedidoId, modal) {
                 csrf_token: window.CSRF_TOKEN
             })
         });
-        dados = await resposta.json();
+        const dados = await resposta.json();
 
         if (dados.status === 'ok') {
+            // Remove o elemento visualmente de imediato
             document.querySelector(`.compra-card[data-id='${pedidoId}']`)?.remove();
         } else {
             alert(dados.mensagem || 'Ocorreu um erro ao cancelar o pedido.');
