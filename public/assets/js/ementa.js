@@ -319,7 +319,10 @@ btnComprar.addEventListener('click', () => {
     `);
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
-    modal.addFooterBtn('Confirmar e pagar', 'tingle-btn tingle-btn--primary', async () => {
+    const btnConfirmar = modal.addFooterBtn('Confirmar e pagar', 'tingle-btn tingle-btn--primary', async () => {
+        // UX4 FIX: desativar imediatamente para evitar duplo clique
+        btnConfirmar.disabled = true;
+        btnConfirmar.textContent = 'A processar…';
         modal.close();
         await processarPedidos(selecoes);
     });
@@ -331,12 +334,32 @@ btnComprar.addEventListener('click', () => {
    CRIAÇÃO DOS PEDIDOS
    ====================================================================== */
 
+// ── Overlay de loading (D3) ─────────────────────────────────────────────
+const loadingOverlay = document.createElement('div');
+loadingOverlay.id = 'loadingOverlay';
+loadingOverlay.innerHTML = `
+    <div class="loading-spinner-wrap">
+        <div class="loading-spinner"></div>
+        <span class="loading-spinner-texto">A criar pedido…</span>
+    </div>
+`;
+document.body.appendChild(loadingOverlay);
+
+function mostrarLoading(texto = 'A criar pedido…') {
+    loadingOverlay.querySelector('.loading-spinner-texto').textContent = texto;
+    loadingOverlay.classList.add('visivel');
+}
+function esconderLoading() {
+    loadingOverlay.classList.remove('visivel');
+}
+
 /**
  * Envia cada conjunto de seleções para a API,
  * criando os respetivos pedidos no servidor.
  */
 async function processarPedidos(selecoes) {
 
+    mostrarLoading('A processar pedido…');
     btnComprar.disabled = true;
     const btnSpan = btnComprar.querySelector('span');
     if (btnSpan) btnSpan.textContent = 'A criar pedido...';
@@ -371,6 +394,8 @@ async function processarPedidos(selecoes) {
         }
     }
 
+    esconderLoading();
+
     if (pedidoIds.length === 0) {
         if (btnSpan) btnSpan.textContent = 'Confirmar compra';
         atualizarResumo();
@@ -380,6 +405,7 @@ async function processarPedidos(selecoes) {
 
     mostrarEcraPagamento(pedidoIds, totalConfirmado, falhas);
 }
+
 
 /* ======================================================================
    SIMULAÇÃO DO PAGAMENTO

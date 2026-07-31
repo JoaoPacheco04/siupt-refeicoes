@@ -4,7 +4,8 @@
  *
  * Apresenta um resumo estatístico das vendas da cantina
  * para o mês selecionado, incluindo indicadores gerais,
- * vendas por tipo de refeição e vendas diárias.
+ * vendas por tipo de refeição, gráfico de vendas diárias
+ * e avaliações por prato (filtradas pelo mês selecionado).
  */
 
 session_start();
@@ -13,6 +14,7 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 
 $utilizador = exigirLogin('funcionario');
+
 /**
  * Obtém o mês pretendido através da query string.
  * Caso o formato seja inválido, utiliza o mês atual.
@@ -25,15 +27,17 @@ if (!preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
 /**
  * Carrega toda a informação necessária para o relatório.
  */
-$resumo = Database::obterResumoMensal($anoMes);
-$vendasPorTipo = Database::obterVendasPorTipoMensal($anoMes);
-$vendasDiarias = Database::obterVendasDiariasMensal($anoMes);
-$mediaAvaliacoes = Database::obterMediaAvaliacoesMensal($anoMes);
+$resumo            = Database::obterResumoMensal($anoMes);
+$vendasPorTipo     = Database::obterVendasPorTipoMensal($anoMes);
+$vendasDiarias     = Database::obterVendasDiariasMensal($anoMes);
+$mediaAvaliacoes   = Database::obterMediaAvaliacoesMensal($anoMes);
+// FIX 2: passa $anoMes para filtrar apenas as avaliações deste mês
+$avaliacoesPorPrato = Database::obterMediaAvaliacoesPorPrato(1, $anoMes);
 
 $mesesNomes = [
-    '01' => 'Janeiro', '02' => 'Fevereiro', '03' => 'Março', '04' => 'Abril',
-    '05' => 'Maio', '06' => 'Junho', '07' => 'Julho', '08' => 'Agosto',
-    '09' => 'Setembro', '10' => 'Outubro', '11' => 'Novembro', '12' => 'Dezembro',
+    '01' => 'Janeiro', '02' => 'Fevereiro', '03' => 'Março',    '04' => 'Abril',
+    '05' => 'Maio',    '06' => 'Junho',     '07' => 'Julho',     '08' => 'Agosto',
+    '09' => 'Setembro','10' => 'Outubro',   '11' => 'Novembro',  '12' => 'Dezembro',
 ];
 [$anoSelecionado, $mesSelecionado] = explode('-', $anoMes);
 $nomeMesSelecionado = $mesesNomes[$mesSelecionado] ?? $mesSelecionado;
@@ -41,7 +45,7 @@ $nomeMesSelecionado = $mesesNomes[$mesSelecionado] ?? $mesSelecionado;
 /**
  * Calcula a variação do valor vendido relativamente ao mês anterior.
  */
-$diferencaMes = $resumo['total_vendido'] - $resumo['total_vendido_mes_anterior'];
+$diferencaMes   = $resumo['total_vendido'] - $resumo['total_vendido_mes_anterior'];
 $percentagemMes = $resumo['total_vendido_mes_anterior'] > 0
     ? ($diferencaMes / $resumo['total_vendido_mes_anterior']) * 100
     : null;
@@ -50,13 +54,25 @@ $percentagemMes = $resumo['total_vendido_mes_anterior'] > 0
  * Separa as vendas entre pratos da ementa e pratos extra.
  */
 $pratosEmenta = array_values(array_filter($vendasPorTipo, fn($t) => !str_starts_with($t['RTP_NOME'], 'Extra: ')));
-$extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) => str_starts_with($t['RTP_NOME'], 'Extra: ')));
-$totalExtras = array_sum(array_column($extrasVendas, 'total'));
-$qtdExtras = array_sum(array_column($extrasVendas, 'quantidade'));
+$extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) =>  str_starts_with($t['RTP_NOME'], 'Extra: ')));
+$totalExtras  = array_sum(array_column($extrasVendas, 'total'));
+$qtdExtras    = array_sum(array_column($extrasVendas, 'quantidade'));
 
-$LIMITE_LINHAS = 10;
+$LIMITE_LINHAS       = 10;
 $pratosEmentaMostrar = array_slice($pratosEmenta, 0, $LIMITE_LINHAS);
-$extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
+$extrasMostrar       = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
+
+/**
+ * Prepara os dados do gráfico de vendas diárias para Chart.js.
+ */
+$graficoLabels = [];
+$graficoVendas = [];
+$graficoPedidos = [];
+foreach ($vendasDiarias as $d) {
+    $graficoLabels[]  = date('d/m', strtotime($d['RP_DATA_REFEICAO']));
+    $graficoVendas[]  = round((float) $d['total_vendido'], 2);
+    $graficoPedidos[] = (int) $d['total_pedidos'];
+}
 
 ?>
 <!DOCTYPE html>
@@ -65,13 +81,13 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SIUPT - Relatório mensal</title>
-    <meta name="description" content="Relatório mensal de vendas e avaliações da cantina — área reservada a funcionários.">
-    <meta name="robots" content="noindex">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="assets/css/base.css" rel="stylesheet">
     <link href="assets/css/navbar.css" rel="stylesheet">
     <link href="<?= assetUrl('assets/css/relatorio.css') ?>" rel="stylesheet">
+    <!-- FIX 1: Chart.js para o gráfico de vendas diárias -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
 
@@ -81,10 +97,14 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     <a id="home" href="validar.php" title="Voltar ao início">
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
+    <!-- DESIGN: ícone ativo conforme a página atual -->
+    <a href="validar.php" class="nav-icon-link" title="Validar QR code">
+        <i class="bi bi-qr-code-scan"></i>
+    </a>
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
-    <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
+    <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
@@ -112,7 +132,7 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     <?php
     $mesAnteriorStr = date('Y-m', strtotime($anoMes . '-01 -1 month'));
     $mesSeguinteStr = date('Y-m', strtotime($anoMes . '-01 +1 month'));
-    $temMesSeguinte = $mesSeguinteStr <= date('Y-m'); // não permite ir além do mês atual
+    $temMesSeguinte = $mesSeguinteStr <= date('Y-m');
     ?>
     
     <div class="relatorio-seletor-mes">
@@ -172,6 +192,14 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
         </div>
     </div>
 
+    <!-- FIX 1: Gráfico de vendas diárias -->
+    <?php if (!empty($vendasDiarias)): ?>
+    <h2 class="relatorio-secao-titulo">evolução de vendas diárias</h2>
+    <div class="relatorio-grafico-wrap">
+        <canvas id="graficoVendas" height="90" aria-label="Gráfico de vendas diárias" role="img"></canvas>
+    </div>
+    <?php endif; ?>
+
     <!-- Vendas por tipo de refeição da ementa -->
     <h2 class="relatorio-secao-titulo">vendas por tipo — ementa</h2>
     <?php if (empty($pratosEmenta)): ?>
@@ -215,15 +243,11 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     </div>
     <?php endif; ?>
 
-    <!-- Resumo diário de vendas -->
-    <h2 class="relatorio-secao-titulo">vendas diárias</h2>
+    <!-- Resumo diário de vendas (tabela compacta abaixo do gráfico) -->
+    <h2 class="relatorio-secao-titulo">vendas diárias — detalhe</h2>
     <?php if (empty($vendasDiarias)): ?>
     <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas registadas neste mês.</p>
     <?php else: ?>
-    <!-- Gráfico de barras das vendas diárias -->
-    <div class="relatorio-grafico-wrap">
-        <canvas id="graficoVendasDiarias" height="120"></canvas>
-    </div>
     <div class="relatorio-tabela">
         <?php foreach ($vendasDiarias as $d): ?>
         <div class="relatorio-tabela-linha">
@@ -235,75 +259,137 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     </div>
     <?php endif; ?>
 
-    <!-- Avaliações dos alunos -->
-    <h2 class="relatorio-secao-titulo">avaliações dos alunos</h2>
+    <!-- Avaliações dos alunos por prato (filtradas pelo mês selecionado) -->
+    <h2 class="relatorio-secao-titulo">avaliações por prato — <?= htmlspecialchars($nomeMesSelecionado) ?></h2>
 
-    <?php if ($mediaAvaliacoes['total'] === 0): ?>
+    <?php if (empty($avaliacoesPorPrato) && $mediaAvaliacoes['total'] === 0): ?>
     <p class="relatorio-vazio"><i class="bi bi-star"></i> Sem avaliações registadas neste mês.</p>
     <?php else: ?>
-    <div class="avaliacao-resumo-card">
-        <div class="avaliacao-media-estrelas">
-            <?= str_repeat('★', round($mediaAvaliacoes['media'])) . str_repeat('☆', 5 - round($mediaAvaliacoes['media'])) ?>
-        </div>
-        <div class="avaliacao-media-numero"><?= number_format($mediaAvaliacoes['media'], 1, ',', '.') ?> / 5</div>
-        <div class="avaliacao-media-total"><?= $mediaAvaliacoes['total'] ?> pessoa(s) avaliaram</div>
+
+    <?php if ($mediaAvaliacoes['total'] > 0): ?>
+    <div class="avaliacao-resumo-geral">
+        <span class="avaliacao-geral-estrelas"><?= str_repeat('★', round($mediaAvaliacoes['media'])) . str_repeat('☆', 5 - round($mediaAvaliacoes['media'])) ?></span>
+        <span class="avaliacao-geral-numero"><?= number_format($mediaAvaliacoes['media'], 1, ',', '.') ?> / 5</span>
+        <span class="avaliacao-geral-total">(<?= $mediaAvaliacoes['total'] ?> avaliação<?= $mediaAvaliacoes['total'] !== 1 ? 'ões' : '' ?> neste mês)</span>
     </div>
+    <?php endif; ?>
+
+    <?php if (!empty($avaliacoesPorPrato)): ?>
+    <div class="relatorio-tabela avaliacao-por-prato-tabela">
+        <?php foreach ($avaliacoesPorPrato as $prato):
+            $media      = (float) $prato['media'];
+            $total      = (int)   $prato['total'];
+            $estrelasInt = (int)  round($media);
+            $corClasse  = $media >= 4 ? 'barra-boa' : ($media >= 3 ? 'barra-media' : 'barra-ma');
+            // DESIGN D2: barra de progresso proporcional (0–5 escala → 0–100%)
+            $larguraBarra = round(($media / 5) * 100);
+        ?>
+        <div class="relatorio-tabela-linha avaliacao-prato-linha">
+            <span class="relatorio-tabela-nome avaliacao-prato-nome">
+                <?= htmlspecialchars($prato['RM_NOME']) ?>
+                <span class="avaliacao-prato-contagem"><?= $total ?> <?= $total === 1 ? 'avaliação' : 'avaliações' ?></span>
+            </span>
+            <!-- DESIGN D2: barra visual proporcional à nota -->
+            <span class="avaliacao-prato-barra-wrap">
+                <span class="avaliacao-prato-barra <?= $corClasse ?>" style="width:<?= $larguraBarra ?>%"></span>
+            </span>
+            <span class="avaliacao-prato-estrelas">
+                <?= str_repeat('★', $estrelasInt) . str_repeat('☆', 5 - $estrelasInt) ?>
+            </span>
+            <span class="avaliacao-prato-nota <?= $corClasse ?>">
+                <?= number_format($media, 1, ',', '.') ?>
+            </span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php else: ?>
+    <p class="relatorio-vazio"><i class="bi bi-star"></i> Nenhum prato com avaliações suficientes para mostrar.</p>
+    <?php endif; ?>
+
     <?php endif; ?>
 </main>
 </div>
 
-<!-- Chart.js para gráficos do relatório -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<!-- FIX 1: Script de inicialização do Chart.js -->
+<?php if (!empty($vendasDiarias)): ?>
 <script>
 (function () {
-    const canvas = document.getElementById('graficoVendasDiarias');
-    if (!canvas) return;
+    const labels  = <?= json_encode($graficoLabels) ?>;
+    const vendas  = <?= json_encode($graficoVendas) ?>;
+    const pedidos = <?= json_encode($graficoPedidos) ?>;
 
-    // Dados injetados pelo PHP
-    const dados = <?= json_encode(array_map(function($d) {
-        return [
-            'label' => date('d/m', strtotime($d['RP_DATA_REFEICAO'])),
-            'valor' => (float) $d['total_vendido'],
-            'qtd'   => (int) $d['total_pedidos'],
-        ];
-    }, $vendasDiarias ?? [])) ?>;
+    const ctx = document.getElementById('graficoVendas');
+    if (!ctx) return;
 
-    new Chart(canvas, {
+    new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: dados.map(d => d.label),
-            datasets: [{
-                label: 'Vendas (€)',
-                data: dados.map(d => d.valor),
-                backgroundColor: 'rgba(92, 124, 201, 0.75)',
-                borderColor: 'rgba(92, 124, 201, 1)',
-                borderWidth: 1,
-                borderRadius: 4,
-            }]
+            labels,
+            datasets: [
+                {
+                    label: 'Vendas (€)',
+                    data: vendas,
+                    backgroundColor: 'rgba(26, 58, 99, 0.75)',
+                    borderColor: '#1a3a63',
+                    borderWidth: 0,
+                    borderRadius: 5,
+                    borderSkipped: false,
+                    yAxisID: 'yVendas',
+                },
+                {
+                    label: 'Pedidos',
+                    data: pedidos,
+                    type: 'line',
+                    borderColor: '#73c5d8',
+                    backgroundColor: 'rgba(115, 197, 216, 0.08)',
+                    pointBackgroundColor: '#73c5d8',
+                    pointRadius: 3,
+                    tension: 0.35,
+                    fill: true,
+                    yAxisID: 'yPedidos',
+                }
+            ]
         },
         options: {
             responsive: true,
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: { display: false },
+                legend: { position: 'top', labels: { font: { family: 'Plus Jakarta Sans, sans-serif', size: 12 }, boxWidth: 12 } },
                 tooltip: {
                     callbacks: {
-                        label: ctx => {
-                            const d = dados[ctx.dataIndex];
-                            return ` ${ctx.parsed.y.toFixed(2).replace('.', ',')}\u20ac  (${d.qtd} pedido(s))`;
-                        }
+                        label: (ctx) => ctx.dataset.label === 'Vendas (€)'
+                            ? ` ${ctx.raw.toFixed(2).replace('.', ',')}€`
+                            : ` ${ctx.raw} pedido(s)`
                     }
                 }
             },
             scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: { callback: v => v.toFixed(0) + '\u20ac' }
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 11, family: 'Plus Jakarta Sans, sans-serif' } }
+                },
+                yVendas: {
+                    position: 'left',
+                    grid: { color: 'rgba(0,0,0,0.05)' },
+                    ticks: {
+                        font: { size: 11, family: 'Plus Jakarta Sans, sans-serif' },
+                        callback: (v) => v.toFixed(0) + '€'
+                    }
+                },
+                yPedidos: {
+                    position: 'right',
+                    grid: { display: false },
+                    ticks: {
+                        font: { size: 11, family: 'Plus Jakarta Sans, sans-serif' },
+                        stepSize: 1
+                    }
                 }
             }
         }
     });
 })();
 </script>
+<?php endif; ?>
 
 </body>
 </html>

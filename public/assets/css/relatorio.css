@@ -299,55 +299,80 @@
     margin: 0;
 }
 
-.avaliacao-resumo-card {
+/* ── Resumo geral de avaliações (linha compacta) ── */
+.avaliacao-resumo-geral {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.85rem;
+    padding: 0.6rem 0.9rem;
     background: #fff;
     border: 1px solid #e5e9ef;
-    border-radius: 10px;
-    padding: 1.25rem;
-    text-align: center;
-    margin-bottom: 0.85rem;
+    border-radius: 8px;
+    flex-wrap: wrap;
 }
 
-.avaliacao-media-estrelas {
-    font-size: 1.6rem;
+.avaliacao-geral-estrelas {
+    font-size: 1.15rem;
     color: #d97706;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
 }
 
-.avaliacao-media-numero {
+.avaliacao-geral-numero {
     font-family: 'Manrope', sans-serif;
-    font-size: 1.4rem;
+    font-size: 1rem;
     font-weight: 800;
     color: #1e2a3b;
-    margin-top: 0.3rem;
 }
 
-.avaliacao-alerta-problemas {
-    background: #fef2f2;
-    border: 1px solid #fca5a5;
-    border-radius: 8px;
-    padding: 0.75rem 0.9rem;
-    margin-top: 0.6rem;
-}
-
-.avaliacao-alerta-titulo {
-    color: #991b1b;
-    font-size: 0.82rem;
-    font-weight: 700;
-    margin: 0 0 0.5rem 0;
-}
-
-.avaliacao-motivo-linha {
-    display: flex;
-    justify-content: space-between;
+.avaliacao-geral-total {
     font-size: 0.8rem;
-    color: #7f1d1d;
-    padding: 0.15rem 0;
+    color: #8a99ad;
 }
 
-.avaliacao-media-prato {
-    color: #d97706;
+/* ── Tabela de avaliações por prato ─────────────── */
+.avaliacao-por-prato-tabela {
+    margin-top: 0.25rem;
 }
+
+.avaliacao-prato-linha {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.avaliacao-prato-nome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.avaliacao-prato-contagem {
+    font-size: 0.72rem;
+    color: #8a99ad;
+    font-weight: 500;
+}
+
+.avaliacao-prato-estrelas {
+    font-size: 0.9rem;
+    color: #d97706;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+
+.avaliacao-prato-nota {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 800;
+    min-width: 2.2rem;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.avaliacao-prato-nota.barra-boa   { color: #16a34a; }
+.avaliacao-prato-nota.barra-media { color: #d97706; }
+.avaliacao-prato-nota.barra-ma    { color: #dc2626; }
 
 /* ======================================================================
    AJUSTES RESPONSIVOS
@@ -398,14 +423,25 @@
     }
 }
 
-/* ======================================================================
-   GRÁFICO DE VENDAS DIÁRIAS (Chart.js)
-   ====================================================================== */
+/* ── Barra de progresso visual (D2) ────────────────── */
+.avaliacao-prato-barra-wrap {
+    flex: 1;
+    height: 6px;
+    background: #e5e9ef;
+    border-radius: 999px;
+    overflow: hidden;
+    min-width: 48px;
+    max-width: 120px;
+}
 
-.relatorio-grafico-wrap {
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 1px 4px rgba(30, 42, 59, 0.08);
-    padding: 1rem 1.25rem;
-    margin-bottom: 1rem;
-}
+.avaliacao-prato-barra {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.avaliacao-prato-barra.barra-boa   { background: #16a34a; }
+.avaliacao-prato-barra.barra-media { background: #d97706; }
+.avaliacao-prato-barra.barra-ma    { background: #dc2626; }
+

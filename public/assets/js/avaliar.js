@@ -16,6 +16,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+// Escape de HTML (previne XSS ao inserir texto em innerHTML)
+function escHtmlAvaliar(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 /**
  * Abre o modal para o utilizador introduzir a avaliação.
  * @param {string} pedidoId ID do pedido a avaliar.
@@ -28,43 +37,57 @@ function abrirModalAvaliacao(pedidoId) {
         onClose: function () { modal.destroy(); }
     });
 
+    let estrelaSelecionada = 0;
+
     modal.setContent(`
         <div class="modal-siupt-header">
             <i class="bi bi-star-half"></i>
             <h4>Avaliar refeição</h4>
         </div>
-        <div class="avaliacao-modal-estrelas">
-            ${[1, 2, 3, 4, 5].map(i => `<i class="bi bi-star" data-valor="${i}"></i>`).join('')}
+        <div class="avaliacao-estrelas-input" id="estrelasInput">
+            ${[1,2,3,4,5].map(n => `<i class="bi bi-star" data-valor="${n}"></i>`).join('')}
         </div>
-        <input type="hidden" id="estrelasInput" value="0">
-        <textarea id="comentarioInput" class="avaliacao-comentario" placeholder="Comentário (opcional)"></textarea>
+        <div class="avaliacao-motivo-wrap" id="motivoWrap" style="display:none;">
+            <label for="motivoSelect" class="avaliacao-motivo-label">O que correu mal? (opcional)</label>
+            <select id="motivoSelect" class="avaliacao-motivo-select">
+                <option value="">Selecionar motivo…</option>
+                <option value="comida_fria">Comida fria</option>
+                <option value="porcao_pequena">Porção pequena</option>
+                <option value="qualidade_abaixo">Qualidade abaixo do esperado</option>
+                <option value="erro_pedido">Refeição errada</option>
+                <option value="demora_entrega">Demora na entrega</option>
+            </select>
+        </div>
     `);
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
-    const btnSubmeter = modal.addFooterBtn('Submeter', 'tingle-btn tingle-btn--primary', () => {
-        const estrelas = document.getElementById('estrelasInput').value;
-        const comentario = document.getElementById('comentarioInput').value;
-        submeterAvaliacao(pedidoId, estrelas, comentario, modal);
+    const btnSubmeter = modal.addFooterBtn('Enviar avaliação', 'tingle-btn tingle-btn--primary', async () => {
+        if (estrelaSelecionada === 0) { alert('Escolhe pelo menos 1 estrela.'); return; }
+        // BUG 1 FIX: campo correto é "motivo", não "comentario"
+        const motivo = document.getElementById('motivoSelect')?.value || '';
+        await submeterAvaliacao(pedidoId, estrelaSelecionada, motivo, modal);
     });
     btnSubmeter.disabled = true;
 
     modal.open();
 
-    // Lógica de seleção de estrelas dentro do modal
-    const estrelasContainer = modal.modal.querySelector('.avaliacao-modal-estrelas');
-    const estrelasIcons = [...estrelasContainer.querySelectorAll('i')];
+    const icones = modal.modal.querySelectorAll('#estrelasInput i');
+    const motivoWrap = modal.modal.querySelector('#motivoWrap');
 
-    estrelasContainer.addEventListener('click', e => {
-        const estrela = e.target.closest('i');
-        if (!estrela) return;
+    icones.forEach(icone => {
+        icone.addEventListener('click', () => {
+            estrelaSelecionada = parseInt(icone.dataset.valor, 10);
+            btnSubmeter.disabled = false;
+            icones.forEach(i =>
+                i.className = parseInt(i.dataset.valor) <= estrelaSelecionada ? 'bi bi-star-fill' : 'bi bi-star'
+            );
 
-        const valor = parseInt(estrela.dataset.valor, 10);
-        document.getElementById('estrelasInput').value = valor;
-        btnSubmeter.disabled = false;
-
-        estrelasIcons.forEach((icon, i) => {
-            icon.classList.toggle('bi-star-fill', i < valor);
-            icon.classList.toggle('bi-star', i >= valor);
+            // Mostra o dropdown de motivo apenas com nota baixa (1-2 estrelas)
+            if (motivoWrap) motivoWrap.style.display = estrelaSelecionada <= 2 ? 'block' : 'none';
+            if (estrelaSelecionada > 2) {
+                const motivoSelect = document.getElementById('motivoSelect');
+                if (motivoSelect) motivoSelect.value = '';
+            }
         });
     });
 }
@@ -72,11 +95,11 @@ function abrirModalAvaliacao(pedidoId) {
 /**
  * Envia a avaliação para a API.
  * @param {string} pedidoId
- * @param {string} estrelas
- * @param {string} comentario
+ * @param {number} estrelas
+ * @param {string} motivo
  * @param {object} modal
  */
-async function submeterAvaliacao(pedidoId, estrelas, comentario, modal) {
+async function submeterAvaliacao(pedidoId, estrelas, motivo, modal) {
     modal.close();
 
     try {
@@ -86,14 +109,15 @@ async function submeterAvaliacao(pedidoId, estrelas, comentario, modal) {
             body: new URLSearchParams({
                 pedido_id: pedidoId,
                 estrelas: estrelas,
-                comentario: comentario,
+                // BUG 1 FIX: campo "motivo" (antes enviava "comentario" — API ignorava)
+                motivo: motivo,
                 csrf_token: window.CSRF_TOKEN
             })
         });
         const dados = await resposta.json();
 
         if (dados.status === 'ok') {
-            location.reload(); // Recarrega para mostrar as estrelas
+            location.reload();
         } else {
             mostrarErroAvaliacao(dados.mensagem || 'Ocorreu um erro ao submeter a avaliação.');
         }
@@ -112,9 +136,10 @@ function mostrarErroAvaliacao(mensagem) {
         closeMethods: ['overlay', 'button', 'escape'],
         cssClass: ['tingle-siupt']
     });
+    // SEC 2 FIX: escapar mensagem antes de inserir em innerHTML (previne XSS)
     modalErro.setContent(`
         <div class="modal-siupt-header erro"><i class="bi bi-x-circle-fill"></i><h4>Erro na avaliação</h4></div>
-        <p class="text-muted small">${mensagem}</p>
+        <p class="text-muted small">${escHtmlAvaliar(mensagem)}</p>
     `);
     modalErro.addFooterBtn('Fechar', 'tingle-btn tingle-btn--primary', () => modalErro.close());
     modalErro.open();

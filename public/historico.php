@@ -7,10 +7,9 @@
  * como pagamento de pedidos pendentes ou apresentação do QR Code.
  */
 
-// Inicia a sessão do utilizador para permitir o acesso às variáveis de sessão.
-session_start();
-
 // Inclui as funções de autenticação.
+// Nota: session_start() é gerido internamente por exigirLogin().
+
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';

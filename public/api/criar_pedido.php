@@ -67,8 +67,19 @@ foreach ($itens as $item) {
         continue;
     }
 
+    $rmId = (int) $item['rm_id'];
+
+    // SEC 1 FIX: rejeitar IDs não positivos que passariam o cast para int
+    if ($rmId <= 0) {
+        echo json_encode([
+            'status'   => 'erro',
+            'mensagem' => 'Item inválido na lista de seleção.'
+        ]);
+        exit;
+    }
+
     $itensValidados[] = [
-        'rm_id' => (int) $item['rm_id'],
+        'rm_id'        => $rmId,
         'menu_completo' => !empty($item['menu_completo']),
     ];
 }

@@ -59,7 +59,11 @@ $extras = Database::listarDetalhesExtrasParaGestao();
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
 
-    <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
+    <a href="validar.php" class="nav-icon-link" title="Validar QR code">
+        <i class="bi bi-qr-code-scan"></i>
+    </a>
+
+    <a href="gerir_extras.php" class="nav-icon-link nav-icon-link--ativo" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
 
