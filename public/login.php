@@ -26,33 +26,70 @@ if (isset($_GET['logout'])) {
     exit;
 }
 
+// ── Rate limiting simples: máx 10 tentativas por IP em 15 minutos ────────
+$ipCliente  = $_SERVER['REMOTE_ADDR'] ?? 'desconhecido';
+$chaveRateKey = 'login_tentativas_' . md5($ipCliente);
+$janelaTempo  = 900;  // 15 minutos em segundos
+$maxTentativas = 10;
+
+if (!isset($_SESSION[$chaveRateKey])) {
+    $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
+}
+
+// Reinicia a janela se já passou o tempo limite
+if (time() - $_SESSION[$chaveRateKey]['desde'] > $janelaTempo) {
+    $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
+}
+
+$bloqueado = $_SESSION[$chaveRateKey]['total'] >= $maxTentativas;
+
 /**
  * Processa o pedido de autenticação.
  */
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
 
-    $bicc = $_POST['numero'] ?? '';
+    $bicc     = $_POST['numero'] ?? '';
     $password = $_POST['password'] ?? '';
 
     $utilizador = Database::autenticar($bicc, $password);
 
     if ($utilizador) {
+        // Sucesso — zera o contador de tentativas
+        $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
+
         $tipo = Database::perfilParaTipo((int) $utilizador['U_PERFIL']);
 
         session_regenerate_id(true);
 
-        $_SESSION['user_id'] = $utilizador['U_ID'];
+        $_SESSION['user_id']   = $utilizador['U_ID'];
         $_SESSION['user_nome'] = $utilizador['U_NOME'];
         $_SESSION['user_tipo'] = $tipo;
 
-        header('Location: ' . ($tipo === 'funcionario' ? 'validar.php' : 'ementa.php'));
+        // Redireciona para a página de origem (passada via ?next=) se for segura.
+        // Proteção contra open redirect: só aceita caminhos relativos (sem "://").
+        $destino = $_GET['next'] ?? '';
+        $destinoPadrao = $tipo === 'funcionario' ? 'validar.php' : 'ementa.php';
+        if ($destino !== '' && !str_contains($destino, '://') && !str_starts_with($destino, '//')) {
+            $destino = ltrim(basename(parse_url($destino, PHP_URL_PATH)), '/');
+        } else {
+            $destino = $destinoPadrao;
+        }
+
+        header('Location: ' . ($destino ?: $destinoPadrao));
         exit;
     }
 
-    $erro = 'BI/CC ou password incorretos';
-}
+    // Falha — incrementa o contador
+    $_SESSION[$chaveRateKey]['total']++;
+    $restantes = max(0, $maxTentativas - $_SESSION[$chaveRateKey]['total']);
 
-mostrar_formulario:
+    $erro = $restantes > 0
+        ? "BI/CC ou password incorretos. Tentativas restantes: {$restantes}."
+        : 'Demasiadas tentativas. Por favor aguarda 15 minutos e tenta novamente.';
+
+} elseif ($bloqueado) {
+    $erro = 'Demasiadas tentativas. Por favor aguarda antes de tentar novamente.';
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -146,7 +183,11 @@ mostrar_formulario:
 
             <div class="login-field-label">
                 Palavra-passe
-                <a href="#" class="forgot-link">Esqueceu-se?</a>
+                <span class="forgot-link" title="Recuperação de password gerida pela Universidade Portucalense."
+                      onclick="alert('Para recuperar a password, contacta os Serviços Académicos da Universidade Portucalense.')"
+                      style="cursor:pointer;">
+                    Esqueceu-se?
+                </span>
             </div>
 
             <div class="input-icon-group">

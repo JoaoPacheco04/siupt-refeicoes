@@ -5,8 +5,15 @@
  * Recolhe indicadores sobre o estado dos pedidos e das validações,
  * registando a informação num ficheiro de log.
  *
- * Pode ser executado manualmente ou através de uma tarefa agendada.
+ * Deve ser executado EXCLUSIVAMENTE via linha de comandos (CLI) ou
+ * tarefa agendada (cron). Não é acessível via HTTP.
  */
+
+// ── Proteção: só permite execução via CLI ─────────────────────────────
+if (php_sapi_name() !== 'cli') {
+    http_response_code(403);
+    exit('Acesso negado: este script só pode ser executado via linha de comandos.');
+}
 
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 

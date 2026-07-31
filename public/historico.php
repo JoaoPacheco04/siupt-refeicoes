@@ -117,27 +117,9 @@ foreach ($pedidos as $p) {
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
 
-    <nav>
-        <ul id="mainmenu">
-            <li id="menu_id_10"><a href="#">Portais</a></li>
-            <li id="menu_id_5"><a href="#">Ingresso</a></li>
-            <li id="menu_id_7"><a href="#">Estudante</a></li>
-            <li id="menu_id_8" class="selected"><a href="ementa.php">Suporte</a></li>
-            <li id="menu_id_16"><a href="#">Decisão</a></li>
-        </ul>
-    </nav>
-
     <a href="historico.php" class="nav-icon-link" title="As minhas compras">
         <i class="bi bi-clock-history"></i>
     </a>
-
-    <form id="form_new_user_lang" method="post" action="#">
-        <label for="new_user_lang"></label>
-        <select id="new_user_lang" name="new_user_lang">
-            <option value="en">Inglês</option>
-            <option value="pt" selected>Português</option>
-        </select>
-    </form>
 
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
@@ -330,6 +312,17 @@ foreach ($pedidos as $p) {
             Nenhum pedido nesta categoria.
         </p>
 
+        <!-- Controles de paginação -->
+        <div class="historico-paginacao" id="paginacao" style="display:none;">
+            <button class="btn-pag" id="btnPagAnterior" disabled>
+                <i class="bi bi-chevron-left"></i> Anterior
+            </button>
+            <span class="pag-info" id="pagInfo"></span>
+            <button class="btn-pag" id="btnPagSeguinte">
+                Seguinte <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+
     <?php endif; ?>
 
 </main>
@@ -342,6 +335,7 @@ window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 <script src="assets/js/vendor/qrcode.min.js"></script>
+<script src="assets/js/utils.js"></script>
 <script src="<?= assetUrl('assets/js/historico.js') ?>"></script>
 
 </body>

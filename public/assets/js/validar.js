@@ -277,19 +277,4 @@ function mostrarResultado(status, dados = {}) {
     }
 }
 
-/* ======================================================================
-   FUNÇÕES UTILITÁRIAS
-   ====================================================================== */
-
-// ── Escape de HTML (Prevenção XSS) ──────────────────────────────────────
-/**
- * Escapa caracteres especiais antes de injetar dados na árvore DOM,
- * prevenindo ataques de injeção de código (XSS).
- */
-function escHtml(str) {
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;');
-}
+/* escHtml — já declarada no início deste ficheiro */

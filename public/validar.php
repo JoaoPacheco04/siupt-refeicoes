@@ -41,16 +41,6 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
 
-    <nav>
-        <ul id="mainmenu">
-            <li id="menu_id_10"><a href="#">Portais</a></li>
-            <li id="menu_id_5"><a href="#">Ingresso</a></li>
-            <li id="menu_id_7"><a href="#">Funcionário</a></li>
-            <li id="menu_id_8" class="selected"><a href="validar.php">Cantina</a></li>
-            <li id="menu_id_16"><a href="#">Decisão</a></li>
-        </ul>
-    </nav>
-
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>

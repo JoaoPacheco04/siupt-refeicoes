@@ -65,6 +65,8 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SIUPT - Relatório mensal</title>
+    <meta name="description" content="Relatório mensal de vendas e avaliações da cantina — área reservada a funcionários.">
+    <meta name="robots" content="noindex">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="assets/css/base.css" rel="stylesheet">
@@ -79,15 +81,6 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     <a id="home" href="validar.php" title="Voltar ao início">
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
-    <nav>
-        <ul id="mainmenu">
-            <li id="menu_id_10" class=""><a href="#">Portais</a></li>
-            <li id="menu_id_5"  class=""><a href="#">Ingresso</a></li>
-            <li id="menu_id_7"  class=""><a href="#">Funcionário</a></li>
-            <li id="menu_id_8"  class="selected"><a href="validar.php">Cantina</a></li>
-            <li id="menu_id_16" class=""><a href="#">Decisão</a></li>
-        </ul>
-    </nav>
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
@@ -227,6 +220,10 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     <?php if (empty($vendasDiarias)): ?>
     <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas registadas neste mês.</p>
     <?php else: ?>
+    <!-- Gráfico de barras das vendas diárias -->
+    <div class="relatorio-grafico-wrap">
+        <canvas id="graficoVendasDiarias" height="120"></canvas>
+    </div>
     <div class="relatorio-tabela">
         <?php foreach ($vendasDiarias as $d): ?>
         <div class="relatorio-tabela-linha">
@@ -254,6 +251,59 @@ $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
     <?php endif; ?>
 </main>
 </div>
+
+<!-- Chart.js para gráficos do relatório -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+    const canvas = document.getElementById('graficoVendasDiarias');
+    if (!canvas) return;
+
+    // Dados injetados pelo PHP
+    const dados = <?= json_encode(array_map(function($d) {
+        return [
+            'label' => date('d/m', strtotime($d['RP_DATA_REFEICAO'])),
+            'valor' => (float) $d['total_vendido'],
+            'qtd'   => (int) $d['total_pedidos'],
+        ];
+    }, $vendasDiarias ?? [])) ?>;
+
+    new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: dados.map(d => d.label),
+            datasets: [{
+                label: 'Vendas (€)',
+                data: dados.map(d => d.valor),
+                backgroundColor: 'rgba(92, 124, 201, 0.75)',
+                borderColor: 'rgba(92, 124, 201, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => {
+                            const d = dados[ctx.dataIndex];
+                            return ` ${ctx.parsed.y.toFixed(2).replace('.', ',')}\u20ac  (${d.qtd} pedido(s))`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { callback: v => v.toFixed(0) + '\u20ac' }
+                }
+            }
+        }
+    });
+})();
+</script>
 
 </body>
 </html>

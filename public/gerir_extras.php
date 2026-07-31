@@ -27,6 +27,8 @@ $extras = Database::listarDetalhesExtrasParaGestao();
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <title>SIUPT - Gerir extras</title>
+    <meta name="description" content="Gestão dos extras de refeição disponíveis na cantina — área reservada a funcionários.">
+    <meta name="robots" content="noindex">
 
     <!-- Bootstrap -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -57,23 +59,10 @@ $extras = Database::listarDetalhesExtrasParaGestao();
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
 
-    <!-- Menu principal -->
-    <nav>
-        <ul id="mainmenu">
-            <li id="menu_id_10"><a href="#">Portais</a></li>
-            <li id="menu_id_5"><a href="#">Ingresso</a></li>
-            <li id="menu_id_7"><a href="#">Funcionário</a></li>
-            <li id="menu_id_8" class="selected"><a href="validar.php">Cantina</a></li>
-            <li id="menu_id_16"><a href="#">Decisão</a></li>
-        </ul>
-    </nav>
-
-    <!-- Atalho para gestão de extras -->
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
 
-    <!-- Atalho para o relatório mensal -->
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>

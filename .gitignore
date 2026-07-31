@@ -1,4 +1,5 @@
 # Configuração sensível — NUNCA commitar credenciais
+.env
 config/config.php
 
 # Logs gerados pelos scripts

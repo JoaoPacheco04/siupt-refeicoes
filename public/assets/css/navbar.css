@@ -38,82 +38,9 @@ a#home {
 }
 
 /* ======================================================================
-   MENU DE NAVEGAÇÃO PRINCIPAL
+   SELETOR DE IDIOMA (REMOVIDO — era decorativo)
    ====================================================================== */
-
-header nav {
-    flex: 1;
-}
-
-#mainmenu {
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.15rem;
-    margin: 0;
-    padding: 0;
-    height: auto;
-    transform: translateY(2px);
-}
-
-#mainmenu li {
-    display: flex;
-    align-items: center;
-}
-
-#mainmenu li a {
-    color: #8c98a9;
-    font-family: "Plus Jakarta Sans", Arial, sans-serif;
-    font-size: 0.85rem;
-    font-weight: 500;
-    line-height: 1;
-    text-decoration: none;
-    white-space: nowrap;
-    padding: 0.5rem 0.8rem;
-    border-radius: 3px;
-    transition: color 0.15s;
-}
-
-#mainmenu li a:hover {
-    color: #4b5563;
-    background: transparent;
-}
-
-#mainmenu li.selected a {
-    color: #2c4060;
-    font-weight: 600;
-    background: transparent;
-}
-
-/* ======================================================================
-   SELETOR DE IDIOMA
-   ====================================================================== */
-
-#form_new_user_lang {
-    display: flex;
-    align-items: center;
-    flex-shrink: 0;
-    transform: translateY(5px);
-}
-
-#form_new_user_lang label {
-    display: none;
-}
-
-#new_user_lang {
-    font-size: 0.84rem;
-    border: 1px solid #cfd3dc;
-    border-radius: 0;
-    padding: 0.25rem 0.55rem;
-    background: #fff;
-    color: #2f3542;
-    cursor: pointer;
-    outline: none;
-}
-
-#new_user_lang:focus {
-    border-color: #73c5d8;
-}
+/* #form_new_user_lang, #new_user_lang — bloco eliminado de todas as páginas */
 
 /* ======================================================================
    ÁREA DO PERFIL DO UTILIZADOR
@@ -200,10 +127,6 @@ header nav {
    ====================================================================== */
 
 @media (max-width: 768px) {
-    #mainmenu {
-        display: none;
-    }
-
     header {
         padding: 0 0.9rem 0 0;
         gap: 0.5rem;
@@ -219,10 +142,6 @@ header nav {
 
     #siupt-logo {
         height: 44px;
-    }
-
-    #form_new_user_lang {
-        display: none;
     }
 
     #profile {

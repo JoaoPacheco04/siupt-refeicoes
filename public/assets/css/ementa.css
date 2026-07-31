@@ -59,6 +59,27 @@
     animation: slideDown 0.3s ease;
 }
 
+.banner-prazo-proximo {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-left: 4px solid #dc2626;
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    font-size: 0.82rem;
+    color: #991b1b;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    animation: slideDown 0.3s ease;
+}
+
+.banner-prazo-proximo i {
+    font-size: 1rem;
+    flex-shrink: 0;
+    color: #dc2626;
+}
 .banner-semana-avancada i {
     font-size: 1rem;
     flex-shrink: 0;

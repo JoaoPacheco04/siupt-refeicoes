@@ -1,15 +1,23 @@
-// ── Banner "por avaliar" — fechar e lembrar até haver novidade ──────────
+// ── Banner "por avaliar" — fechar e lembrar com expiração de 1h ──────────
 const bannerAvaliar = document.getElementById('bannerAvaliar');
 if (bannerAvaliar) {
     const totalAtual = bannerAvaliar.dataset.total;
-    const totalFechado = localStorage.getItem('banner_avaliar_fechado');
+    const EXPIRACAO_MS = 3600 * 1000; // 1 hora
 
-    if (totalFechado === totalAtual) {
+    // Lê o estado guardado: { total, timestamp }
+    let estadoGuardado = null;
+    try { estadoGuardado = JSON.parse(localStorage.getItem('banner_avaliar')); } catch (_) {}
+
+    const expirou = !estadoGuardado || (Date.now() - estadoGuardado.ts) > EXPIRACAO_MS;
+    const mesmaConta = estadoGuardado && estadoGuardado.total === totalAtual;
+
+    // Só oculta se fechou recentemente E o número ainda é o mesmo
+    if (!expirou && mesmaConta) {
         bannerAvaliar.style.display = 'none';
     }
 
     document.getElementById('btnFecharBanner')?.addEventListener('click', () => {
-        localStorage.setItem('banner_avaliar_fechado', totalAtual);
+        localStorage.setItem('banner_avaliar', JSON.stringify({ total: totalAtual, ts: Date.now() }));
         bannerAvaliar.style.display = 'none';
     });
 }

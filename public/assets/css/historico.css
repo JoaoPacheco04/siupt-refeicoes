@@ -412,3 +412,75 @@
 .btn-transferir:hover {
     background: #eff6ff;
 }
+
+.avaliacao-motivo-wrap {
+    margin-top: 0.85rem;
+    text-align: left;
+}
+
+.avaliacao-motivo-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4b5563;
+    margin-bottom: 0.35rem;
+}
+
+.avaliacao-motivo-select {
+    width: 100%;
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.85rem;
+    color: #1e2a3b;
+}
+
+.contador-separador {
+    color: #d1d8e0;
+    margin: 0 0.2rem;
+}
+
+/* ======================================================================
+   PAGINAÇÃO
+   ====================================================================== */
+
+.historico-paginacao {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.btn-pag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #fff;
+    border: 1.5px solid #dee2e6;
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.85rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    color: #1e2a3b;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-pag:hover:not(:disabled) {
+    background: #f0f4ff;
+    border-color: #7e8fe0;
+}
+
+.btn-pag:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.pag-info {
+    font-size: 0.85rem;
+    color: #6c757d;
+    min-width: 60px;
+    text-align: center;
+}
+

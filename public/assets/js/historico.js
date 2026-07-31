@@ -16,39 +16,79 @@ function escHtml(str) {
 }
 
 /* ======================================================================
-   FILTROS DE ESTADO (HISTÓRICO)
+   PAGINAÇÃO + FILTROS DE ESTADO (HISTÓRICO)
    ====================================================================== */
 
-// ── Alternar visualização por estado do pedido ──────────────────────────
 const cards     = document.querySelectorAll('.compra-card');
 const semFiltro = document.querySelector('.historico-sem-filtro');
+const paginacao = document.getElementById('paginacao');
+const btnAnterior = document.getElementById('btnPagAnterior');
+const btnSeguinte = document.getElementById('btnPagSeguinte');
+const pagInfo     = document.getElementById('pagInfo');
+
+const POR_PAGINA = 10;
+let paginaAtual = 1;
+let cardsFiltrados = [...cards]; // todos visíveis por defeito
+
+/**
+ * Atualiza a visibilidade dos cartões conforme a página atual
+ * e actualiza os botões de navegação.
+ */
+function renderizarPagina() {
+    const inicio = (paginaAtual - 1) * POR_PAGINA;
+    const fim    = inicio + POR_PAGINA;
+    const total  = cardsFiltrados.length;
+    const totalPaginas = Math.ceil(total / POR_PAGINA);
+
+    // Mostra só os cartões da página atual
+    cardsFiltrados.forEach((card, i) => {
+        card.style.display = (i >= inicio && i < fim) ? '' : 'none';
+    });
+
+    // Atualiza informação e estado dos botões
+    if (pagInfo)     pagInfo.textContent = total > 0 ? `${paginaAtual} / ${totalPaginas}` : '';
+    if (btnAnterior) btnAnterior.disabled = paginaAtual <= 1;
+    if (btnSeguinte) btnSeguinte.disabled = paginaAtual >= totalPaginas;
+
+    // Mostra/oculta paginação
+    if (paginacao) paginacao.style.display = total > POR_PAGINA ? '' : 'none';
+
+    // Mensagem de sem resultados
+    if (semFiltro) semFiltro.style.display = total === 0 ? '' : 'none';
+}
+
+/**
+ * Aplica o filtro e reinicia na página 1.
+ */
+function aplicarFiltro(filtro) {
+    cardsFiltrados = [...cards].filter(card =>
+        filtro === 'todos' || card.dataset.estado === filtro
+    );
+    // Esconde todos os cards inicialmente
+    cards.forEach(c => c.style.display = 'none');
+    paginaAtual = 1;
+    renderizarPagina();
+}
 
 /**
  * Filtra os cartões de histórico com base no estado selecionado
- * (Todos, Pendente, Confirmado, Cancelado) e exibe uma mensagem
- * de aviso caso não existam resultados para o filtro aplicado.
+ * e reinicia a paginação na página 1.
  */
 document.querySelectorAll('.btn-filtro').forEach(btn => {
     btn.addEventListener('click', () => {
-        const filtro = btn.dataset.filtro;
-
-        // Atualiza a interface visual dos botões de filtro
         document.querySelectorAll('.btn-filtro').forEach(b => b.classList.remove('ativo-filtro'));
         btn.classList.add('ativo-filtro');
-
-        let visiveis = 0;
-        
-        // Percorre todos os cartões e mostra/esconde consoante o estado
-        cards.forEach(card => {
-            const mostrar = filtro === 'todos' || card.dataset.estado === filtro;
-            card.style.display = mostrar ? '' : 'none';
-            if (mostrar) visiveis++;
-        });
-
-        // Mostra o "empty state" (mensagem de sem resultados) se tudo for filtrado
-        if (semFiltro) semFiltro.style.display = visiveis === 0 ? '' : 'none';
+        aplicarFiltro(btn.dataset.filtro);
     });
 });
+
+// Navegação de páginas
+btnAnterior?.addEventListener('click', () => { paginaAtual--; renderizarPagina(); });
+btnSeguinte?.addEventListener('click', () => { paginaAtual++; renderizarPagina(); });
+
+// Inicialização — renderiza a primeira página com todos os cartões
+aplicarFiltro('todos');
+
 
 /* ======================================================================
    VISUALIZAÇÃO DE QR CODES
@@ -330,46 +370,100 @@ document.querySelectorAll('.btn-avaliar').forEach(btn => {
     });
 });
 
+/**
+ * Constrói e abre o modal para o utilizador introduzir a avaliação da refeição.
+ * @param {string} pedidoId ID do pedido a ser avaliado.
+ */
 function mostrarModalAvaliacao(pedidoId) {
     const modal = new tingle.modal({
         footer: true,
         closeMethods: ['overlay', 'button', 'escape'],
-        cssClass: ['tingle-siupt']
+        cssClass: ['tingle-siupt'],
+        onClose: function () { modal.destroy(); }
     });
 
     let estrelaSelecionada = 0;
 
     modal.setContent(`
         <div class="modal-siupt-header">
-            <i class="bi bi-star-fill"></i>
+            <i class="bi bi-star-half"></i>
             <h4>Avaliar refeição</h4>
         </div>
         <div class="avaliacao-estrelas-input" id="estrelasInput">
             ${[1,2,3,4,5].map(n => `<i class="bi bi-star" data-valor="${n}"></i>`).join('')}
         </div>
+        <div class="avaliacao-motivo-wrap" id="motivoWrap" style="display:none;">
+            <label for="motivoSelect" class="avaliacao-motivo-label">O que correu mal? (opcional)</label>
+            <select id="motivoSelect" class="avaliacao-motivo-select">
+                <option value="">Selecionar motivo…</option>
+                <option value="comida_fria">Comida fria</option>
+                <option value="porcao_pequena">Porção pequena</option>
+                <option value="qualidade_abaixo">Qualidade abaixo do esperado</option>
+                <option value="erro_pedido">Refeição errada</option>
+                <option value="demora_entrega">Demora na entrega</option>
+            </select>
+        </div>
     `);
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
-    modal.addFooterBtn('Enviar avaliação', 'tingle-btn tingle-btn--primary', async () => {
+    const btnSubmeter = modal.addFooterBtn('Enviar avaliação', 'tingle-btn tingle-btn--primary', async () => {
         if (estrelaSelecionada === 0) { alert('Escolhe pelo menos 1 estrela.'); return; }
-        await enviarAvaliacao(pedidoId, estrelaSelecionada, modal);
+        const motivo = document.getElementById('motivoSelect')?.value || '';
+        await enviarAvaliacao(pedidoId, estrelaSelecionada, motivo, modal);
     });
+    btnSubmeter.disabled = true;
 
     modal.open();
 
     const icones = modal.modal.querySelectorAll('#estrelasInput i');
+    const motivoWrap = modal.modal.querySelector('#motivoWrap');
+
     icones.forEach(icone => {
         icone.addEventListener('click', () => {
             estrelaSelecionada = parseInt(icone.dataset.valor);
+            btnSubmeter.disabled = false;
             icones.forEach(i => i.className = parseInt(i.dataset.valor) <= estrelaSelecionada ? 'bi bi-star-fill' : 'bi bi-star');
 
-            // Só mostra o checkbox com 1 estrela — sinal claro de "algo correu mal"
-            problemaWrap.style.display = estrelaSelecionada === 1 ? 'flex' : 'none';
-            if (estrelaSelecionada !== 1) {
-                document.getElementById('reportarProblemaInput').checked = false;
+            // Mostra o dropdown com 1 ou 2 estrelas
+            if (motivoWrap) motivoWrap.style.display = estrelaSelecionada <= 2 ? 'block' : 'none';
+            if (estrelaSelecionada > 2) {
+                const motivoSelect = document.getElementById('motivoSelect');
+                if (motivoSelect) motivoSelect.value = '';
             }
         });
     });
+}
+
+/**
+ * Envia a avaliação (estrelas e motivo opcional) para a API.
+ * @param {string} pedidoId
+ * @param {number} estrelas
+ * @param {string} motivo
+ * @param {object} modal
+ */
+async function enviarAvaliacao(pedidoId, estrelas, motivo, modal) {
+    try {
+        const resposta = await fetch('api/avaliar_pedido.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+                pedido_id: pedidoId,
+                estrelas,
+                motivo,
+                csrf_token: window.CSRF_TOKEN
+            })
+        });
+        const dados = await resposta.json();
+        modal.close();
+        if (dados.status === 'ok') {
+            location.reload();
+        } else {
+            alert(dados.mensagem || 'Não foi possível enviar a avaliação.');
+        }
+    } catch (e) {
+        modal.close();
+        alert('Erro de rede ao enviar a avaliação.');
+    }
 }
 
 document.querySelectorAll('.btn-transferir').forEach(btn => {

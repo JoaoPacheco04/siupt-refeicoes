@@ -322,6 +322,33 @@
     margin-top: 0.3rem;
 }
 
+.avaliacao-alerta-problemas {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 8px;
+    padding: 0.75rem 0.9rem;
+    margin-top: 0.6rem;
+}
+
+.avaliacao-alerta-titulo {
+    color: #991b1b;
+    font-size: 0.82rem;
+    font-weight: 700;
+    margin: 0 0 0.5rem 0;
+}
+
+.avaliacao-motivo-linha {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    color: #7f1d1d;
+    padding: 0.15rem 0;
+}
+
+.avaliacao-media-prato {
+    color: #d97706;
+}
+
 /* ======================================================================
    AJUSTES RESPONSIVOS
    ====================================================================== */
@@ -370,3 +397,15 @@
         break-inside: avoid;
     }
 }
+
+/* ======================================================================
+   GRÁFICO DE VENDAS DIÁRIAS (Chart.js)
+   ====================================================================== */
+
+.relatorio-grafico-wrap {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 1px 4px rgba(30, 42, 59, 0.08);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+}

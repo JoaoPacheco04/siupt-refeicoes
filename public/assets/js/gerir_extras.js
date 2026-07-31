@@ -199,6 +199,11 @@ document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
 
         if (!confirm(`Eliminar "${nome}"? Esta ação não pode ser desfeita.`)) return;
 
+        // Estado de loading: desativa o botão e mostra spinner
+        btn.disabled = true;
+        const iconeOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+
         try {
             const resposta = await fetch('api/gerir_extras_apagar.php', {
                 method: 'POST',
@@ -211,9 +216,13 @@ document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
                 location.reload();
             } else {
                 mostrarErro(dados.mensagem || 'Não foi possível eliminar o extra.');
+                btn.disabled = false;
+                btn.innerHTML = iconeOriginal;
             }
         } catch (err) {
             mostrarErro('Erro de rede ao eliminar o extra.');
+            btn.disabled = false;
+            btn.innerHTML = iconeOriginal;
         }
     });
 });
@@ -232,6 +241,11 @@ document.querySelectorAll('.btn-reativar-extra').forEach(btn => {
         const item = btn.closest('.extra-item');
         const rmId = item.dataset.rmId;
 
+        // Estado de loading: desativa o botão e mostra spinner
+        btn.disabled = true;
+        const iconeOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+
         try {
             const resposta = await fetch('api/gerir_extras_reativar.php', {
                 method: 'POST',
@@ -244,9 +258,13 @@ document.querySelectorAll('.btn-reativar-extra').forEach(btn => {
                 location.reload();
             } else {
                 mostrarErro(dados.mensagem || 'Não foi possível reativar o extra.');
+                btn.disabled = false;
+                btn.innerHTML = iconeOriginal;
             }
         } catch (err) {
             mostrarErro('Erro de rede ao reativar o extra.');
+            btn.disabled = false;
+            btn.innerHTML = iconeOriginal;
         }
     });
 });

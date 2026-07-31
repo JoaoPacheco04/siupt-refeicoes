@@ -153,6 +153,34 @@ foreach ($extrasComPreco as $e) {
 }
 $mediasAvaliacoes = Database::obterMediaAvaliacoesPorNomes($nomesParaAvaliar);
 
+// ── Aviso de prazo a aproximar-se (só para o dia de hoje) ─────────────────
+$avisoPrazo = null;
+foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipoPrincipal) {
+    $tipoId = Database::obterTipoIdPorNome($tipoPrincipal);
+    if ($tipoId === null || !isset($limitesBatch[$tipoId])) continue;
+
+    $limite = $limitesBatch[$tipoId];
+    $dataLimiteHoje = date(
+        'Y-m-d ' . $limite['RDL_HORA'],
+        strtotime($hojeStr . ' -' . $limite['RDL_DIA_ANTECEDENCIA'] . ' days')
+    );
+
+    $agora = new DateTime();
+    $limiteObj = new DateTime($dataLimiteHoje);
+    $diffSegundos = $limiteObj->getTimestamp() - $agora->getTimestamp();
+
+    // Só mostra se faltar entre 0 e 2 horas (não mostra se já passou, nem se falta muito)
+    if ($diffSegundos > 0 && $diffSegundos <= 2 * 3600) {
+        $horasRestantes = floor($diffSegundos / 3600);
+        $minutosRestantes = floor(($diffSegundos % 3600) / 60);
+        $avisoPrazo = [
+            'horas' => $horasRestantes,
+            'minutos' => $minutosRestantes,
+            'hora_limite' => date('H:i', strtotime($limite['RDL_HORA'])),
+        ];
+        break; // já encontrámos o próximo prazo a expirar, não precisamos de continuar
+    }
+}
 // Variáveis auxiliares para a apresentação da data na interface.
 $numerosDia = [1 => '2ª', 2 => '3ª', 3 => '4ª', 4 => '5ª', 5 => '6ª'];
 $nomesCompletoDia = [1 => 'Segunda', 2 => 'Terça', 3 => 'Quarta', 4 => 'Quinta', 5 => 'Sexta'];
@@ -170,6 +198,8 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SIUPT - Ementa</title>
+    <meta name="description" content="Consulte e reserve a ementa semanal da cantina da Universidade Portucalense.">
+    <meta name="robots" content="noindex">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.css" rel="stylesheet">
@@ -185,25 +215,9 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     <a id="home" href="ementa.php" title="Voltar à página principal">
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
-    <nav>
-        <ul id="mainmenu">
-            <li id="menu_id_10" class=""><a href="#">Portais</a></li>
-            <li id="menu_id_5"  class=""><a href="#">Ingresso</a></li>
-            <li id="menu_id_7"  class=""><a href="#">Estudante</a></li>
-            <li id="menu_id_8"  class="selected"><a href="ementa.php">Suporte</a></li>
-            <li id="menu_id_16" class=""><a href="#">Decisão</a></li>
-        </ul>
-    </nav>
     <a href="historico.php" class="nav-icon-link" title="As minhas compras">
         <i class="bi bi-clock-history"></i>
     </a>
-    <form id="form_new_user_lang" method="post" action="#">
-        <label for="new_user_lang"></label>
-        <select id="new_user_lang" name="new_user_lang">
-            <option value="en">Inglês</option>
-            <option value="pt" selected>Português</option>
-        </select>
-    </form>
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
         <div id="profile-photo" class="profile-avatar">
@@ -234,6 +248,17 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     <div class="banner-semana-avancada" role="alert">
         <i class="bi bi-info-circle-fill"></i>
         A semana atual já está fora de prazo. A mostrar a ementa da <strong>próxima semana</strong>.
+    </div>
+    <?php endif; ?>
+
+    <?php if ($avisoPrazo !== null): ?>
+    <div class="banner-prazo-proximo" role="alert">
+        <i class="bi bi-clock-fill"></i>
+        <?php if ($avisoPrazo['horas'] > 0): ?>
+        Faltam <?= $avisoPrazo['horas'] ?>h<?= $avisoPrazo['minutos'] > 0 ? $avisoPrazo['minutos'] . 'min' : '' ?> para o prazo de compra de hoje (<?= $avisoPrazo['hora_limite'] ?>).
+        <?php else: ?>
+        Faltam apenas <?= $avisoPrazo['minutos'] ?> minutos para o prazo de compra de hoje (<?= $avisoPrazo['hora_limite'] ?>)!
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 

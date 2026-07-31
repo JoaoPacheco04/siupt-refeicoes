@@ -9,6 +9,7 @@ verificarCsrfToken(true);
 
 $pedidoId = (int) ($_POST['pedido_id'] ?? 0);
 $estrelas = (int) ($_POST['estrelas'] ?? 0);
+$motivo = trim($_POST['motivo'] ?? '') ?: null;
 
 if ($pedidoId <= 0 || $estrelas < 1 || $estrelas > 5) {
     echo json_encode(['status' => 'erro', 'mensagem' => 'Dados inválidos']);
@@ -20,7 +21,7 @@ $mensagens = [
     'ja_avaliado' => 'Já avaliaste este pedido.',
 ];
 
-$resultado = Database::avaliarPedido($pedidoId, (int) $utilizador['id'], $estrelas);
+$resultado = Database::avaliarPedido($pedidoId, (int) $utilizador['id'], $estrelas, $motivo);
 
 echo json_encode($resultado === 'ok'
     ? ['status' => 'ok']

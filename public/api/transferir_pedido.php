@@ -7,7 +7,7 @@ header('Content-Type: application/json');
 $utilizador = exigirLogin('aluno', true);
 verificarCsrfToken(true);
 
-$pedidoId = (int) ($_POST['pedido_id'] ?? 0);
+$pedidoId    = (int) ($_POST['pedido_id'] ?? 0);
 $biccDestino = trim($_POST['bicc_destino'] ?? '');
 
 if ($pedidoId <= 0 || $biccDestino === '') {
@@ -15,11 +15,20 @@ if ($pedidoId <= 0 || $biccDestino === '') {
     exit;
 }
 
+// ── Verificação de ownership explícita (defense in depth) ──────────────
+// Garante que o pedido pertence ao utilizador autenticado antes de
+// qualquer operação, mesmo que a camada DB já o verifique internamente.
+$pedido = Database::obterPedido($pedidoId);
+if (!$pedido || (int) $pedido['RP_U_ID'] !== (int) $utilizador['id']) {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Pedido não encontrado ou sem permissão.']);
+    exit;
+}
+
 $mensagens = [
-    'nao_transferivel' => 'Este pedido já não pode ser transferido (só pedidos ativos).',
+    'nao_transferivel'           => 'Este pedido já não pode ser transferido (só pedidos ativos).',
     'destinatario_nao_encontrado' => 'Não encontrámos nenhum utilizador com esse número.',
-    'mesmo_utilizador' => 'Não podes transferir para ti próprio.',
-    'erro_bd' => 'Erro ao processar a transferência.',
+    'mesmo_utilizador'           => 'Não podes transferir para ti próprio.',
+    'erro_bd'                    => 'Erro ao processar a transferência.',
 ];
 
 $resultado = Database::transferirPedido($pedidoId, (int) $utilizador['id'], $biccDestino);

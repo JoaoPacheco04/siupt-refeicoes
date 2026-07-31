@@ -866,6 +866,26 @@ public static function obterMediaAvaliacoesMensal(string $anoMes): array {
     ];
 }
 
+/**
+ * Média de avaliações por prato, histórico completo (não filtrado por mês),
+ * ordenado do pior para o melhor — ajuda o funcionário a identificar
+ * pratos a melhorar.
+ */
+public static function obterMediaAvaliacoesPorPrato(int $minimoAvaliacoes = 2): array {
+    $stmt = self::conexao()->prepare("
+        SELECT rm.RM_NOME, AVG(CAST(rav.RAV_ESTRELAS AS FLOAT)) AS media, COUNT(*) AS total
+        FROM restaurante_avaliacao rav
+        JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
+        JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+        JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+        GROUP BY rm.RM_NOME
+        HAVING COUNT(*) >= ?
+        ORDER BY media ASC
+    ");
+    $stmt->execute([$minimoAvaliacoes]);
+    return $stmt->fetchAll();
+}
+
 
 public static function cancelarPedidoPendente(int $pedidoId, int $utilizadorId): bool {
     $pdo = self::conexao();
@@ -902,8 +922,7 @@ public static function cancelarPedidoPendente(int $pedidoId, int $utilizadorId):
         return false;
     }
 }
-    public static function avaliarPedido(int $pedidoId, int $utilizadorId, int $estrelas): string {
-    // Só permite avaliar pedidos próprios, já levantados
+    public static function avaliarPedido(int $pedidoId, int $utilizadorId, int $estrelas, ?string $motivo): string {
     $stmt = self::conexao()->prepare("
         SELECT RP_ID FROM restaurante_pedido WHERE RP_ID = ? AND RP_U_ID = ? AND RP_UTILIZADO = 1
     ");
@@ -918,10 +937,32 @@ public static function cancelarPedidoPendente(int $pedidoId, int $utilizadorId):
         return 'ja_avaliado';
     }
 
-    self::conexao()->prepare("INSERT INTO restaurante_avaliacao (RAV_RP_ID, RAV_ESTRELAS) VALUES (?, ?)")
-        ->execute([$pedidoId, $estrelas]);
+    // Lista fechada de motivos válidos — protege contra valores arbitrários vindos da API
+    $motivosValidos = ['comida_fria', 'porcao_pequena', 'qualidade_abaixo', 'erro_pedido', 'demora_entrega'];
+    $motivoFinal = ($estrelas <= 2 && in_array($motivo, $motivosValidos, true)) ? $motivo : null;
+
+    self::conexao()->prepare("
+        INSERT INTO restaurante_avaliacao (RAV_RP_ID, RAV_ESTRELAS, RAV_MOTIVO)
+        VALUES (?, ?, ?)
+    ")->execute([$pedidoId, $estrelas, $motivoFinal]);
 
     return 'ok';
+}
+
+public static function obterMotivosProblemasMensal(string $anoMes): array {
+    $inicio = $anoMes . '-01';
+    $fim = date('Y-m-t', strtotime($inicio));
+
+    $stmt = self::conexao()->prepare("
+        SELECT rav.RAV_MOTIVO, COUNT(*) AS total
+        FROM restaurante_avaliacao rav
+        JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
+        WHERE rav.RAV_MOTIVO IS NOT NULL AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
+        GROUP BY rav.RAV_MOTIVO
+        ORDER BY total DESC
+    ");
+    $stmt->execute([$inicio, $fim]);
+    return $stmt->fetchAll();
 }
 
 public static function listarAvaliacoesPorPedidos(array $pedidoIds): array {
@@ -981,6 +1022,14 @@ public static function transferirPedido(int $pedidoId, int $deUtilizadorId, stri
         $pdo->rollBack();
         return 'erro_bd';
     }
+}
+public static function contarRefeicoesAtivasHoje(): int {
+    $stmt = self::conexao()->prepare("
+        SELECT COUNT(*) FROM restaurante_pedido
+        WHERE RP_PAGO = 1 AND RP_UTILIZADO = 0 AND RP_DATA_REFEICAO = CAST(GETDATE() AS DATE)
+    ");
+    $stmt->execute();
+    return (int) $stmt->fetchColumn();
 }
     
 }
