@@ -45,6 +45,15 @@ $motivosLabels = [
     'demora_entrega'    => 'Demora na entrega',
 ];
 
+// NOVO — ícone visual por motivo, para leitura mais rápida na lista
+$motivosIcones = [
+    'comida_fria'       => 'bi-thermometer-snow',
+    'porcao_pequena'    => 'bi-arrows-angle-contract',
+    'qualidade_abaixo'  => 'bi-emoji-frown',
+    'erro_pedido'       => 'bi-x-octagon',
+    'demora_entrega'    => 'bi-clock-history',
+];
+
 $mesesNomes = [
     '01' => 'Janeiro', '02' => 'Fevereiro', '03' => 'Março',    '04' => 'Abril',
     '05' => 'Maio',    '06' => 'Junho',     '07' => 'Julho',     '08' => 'Agosto',
@@ -98,7 +107,7 @@ foreach ($vendasDiarias as $d) {
     <link href="assets/css/navbar.css" rel="stylesheet">
     <link href="<?= assetUrl('assets/css/relatorio.css') ?>" rel="stylesheet">
     <!-- FIX 1: Chart.js para o gráfico de vendas diárias -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -207,6 +216,11 @@ foreach ($vendasDiarias as $d) {
     <?php if (!empty($vendasDiarias)): ?>
     <h2 class="relatorio-secao-titulo">evolução de vendas diárias</h2>
     <div class="relatorio-grafico-wrap">
+        <?php if (count($vendasDiarias) < 3): ?>
+        <p class="text-muted small" style="text-align:center; margin-bottom:0.5rem;">
+            <i class="bi bi-info-circle"></i> Poucos dias de dados este mês — o gráfico fica mais útil com o mês completo.
+        </p>
+        <?php endif; ?>
         <canvas id="graficoVendas" height="90" aria-label="Gráfico de vendas diárias" role="img"></canvas>
     </div>
     <?php endif; ?>
@@ -336,10 +350,17 @@ foreach ($vendasDiarias as $d) {
     <div class="relatorio-tabela motivos-tabela">
         <?php foreach ($motivosProblemas as $m):
             $label   = $motivosLabels[$m['RAV_MOTIVO']] ?? $m['RAV_MOTIVO'];
+            $icone   = $motivosIcones[$m['RAV_MOTIVO']] ?? 'bi-exclamation-circle';
             $largura = round(($m['total'] / $maxMotivo) * 100);
         ?>
         <div class="relatorio-tabela-linha motivo-linha">
-            <span class="relatorio-tabela-nome motivo-nome"><?= htmlspecialchars($label) ?></span>
+            <span class="relatorio-tabela-nome motivo-nome">
+                <i class="bi <?= $icone ?> motivo-icone"></i>
+                <?= htmlspecialchars($label) ?>
+                <?php if (!empty($m['pratos_associados'])): ?>
+                <span class="motivo-pratos-associados"><?= htmlspecialchars($m['pratos_associados']) ?></span>
+                <?php endif; ?>
+            </span>
             <span class="motivo-barra-wrap">
                 <span class="motivo-barra" style="width:<?= $largura ?>%"></span>
             </span>
@@ -376,6 +397,8 @@ foreach ($vendasDiarias as $d) {
                     borderWidth: 0,
                     borderRadius: 5,
                     borderSkipped: false,
+                    barPercentage: 0.5,        // NOVO — largura da barra relativa ao espaço da categoria
+                    categoryPercentage: 0.6,   // NOVO — espaço da categoria em si
                     yAxisID: 'yVendas',
                 },
                 {

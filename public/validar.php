@@ -16,7 +16,6 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 $utilizador = exigirLogin('funcionario');
 $validacoesHoje = Database::contarValidacoesHoje((int) $utilizador['id']);
 $refeicoesPorLevantar = Database::contarRefeicoesAtivasHoje(); // NOVO — item 2
-$naoLevantadosAnteriores = Database::contarNaoLevantadosAntesDeHoje(); // NOVO
 $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 ?>
 <!DOCTYPE html>
@@ -86,15 +85,6 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <i class="bi bi-hourglass-split"></i>
         <span class="num" id="contadorPorLevantar"><?= $refeicoesPorLevantar ?></span>
         por levantar hoje
-    </div>
-    <?php endif; ?>
-
-    <!-- NOVO -->
-    <?php if ($naoLevantadosAnteriores > 0): ?>
-    <div class="validacoes-contador validacoes-contador--erro">
-        <i class="bi bi-exclamation-triangle-fill"></i>
-        <span class="num"><?= $naoLevantadosAnteriores ?></span>
-        não levantadas (dias anteriores)
     </div>
     <?php endif; ?>
 

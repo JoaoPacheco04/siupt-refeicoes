@@ -982,9 +982,12 @@ class Database {
         $fim = date('Y-m-t', strtotime($inicio));
 
         $stmt = self::conexao()->prepare("
-            SELECT rav.RAV_MOTIVO, COUNT(*) AS total
+            SELECT rav.RAV_MOTIVO, COUNT(*) AS total,
+                   STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS pratos_associados
             FROM restaurante_avaliacao rav
             JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
+            LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+            LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
             WHERE rav.RAV_MOTIVO IS NOT NULL AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
             GROUP BY rav.RAV_MOTIVO
             ORDER BY total DESC
@@ -1013,35 +1016,6 @@ class Database {
               AND NOT EXISTS (SELECT 1 FROM restaurante_avaliacao rav WHERE rav.RAV_RP_ID = rp.RP_ID)
         ");
         $stmt->execute([$utilizadorId]);
-        return (int) $stmt->fetchColumn();
-    }
-
-    /**
-     * Conta o número de refeições pagas por um utilizador que não foram
-     * levantadas a tempo (ou seja, a data da refeição já passou).
-     */
-    public static function contarRefeicoesNaoLevantadasRecentes(int $utilizadorId): int {
-        $stmt = self::conexao()->prepare("
-            SELECT COUNT(*)
-            FROM restaurante_pedido
-            WHERE RP_U_ID = ? AND RP_PAGO = 1 AND RP_UTILIZADO = 0
-              AND RP_DATA_REFEICAO < CAST(GETDATE() AS DATE)
-        ");
-        $stmt->execute([$utilizadorId]);
-        return (int) $stmt->fetchColumn();
-    }
-
-    /**
-     * Conta refeições pagas e não levantadas de dias ANTERIORES a hoje
-     * (exclui as de hoje, que já têm o contador "por levantar hoje").
-     * Serve para o funcionário/gestor perceber padrões de desperdício.
-     */
-    public static function contarNaoLevantadosAntesDeHoje(): int {
-        $stmt = self::conexao()->prepare("
-            SELECT COUNT(*) FROM restaurante_pedido
-            WHERE RP_PAGO = 1 AND RP_UTILIZADO = 0 AND RP_DATA_REFEICAO < CAST(GETDATE() AS DATE)
-        ");
-        $stmt->execute();
         return (int) $stmt->fetchColumn();
     }
     public static function transferirPedido(int $pedidoId, int $deUtilizadorId, string $biccDestino): string {

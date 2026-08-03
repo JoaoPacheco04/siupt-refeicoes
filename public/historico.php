@@ -168,7 +168,7 @@ foreach ($pedidos as $p) {
         <button class="btn-filtro<?= $contagens['expirado'] === 0 ? ' filtro-vazio' : '' ?>"
                 data-filtro="expirado"
                 id="filtro-vencido">
-            Vencidos
+            Expirados
             <span class="filtro-conta"><?= $contagens['expirado'] ?></span>
         </button>
 

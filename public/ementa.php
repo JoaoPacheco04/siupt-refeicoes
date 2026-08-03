@@ -195,7 +195,6 @@ $nomeMes = $meses[(int) $sexta->format('n')];
 $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
 $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
-$refeicoesPerdidas = Database::contarRefeicoesNaoLevantadasRecentes((int) $utilizador['id']);
 ?>
 
 <!DOCTYPE html>
@@ -254,14 +253,6 @@ $refeicoesPerdidas = Database::contarRefeicoesNaoLevantadasRecentes((int) $utili
     <div class="banner-semana-avancada" role="alert">
         <i class="bi bi-info-circle-fill"></i>
         A semana atual já está fora de prazo. A mostrar a ementa da <strong>próxima semana</strong>.
-    </div>
-    <?php endif; ?>
-
-    <?php if ($refeicoesPerdidas > 0): ?>
-    <div class="banner-nao-levantado" role="alert">
-        <i class="bi bi-exclamation-circle-fill"></i>
-        Tens <?= $refeicoesPerdidas ?> refeição(ões) paga(s) que não foram levantadas a tempo.
-        <a href="historico.php">Ver histórico →</a>
     </div>
     <?php endif; ?>
 
