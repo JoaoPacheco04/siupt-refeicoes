@@ -69,7 +69,6 @@ foreach ($itens as $item) {
 
     $rmId = (int) $item['rm_id'];
 
-    // SEC 1 FIX: rejeitar IDs não positivos que passariam o cast para int
     if ($rmId <= 0) {
         echo json_encode([
             'status'   => 'erro',

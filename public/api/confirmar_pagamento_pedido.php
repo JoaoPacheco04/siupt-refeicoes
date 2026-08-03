@@ -79,7 +79,6 @@ foreach ($pedidoIds as $id) {
     ];
 
     if ($r['status'] === 'confirmado') {
-        // BUG 2 FIX: reler o pedido após processar() para garantir dados atualizados
         $pedidoAtualizado = Database::obterPedido($id);
         $entrada['qrcode']       = ($pedidoAtualizado ?: $pedido)['RP_QRCODE'];
         $entrada['codigo_curto'] = ($pedidoAtualizado ?: $pedido)['RP_CODIGO_CURTO'];

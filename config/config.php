@@ -26,7 +26,6 @@ if (file_exists($envPath)) {
     $linhas = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
     foreach ($linhas as $linha) {
         $linha = trim($linha);
-        // Ignora comentários e linhas sem '='
         if ($linha === '' || $linha[0] === '#' || !str_contains($linha, '=')) {
             continue;
         }

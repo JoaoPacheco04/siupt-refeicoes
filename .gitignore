@@ -16,3 +16,14 @@ Thumbs.db
 *.swo
 
 vendor/
+
+# NOVO — PHPUnit: cache de resultados entre execuções, específico da máquina
+.phpunit.result.cache
+.phpunit.cache/
+
+# NOVO — relatório de cobertura de testes (gerado localmente, não deve ir para o repo)
+coverage-report/
+
+# NOVO — backups temporários que o VS Code ou outros editores possam criar
+*.bak
+*~

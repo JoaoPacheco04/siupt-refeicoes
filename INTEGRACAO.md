@@ -13,7 +13,7 @@ A **única** tabela partilhada com o sistema existente é `users`, e é usada **
 | Tabela | Finalidade |
 |---|---|
 | `restaurante_tipo_refeicao` | Tipos de prato (Carne, Peixe, Vegetariano, Sopa, Sobremesa, Bebida, Menu Completo, e um tipo próprio por cada extra) |
-| `restaurante_menu` | Pratos — com data (ementa semanal) ou sem data (extras sempre disponíveis) |
+| `restaurante_menu` | Pratos — com data (ementa semanal) ou sem data (extras sempre disponíveis); `RM_ATIVO` permite soft-delete de extras já comprados |
 | `restaurante_preco_tipo_refeicao` | Histórico de preços por tipo, com data de início — permite alterar preços sem afetar pedidos já feitos |
 | `restaurante_data_limite` | Prazo de compra por tipo de refeição (hora + dias de antecedência) |
 | `restaurante_pedido` | Cabeçalho do pedido — QR code, código curto, estado pago/utilizado |
@@ -28,11 +28,27 @@ O script completo de criação está em `siupt_refeicoes.sql`, na raiz do projet
 
 ## 3. Pontos de integração (onde mexer para ligar ao sistema real)
 
-### 3.1 Autenticação — `src/Support/Auth.php` + `public/login.php`
+### 3.1 Autenticação — ficheiros a substituir
 
-**Estado atual:** `login.php` é uma simulação própria, feita só para desenvolvimento e testes — autentica contra a tabela `users` com `password_verify()` e cria uma sessão PHP simples (`$_SESSION['user_id']`, `user_nome`, `user_tipo`).
+**Estado atual:** todo o login é uma simulação própria, feita só para desenvolvimento e testes — autentica contra a tabela `users` com `password_verify()` e cria uma sessão PHP simples (`$_SESSION['user_id']`, `user_nome`, `user_tipo`).
 
-**A fazer na integração real:** substituir `login.php` pelo mecanismo de login institucional do SIUPT. As funções `exigirLogin()` e `verificarCsrfToken()` em `Auth.php` não precisam de mudar — só a forma como `$_SESSION['user_id']` é preenchida no login. Todo o resto do módulo lê a sessão da mesma forma, por isso a integração deve ficar isolada a este ponto.
+**Ficheiros a remover/substituir na integração real:**
+
+| Ficheiro | O que fazer |
+|---|---|
+| `public/login.php` | **Remover por completo.** É só a página de login de simulação (formulário BI/CC + password, toggle Estudante/Colaborador). Substituir pelo mecanismo de login institucional do SIUPT. |
+| `src/Support/Auth.php` | **Manter — não remover.** As funções `exigirLogin()`, `gerarCsrfToken()` e `verificarCsrfToken()` são usadas por todo o módulo e não dependem do `login.php`. Só a forma como `$_SESSION['user_id']` é preenchida precisa de mudar (ver abaixo). |
+| Todas as chamadas a `header('Location: login.php?...')` | Ocorrem em `Auth.php` (`exigirLogin()`) sempre que a sessão expira ou o utilizador não tem permissão — apontar para a página de login real da UPT em vez de `login.php`. |
+
+**O que fazer na prática:** qualquer mecanismo de autenticação real só precisa de garantir que, após autenticar o utilizador, preenche estas três variáveis de sessão exatamente como `login.php` já faz hoje:
+
+```php
+$_SESSION['user_id']   = $utilizador['U_ID'];   // ID da tabela users
+$_SESSION['user_nome'] = $utilizador['U_NOME'];
+$_SESSION['user_tipo'] = $tipo; // 'aluno' ou 'funcionario' — ver Database::perfilParaTipo()
+```
+
+A partir daí, todo o resto do módulo (`exigirLogin()` em `Auth.php`, e todas as páginas que a chamam) continua a funcionar sem alterações.
 
 ### 3.2 Pagamento — `src/Services/PagamentoService.php`
 
@@ -54,6 +70,8 @@ Correr `siupt_refeicoes.sql` no SSMS contra a base de dados criada.
 
 Aceder via `http://localhost/siupt-refeicoes/public/login.php` (ajustar caminho conforme o servidor local).
 
+**Nota sobre dependências:** o export de relatório em PDF (`api/exportar_relatorio_pdf.php`) depende do Dompdf, instalado via Composer. Sem correr `composer install`, esse endpoint específico falha com "Class not found" — o resto do sistema funciona normalmente sem esta dependência.
+
 ## 5. Limitações conhecidas (decisões conscientes, não bugs)
 
 - **Avaliação por pedido, não por prato individual.** Um pedido com vários itens (ex: menu completo) só tem uma nota e um motivo, aplicados ao pedido inteiro. A UI de avaliação e o relatório assumem essa nota como representativa de todos os pratos desse pedido. Decisão de simplicidade — avaliar item a item aumentaria significativamente a complexidade do modal de avaliação para um ganho de informação considerado secundário.
@@ -62,4 +80,15 @@ Aceder via `http://localhost/siupt-refeicoes/public/login.php` (ajustar caminho 
 
 ## 6. Testes
 
-O módulo foi validado manualmente, fluxo a fluxo, ao longo do desenvolvimento (compra, pagamento, validação, transferência, avaliação, relatórios, gestão de extras).
+O módulo tem uma suite de testes automatizados (PHPUnit) cobrindo a lógica de negócio crítica: criação de pedidos, validação por QR code, transferências, cancelamentos, avaliações, preços históricos, prazos de compra, e gestão de extras.
+
+**Como correr:**
+
+```powershell
+composer install
+vendor\bin\phpunit --testdox
+```
+
+Os testes correm contra uma base de dados de teste isolada (`siupt_refeicoes_test`), separada da base de desenvolvimento/produção — nunca contra dados reais. Antes de correr pela primeira vez, cria essa base e aplica o mesmo esquema de `siupt_refeicoes.sql`.
+
+Complementarmente, o módulo foi também validado manualmente, fluxo a fluxo, com dados de exemplo cobrindo todos os estados possíveis (pendente, ativo, utilizado, expirado, avaliações positivas e negativas, extras, transferências).
