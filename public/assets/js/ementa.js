@@ -127,6 +127,9 @@ document.querySelectorAll('.checkbox-menu-completo').forEach(box => {
 
             syncComponentesVisibility(card);
 
+            const resumo = card.querySelector('.menu-completo-resumo');
+            if (resumo) resumo.classList.toggle('visivel', box.checked);
+
             if (box.checked) {
                 card.querySelectorAll('.checkbox-componente').forEach(c => c.checked = false);
             }
@@ -288,6 +291,11 @@ btnComprar.addEventListener('click', () => {
     const selecoes = coletarSelecoes();
     if (selecoes.length === 0) return;
 
+    // NOVO: feedback imediato — evita duplo clique em ligação lenta
+    btnComprar.disabled = true;
+    const btnSpanOriginal = btnComprar.querySelector('span');
+    if (btnSpanOriginal) btnSpanOriginal.textContent = 'A preparar...';
+
     const totalGeral = selecoes.reduce((soma, g) => soma + g.itens.reduce((s, i) => s + i.preco, 0), 0);
     const listaHtml = selecoes
         .map(g => {
@@ -301,7 +309,12 @@ btnComprar.addEventListener('click', () => {
         footer: true,
         closeMethods: ['overlay', 'button', 'escape'],
         closeLabel: 'Fechar',
-        cssClass: ['tingle-siupt']
+        cssClass: ['tingle-siupt'],
+        // NOVO: restaura o botão se o utilizador fechar o modal sem confirmar
+        onClose: function () {
+            btnComprar.disabled = false;
+            if (btnSpanOriginal) btnSpanOriginal.textContent = 'Confirmar compra';
+        }
     });
 
     modal.setContent(`

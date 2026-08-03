@@ -207,7 +207,8 @@ $extras = Database::listarDetalhesExtrasParaGestao();
                 <!-- Botão de edição -->
                 <button
                     class="btn-editar-extra"
-                    title="Editar">
+                    title="Editar"
+                    aria-label="Editar extra">
 
                     <i class="bi bi-pencil"></i>
 
@@ -219,7 +220,8 @@ $extras = Database::listarDetalhesExtrasParaGestao();
 
                     <button
                         class="btn-apagar-extra"
-                        title="Eliminar">
+                        title="Eliminar"
+                        aria-label="Eliminar extra">
 
                         <i class="bi bi-trash"></i>
 

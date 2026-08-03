@@ -33,6 +33,17 @@ $vendasDiarias     = Database::obterVendasDiariasMensal($anoMes);
 $mediaAvaliacoes   = Database::obterMediaAvaliacoesMensal($anoMes);
 // FIX 2: passa $anoMes para filtrar apenas as avaliações deste mês
 $avaliacoesPorPrato = Database::obterMediaAvaliacoesPorPrato(1, $anoMes);
+// N5: motivos de reclamação das avaliações com 1-2 estrelas
+$motivosProblemas  = Database::obterMotivosProblemasMensal($anoMes);
+
+// Labels legíveis para os motivos
+$motivosLabels = [
+    'comida_fria'       => 'Comida fria',
+    'porcao_pequena'    => 'Porção pequena',
+    'qualidade_abaixo'  => 'Qualidade abaixo do esperado',
+    'erro_pedido'       => 'Refeição errada',
+    'demora_entrega'    => 'Demora na entrega',
+];
 
 $mesesNomes = [
     '01' => 'Janeiro', '02' => 'Fevereiro', '03' => 'Março',    '04' => 'Abril',
@@ -307,6 +318,37 @@ foreach ($vendasDiarias as $d) {
     <?php endif; ?>
 
     <?php endif; ?>
+
+    <!-- N5: Motivos de reclamação das avaliações negativas -->
+    <?php
+    $totalMotivos = array_sum(array_column($motivosProblemas, 'total'));
+    $maxMotivo    = !empty($motivosProblemas) ? max(array_column($motivosProblemas, 'total')) : 1;
+    ?>
+    <h2 class="relatorio-secao-titulo">motivos de reclamação
+        <?php if ($totalMotivos > 0): ?>
+        <span class="relatorio-subtotal">(<?= $totalMotivos ?> no total)</span>
+        <?php endif; ?>
+    </h2>
+
+    <?php if (empty($motivosProblemas)): ?>
+    <p class="relatorio-vazio"><i class="bi bi-emoji-smile"></i> Sem reclamações registadas neste mês.</p>
+    <?php else: ?>
+    <div class="relatorio-tabela motivos-tabela">
+        <?php foreach ($motivosProblemas as $m):
+            $label   = $motivosLabels[$m['RAV_MOTIVO']] ?? $m['RAV_MOTIVO'];
+            $largura = round(($m['total'] / $maxMotivo) * 100);
+        ?>
+        <div class="relatorio-tabela-linha motivo-linha">
+            <span class="relatorio-tabela-nome motivo-nome"><?= htmlspecialchars($label) ?></span>
+            <span class="motivo-barra-wrap">
+                <span class="motivo-barra" style="width:<?= $largura ?>%"></span>
+            </span>
+            <span class="relatorio-tabela-qtd motivo-contagem"><?= $m['total'] ?>×</span>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
+
 </main>
 </div>
 

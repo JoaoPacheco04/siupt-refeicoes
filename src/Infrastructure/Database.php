@@ -5,7 +5,6 @@ require_once __DIR__ . '/../../config/config.php';
 class Database {
     private static ?PDO $instancia = null;
 
-    private const PERFIL_ALUNO = 1;
     private const PERFIL_FUNCIONARIO = 2;
 
     public static function conexao(): PDO {
@@ -244,25 +243,34 @@ class Database {
         return date('Y-m-d H:i:s') > $dataLimite;
     }
 
+    /**
+     * B2 FIX: usa uma única query com JOIN para obter o limite do primeiro
+     * tipo principal (Carne / Peixe / Vegetariano) que tenha limite definido,
+     * eliminando as 6 queries individuais anteriores.
+     */
     public static function obterDataLimitePrincipalTexto(): ?string {
-        foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipo) {
-            $tipoId = self::obterTipoIdPorNome($tipo);
-            if ($tipoId === null) continue;
-            $limite = self::obterDataLimite($tipoId);
-            if (!$limite) continue;
+        $stmt = self::conexao()->prepare("
+            SELECT TOP 1 rdl.RDL_HORA, rdl.RDL_DIA_ANTECEDENCIA
+            FROM restaurante_tipo_refeicao rtp
+            JOIN restaurante_data_limite rdl ON rdl.RDL_RTP_ID = rtp.RTP_ID
+            WHERE rtp.RTP_NOME IN ('Carne', 'Peixe', 'Vegetariano')
+            ORDER BY CASE rtp.RTP_NOME WHEN 'Carne' THEN 1 WHEN 'Peixe' THEN 2 ELSE 3 END
+        ");
+        $stmt->execute();
+        $limite = $stmt->fetch();
 
-            $hora = rtrim(substr($limite['RDL_HORA'], 0, 5), ':');
-            $dias = (int) $limite['RDL_DIA_ANTECEDENCIA'];
+        if (!$limite) return null;
 
-            if ($dias === 1) {
-                return "até às {$hora} do dia anterior";
-            } elseif ($dias === 0) {
-                return "até às {$hora} do próprio dia";
-            } else {
-                return "até às {$hora} com {$dias} dias de antecedência";
-            }
+        $hora = rtrim(substr($limite['RDL_HORA'], 0, 5), ':');
+        $dias = (int) $limite['RDL_DIA_ANTECEDENCIA'];
+
+        if ($dias === 1) {
+            return "até às {$hora} do dia anterior";
+        } elseif ($dias === 0) {
+            return "até às {$hora} do próprio dia";
+        } else {
+            return "até às {$hora} com {$dias} dias de antecedência";
         }
-        return null;
     }
 
     public static function foraDePrazo(int $tipoRefeicaoId, string $dataRefeicao): bool {
@@ -288,6 +296,12 @@ class Database {
         if (empty($itens)) {
             return 'sem_itens';
         }
+
+    // NOVO: validação explícita — nunca aceitar uma data já passada,
+    // independentemente da lógica de prazo por tipo de refeição
+    if ($dataRefeicao < date('Y-m-d')) {
+        return 'data_no_passado';
+    }
 
         $pdo = self::conexao();
         $pdo->beginTransaction();
@@ -591,20 +605,20 @@ class Database {
      * cada extra tem preço 100% independente, sem partilhar com outros pratos.
      */
     public static function criarTipoRefeicaoExtra(string $nomePrato): int {
-    $pdo = self::conexao();
+        $pdo = self::conexao();
 
-    $stmt = $pdo->prepare("INSERT INTO restaurante_tipo_refeicao (RTP_NOME) VALUES (?)");
-    $stmt->execute(["Extra: {$nomePrato}"]);
-    $tipoId = (int) $pdo->lastInsertId();
+        $stmt = $pdo->prepare("INSERT INTO restaurante_tipo_refeicao (RTP_NOME) VALUES (?)");
+        $stmt->execute(["Extra: {$nomePrato}"]);
+        $tipoId = (int) $pdo->lastInsertId();
 
-    // Limite de compra por defeito: até às 10h do próprio dia
-    $pdo->prepare("
-        INSERT INTO restaurante_data_limite (RDL_RTP_ID, RDL_HORA, RDL_DIA_ANTECEDENCIA)
-        VALUES (?, '10:00:00', 0)
-    ")->execute([$tipoId]);
+        // Limite de compra por defeito: até às 10h do próprio dia
+        $pdo->prepare("
+            INSERT INTO restaurante_data_limite (RDL_RTP_ID, RDL_HORA, RDL_DIA_ANTECEDENCIA)
+            VALUES (?, '10:00:00', 0)
+        ")->execute([$tipoId]);
 
-    return $tipoId;
-}
+        return $tipoId;
+    }
 
     /**
      * Cria um novo prato extra (RM_DATA = NULL) com um tipo de refeição dedicado
@@ -806,65 +820,65 @@ class Database {
     }
 
     /**
- * Versão simplificada de obterResumoMensal, só com o total vendido —
- * usada para comparação com o mês anterior, sem recursão nem repetição de queries pesadas.
- */
-public static function obterTotalVendidoMensal(string $anoMes): float {
-    $inicio = $anoMes . '-01';
-    $fim = date('Y-m-t', strtotime($inicio));
+     * Versão simplificada de obterResumoMensal, só com o total vendido —
+     * usada para comparação com o mês anterior, sem recursão nem repetição de queries pesadas.
+     */
+    public static function obterTotalVendidoMensal(string $anoMes): float {
+        $inicio = $anoMes . '-01';
+        $fim = date('Y-m-t', strtotime($inicio));
 
-    $stmt = self::conexao()->prepare("
-        SELECT ISNULL(SUM(RP_PRECO_TOTAL), 0) AS total
-        FROM restaurante_pedido
-        WHERE RP_PAGO = 1 AND RP_DATA_REFEICAO BETWEEN ? AND ?
-    ");
-    $stmt->execute([$inicio, $fim]);
-    return (float) $stmt->fetchColumn();
-}
-
-/**
- * Média de avaliações agregada por nome do prato (histórico, não só da semana atual).
- * Retorna [nome => ['media' => float, 'total' => int]]
- */
-public static function obterMediaAvaliacoesPorNomes(array $nomes): array {
-    if (empty($nomes)) return [];
-    $nomes = array_values(array_unique($nomes));
-    $ph = implode(',', array_fill(0, count($nomes), '?'));
-    $stmt = self::conexao()->prepare("
-        SELECT rm.RM_NOME, AVG(CAST(rav.RAV_ESTRELAS AS FLOAT)) AS media, COUNT(*) AS total
-        FROM restaurante_avaliacao rav
-        JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
-        JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
-        JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
-        WHERE rm.RM_NOME IN ($ph)
-        GROUP BY rm.RM_NOME
-    ");
-    $stmt->execute($nomes);
-    $resultado = [];
-    foreach ($stmt->fetchAll() as $row) {
-        $resultado[$row['RM_NOME']] = ['media' => (float) $row['media'], 'total' => (int) $row['total']];
+        $stmt = self::conexao()->prepare("
+            SELECT ISNULL(SUM(RP_PRECO_TOTAL), 0) AS total
+            FROM restaurante_pedido
+            WHERE RP_PAGO = 1 AND RP_DATA_REFEICAO BETWEEN ? AND ?
+        ");
+        $stmt->execute([$inicio, $fim]);
+        return (float) $stmt->fetchColumn();
     }
-    return $resultado;
-}
 
-public static function obterMediaAvaliacoesMensal(string $anoMes): array {
-    $inicio = $anoMes . '-01';
-    $fim = date('Y-m-t', strtotime($inicio));
+    /**
+     * Média de avaliações agregada por nome do prato (histórico, não só da semana atual).
+     * Retorna [nome => ['media' => float, 'total' => int]]
+     */
+    public static function obterMediaAvaliacoesPorNomes(array $nomes): array {
+        if (empty($nomes)) return [];
+        $nomes = array_values(array_unique($nomes));
+        $ph = implode(',', array_fill(0, count($nomes), '?'));
+        $stmt = self::conexao()->prepare("
+            SELECT rm.RM_NOME, AVG(CAST(rav.RAV_ESTRELAS AS FLOAT)) AS media, COUNT(*) AS total
+            FROM restaurante_avaliacao rav
+            JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
+            JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+            JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            WHERE rm.RM_NOME IN ($ph)
+            GROUP BY rm.RM_NOME
+        ");
+        $stmt->execute($nomes);
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $resultado[$row['RM_NOME']] = ['media' => (float) $row['media'], 'total' => (int) $row['total']];
+        }
+        return $resultado;
+    }
 
-    $stmt = self::conexao()->prepare("
-        SELECT AVG(CAST(rav.RAV_ESTRELAS AS FLOAT)) AS media, COUNT(*) AS total
-        FROM restaurante_avaliacao rav
-        JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
-        WHERE rp.RP_DATA_REFEICAO BETWEEN ? AND ?
-    ");
-    $stmt->execute([$inicio, $fim]);
-    $resultado = $stmt->fetch();
+    public static function obterMediaAvaliacoesMensal(string $anoMes): array {
+        $inicio = $anoMes . '-01';
+        $fim = date('Y-m-t', strtotime($inicio));
 
-    return [
-        'media' => $resultado['media'] !== null ? (float) $resultado['media'] : null,
-        'total' => (int) $resultado['total'],
-    ];
-}
+        $stmt = self::conexao()->prepare("
+            SELECT AVG(CAST(rav.RAV_ESTRELAS AS FLOAT)) AS media, COUNT(*) AS total
+            FROM restaurante_avaliacao rav
+            JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
+            WHERE rp.RP_DATA_REFEICAO BETWEEN ? AND ?
+        ");
+        $stmt->execute([$inicio, $fim]);
+        $resultado = $stmt->fetch();
+
+        return [
+            'media' => $resultado['media'] !== null ? (float) $resultado['media'] : null,
+            'total' => (int) $resultado['total'],
+        ];
+    }
 
 /**
      * Média de avaliações por prato, opcionalmente filtrada por mês.
@@ -1001,42 +1015,93 @@ public static function obterMediaAvaliacoesMensal(string $anoMes): array {
         $stmt->execute([$utilizadorId]);
         return (int) $stmt->fetchColumn();
     }
-public static function transferirPedido(int $pedidoId, int $deUtilizadorId, string $biccDestino): string {
-    $pdo = self::conexao();
 
-    $stmt = $pdo->prepare("SELECT * FROM restaurante_pedido WHERE RP_ID = ? AND RP_U_ID = ?");
-    $stmt->execute([$pedidoId, $deUtilizadorId]);
-    $pedido = $stmt->fetch();
-
-    if (!$pedido || self::calcularEstadoPedido($pedido) !== 'ativo') {
-        return 'nao_transferivel';
+    /**
+     * Conta o número de refeições pagas por um utilizador que não foram
+     * levantadas a tempo (ou seja, a data da refeição já passou).
+     */
+    public static function contarRefeicoesNaoLevantadasRecentes(int $utilizadorId): int {
+        $stmt = self::conexao()->prepare("
+            SELECT COUNT(*)
+            FROM restaurante_pedido
+            WHERE RP_U_ID = ? AND RP_PAGO = 1 AND RP_UTILIZADO = 0
+              AND RP_DATA_REFEICAO < CAST(GETDATE() AS DATE)
+        ");
+        $stmt->execute([$utilizadorId]);
+        return (int) $stmt->fetchColumn();
     }
 
-    $destino = self::obterUtilizadorPorBICC($biccDestino);
-    if (!$destino) {
-        return 'destinatario_nao_encontrado';
+    /**
+     * Conta refeições pagas e não levantadas de dias ANTERIORES a hoje
+     * (exclui as de hoje, que já têm o contador "por levantar hoje").
+     * Serve para o funcionário/gestor perceber padrões de desperdício.
+     */
+    public static function contarNaoLevantadosAntesDeHoje(): int {
+        $stmt = self::conexao()->prepare("
+            SELECT COUNT(*) FROM restaurante_pedido
+            WHERE RP_PAGO = 1 AND RP_UTILIZADO = 0 AND RP_DATA_REFEICAO < CAST(GETDATE() AS DATE)
+        ");
+        $stmt->execute();
+        return (int) $stmt->fetchColumn();
     }
-    if ((int) $destino['U_ID'] === $deUtilizadorId) {
-        return 'mesmo_utilizador';
+    public static function transferirPedido(int $pedidoId, int $deUtilizadorId, string $biccDestino): string {
+        $pdo = self::conexao();
+
+        $stmt = $pdo->prepare("SELECT * FROM restaurante_pedido WHERE RP_ID = ? AND RP_U_ID = ?");
+        $stmt->execute([$pedidoId, $deUtilizadorId]);
+        $pedido = $stmt->fetch();
+
+        if (!$pedido || self::calcularEstadoPedido($pedido) !== 'ativo') {
+            self::registarTentativaTransferenciaFalhada($pedidoId, $deUtilizadorId, $biccDestino, 'nao_transferivel');
+            return 'nao_transferivel';
+        }
+
+        // Impede reenviar um pedido que já foi transferido antes
+        $stmt = $pdo->prepare("SELECT 1 FROM restaurante_transferencia WHERE RT_RP_ID = ?");
+        $stmt->execute([$pedidoId]);
+        if ($stmt->fetch()) {
+            self::registarTentativaTransferenciaFalhada($pedidoId, $deUtilizadorId, $biccDestino, 'ja_transferido');
+            return 'ja_transferido';
+        }
+
+        $destino = self::obterUtilizadorPorBICC($biccDestino);
+        if (!$destino) {
+            self::registarTentativaTransferenciaFalhada($pedidoId, $deUtilizadorId, $biccDestino, 'destinatario_nao_encontrado');
+            return 'destinatario_nao_encontrado';
+        }
+        if ((int) $destino['U_ID'] === $deUtilizadorId) {
+            self::registarTentativaTransferenciaFalhada($pedidoId, $deUtilizadorId, $biccDestino, 'mesmo_utilizador');
+            return 'mesmo_utilizador';
+        }
+
+        // Impede transferir para um utilizador que já tem um pedido ativo para o mesmo dia
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM restaurante_pedido
+            WHERE RP_U_ID = ? AND RP_DATA_REFEICAO = ? AND RP_PAGO = 1 AND RP_UTILIZADO = 0
+        ");
+        $stmt->execute([$destino['U_ID'], $pedido['RP_DATA_REFEICAO']]);
+        if ((int) $stmt->fetchColumn() > 0) {
+            self::registarTentativaTransferenciaFalhada($pedidoId, $deUtilizadorId, $biccDestino, 'destinatario_ja_tem_pedido');
+            return 'destinatario_ja_tem_pedido';
+        }
+        $pdo->beginTransaction();
+        try {
+            $pdo->prepare("UPDATE restaurante_pedido SET RP_U_ID = ? WHERE RP_ID = ?")
+                ->execute([$destino['U_ID'], $pedidoId]);
+
+            $pdo->prepare("
+                INSERT INTO restaurante_transferencia (RT_RP_ID, RT_DE_U_ID, RT_PARA_U_ID)
+                VALUES (?, ?, ?)
+            ")->execute([$pedidoId, $deUtilizadorId, $destino['U_ID']]);
+
+            $pdo->commit();
+            return 'ok';
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            self::registarTentativaTransferenciaFalhada($pedidoId, $deUtilizadorId, $biccDestino, 'erro_bd');
+            return 'erro_bd';
+        }
     }
-
-    $pdo->beginTransaction();
-    try {
-        $pdo->prepare("UPDATE restaurante_pedido SET RP_U_ID = ? WHERE RP_ID = ?")
-            ->execute([$destino['U_ID'], $pedidoId]);
-
-        $pdo->prepare("
-            INSERT INTO restaurante_transferencia (RT_RP_ID, RT_DE_U_ID, RT_PARA_U_ID)
-            VALUES (?, ?, ?)
-        ")->execute([$pedidoId, $deUtilizadorId, $destino['U_ID']]);
-
-        $pdo->commit();
-        return 'ok';
-    } catch (Exception $e) {
-        $pdo->rollBack();
-        return 'erro_bd';
-    }
-}
     public static function contarRefeicoesAtivasHoje(): int {
         $stmt = self::conexao()->prepare("
             SELECT COUNT(*) FROM restaurante_pedido
@@ -1045,5 +1110,44 @@ public static function transferirPedido(int $pedidoId, int $deUtilizadorId, stri
         $stmt->execute();
         return (int) $stmt->fetchColumn();
     }
+
+
+    /**
+     * Busca informação de transferência (quem enviou) para uma lista de pedidos,
+     * em batch para evitar N+1. Só devolve entrada para pedidos que foram
+     * mesmo recebidos por transferência.
+     */
+    public static function listarTransferenciasPorPedidos(array $pedidoIds): array {
+        if (empty($pedidoIds)) return [];
+        $ph = implode(',', array_fill(0, count($pedidoIds), '?'));
+        $stmt = self::conexao()->prepare("
+            SELECT rt.RT_RP_ID, u.U_NOME AS nome_remetente
+            FROM restaurante_transferencia rt
+            JOIN users u ON rt.RT_DE_U_ID = u.U_ID
+            WHERE rt.RT_RP_ID IN ($ph)
+        ");
+        $stmt->execute($pedidoIds);
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $resultado[(int) $row['RT_RP_ID']] = $row['nome_remetente'];
+        }
+        return $resultado;
+    }
     
+    /**
+     * Regista uma tentativa de transferência falhada, para auditoria e deteção
+     * de possíveis abusos (ex: várias tentativas seguidas para BICCs inexistentes).
+     * Falhas ao registar não devem impedir a resposta normal ao utilizador.
+     */
+    private static function registarTentativaTransferenciaFalhada(int $pedidoId, int $deUtilizadorId, string $biccDestino, string $motivo): void {
+        try {
+            self::conexao()->prepare("
+                INSERT INTO restaurante_transferencia_tentativa (RTT_RP_ID, RTT_DE_U_ID, RTT_BICC_DESTINO, RTT_MOTIVO_FALHA)
+                VALUES (?, ?, ?, ?)
+            ")->execute([$pedidoId, $deUtilizadorId, $biccDestino, $motivo]);
+        } catch (Exception $e) {
+            // Falha silenciosa: não deixar que um problema no log de auditoria
+            // impeça a resposta normal (sucesso ou erro) ao utilizador
+        }
+    }
 }

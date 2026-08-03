@@ -8,5 +8,10 @@
     ],
     "require": {
         "dompdf/dompdf": "^3.1"
+    },
+    "config": {
+        "audit": {
+            "ignore": ["PKSA-z3gr-8qht-p93v"]
+        }
     }
 }

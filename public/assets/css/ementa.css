@@ -705,4 +705,38 @@
     font-size: 0.88rem;
     font-weight: 600;
     letter-spacing: 0.2px;
-}
+}
+
+.menu-completo-resumo {
+    display: none;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.6rem;
+    background: #f0fdf4;
+    border: 1px dashed #86efac;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    color: #166534;
+}
+
+.menu-completo-resumo.visivel {
+    display: flex;
+}
+
+.menu-completo-item-incluido {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.menu-completo-item-incluido i {
+    color: #16a34a;
+}
+
+.prato-avaliacao-total {
+    color: #8a99ad;
+    font-size: 0.68rem;
+    font-weight: 500;
+    letter-spacing: 0;
+}

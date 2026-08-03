@@ -26,6 +26,7 @@ if (!$pedido || (int) $pedido['RP_U_ID'] !== (int) $utilizador['id']) {
 
 $mensagens = [
     'nao_transferivel'           => 'Este pedido já não pode ser transferido (só pedidos ativos).',
+    'ja_transferido' => 'Esta refeição já foi transferida uma vez e não pode ser reenviada.',
     'destinatario_nao_encontrado' => 'Não encontrámos nenhum utilizador com esse número.',
     'mesmo_utilizador'           => 'Não podes transferir para ti próprio.',
     'erro_bd'                    => 'Erro ao processar a transferência.',

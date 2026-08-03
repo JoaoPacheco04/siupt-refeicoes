@@ -23,6 +23,7 @@ $pedidos = Database::listarPedidosDoUtilizador($utilizador['id']);
 // Carrega todas as linhas dos pedidos numa única consulta, evitando múltiplos acessos à base de dados.
 $pedidoIds = array_column($pedidos, 'RP_ID');
 $todasLinhas = Database::listarLinhasDePedidos($pedidoIds);
+$transferencias = Database::listarTransferenciasPorPedidos($pedidoIds);
 
 $pedidosUtilizados = array_column(array_filter($pedidos, fn($p) => $p['estado'] === 'utilizado'), 'RP_ID');
 $avaliacoes = Database::listarAvaliacoesPorPedidos($pedidosUtilizados);
@@ -236,6 +237,12 @@ foreach ($pedidos as $p) {
                         <?= htmlspecialchars($descricao ?: 'Sem itens registados') ?>
                     </div>
 
+                    <?php if (isset($transferencias[(int) $p['RP_ID']])): ?>
+                    <div class="compra-recebida-de">
+                        <i class="bi bi-send"></i>
+                        Recebida de <?= htmlspecialchars($transferencias[(int) $p['RP_ID']]) ?>
+                    </div>
+                    <?php endif; ?>
                     <div class="compra-preco">
                         <?= number_format((float) $p['RP_PRECO_TOTAL'], 2, ',', '') ?>€
                     </div>
@@ -252,7 +259,7 @@ foreach ($pedidos as $p) {
                     <button class="btn-ver-qr"
                             id="btn-qr-<?= $p['RP_ID'] ?>"
                             data-qrcode="<?= htmlspecialchars($p['RP_QRCODE']) ?>"
-                            data-codigo-curto="<?= htmlspecialchars($p['RP_CODIGO_CURTO'] ?? '') ?>"
+                            data-codigo-curto="<?= htmlspecialchars($p['RP_CODIGO_CURTO'] ?? '') ?>" 
                             data-data="<?= date('d/m/Y', strtotime($p['RP_DATA_REFEICAO'])) ?>"
                             data-descricao="<?= htmlspecialchars($descricao) ?>"
                             title="Ver QR code">
@@ -261,13 +268,17 @@ foreach ($pedidos as $p) {
                         QR code
 
                     </button>
-                    <button class="btn-transferir" data-pedido-id="<?= $p['RP_ID'] ?>" title="Transferir refeição">
+                    <?php if (!isset($transferencias[(int) $p['RP_ID']])): ?>
+                    <button class="btn-transferir" data-pedido-id="<?= $p['RP_ID'] ?>" title="Transferir refeição" aria-label="Transferir refeição">
                         <i class="bi bi-send"></i>
                     </button>
+                    <?php endif; ?>
 
                 <?php elseif ($estado === 'nao_pago'): ?>
 
-                    <button class="btn-pagar-agora"
+                    <button class="btn-pagar-agora" 
+                            title="Pagar agora"
+                            aria-label="Pagar agora"
                             data-pedido-id="<?= $p['RP_ID'] ?>">
                         <i class="bi bi-credit-card"></i>
                         Pagar agora
@@ -275,7 +286,8 @@ foreach ($pedidos as $p) {
 
                     <button class="btn-cancelar-pendente"
                             data-pedido-id="<?= $p['RP_ID'] ?>"
-                            title="Cancelar pedido">
+                            title="Cancelar pedido"
+                            aria-label="Cancelar pedido">
 
                         <i class="bi bi-trash3-fill"></i>
 

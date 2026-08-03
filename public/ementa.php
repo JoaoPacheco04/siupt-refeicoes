@@ -154,9 +154,14 @@ foreach ($extrasComPreco as $e) {
 $mediasAvaliacoes = Database::obterMediaAvaliacoesPorNomes($nomesParaAvaliar);
 
 // ── Aviso de prazo a aproximar-se (só para o dia de hoje) ─────────────────
+// P1 FIX: Constrói mapa nome→id a partir dos pratos já carregados (sem queries extra)
+$mapaTipoNomeParaId = [];
+foreach ($pratos as $p) {
+    $mapaTipoNomeParaId[$p['RTP_NOME']] = (int) $p['RM_TP_ID'];
+}
 $avisoPrazo = null;
 foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipoPrincipal) {
-    $tipoId = Database::obterTipoIdPorNome($tipoPrincipal);
+    $tipoId = $mapaTipoNomeParaId[$tipoPrincipal] ?? null;
     if ($tipoId === null || !isset($limitesBatch[$tipoId])) continue;
 
     $limite = $limitesBatch[$tipoId];
@@ -190,6 +195,7 @@ $nomeMes = $meses[(int) $sexta->format('n')];
 $amanhaStr = date('Y-m-d', strtotime('+1 day'));
 
 $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
+$refeicoesPerdidas = Database::contarRefeicoesNaoLevantadasRecentes((int) $utilizador['id']);
 ?>
 
 <!DOCTYPE html>
@@ -248,6 +254,14 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     <div class="banner-semana-avancada" role="alert">
         <i class="bi bi-info-circle-fill"></i>
         A semana atual já está fora de prazo. A mostrar a ementa da <strong>próxima semana</strong>.
+    </div>
+    <?php endif; ?>
+
+    <?php if ($refeicoesPerdidas > 0): ?>
+    <div class="banner-nao-levantado" role="alert">
+        <i class="bi bi-exclamation-circle-fill"></i>
+        Tens <?= $refeicoesPerdidas ?> refeição(ões) paga(s) que não foram levantadas a tempo.
+        <a href="historico.php">Ver histórico →</a>
     </div>
     <?php endif; ?>
 
@@ -341,8 +355,9 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
                         <?php if (isset($mediasAvaliacoes[$prato['nome']])):
                             $av = $mediasAvaliacoes[$prato['nome']];
                         ?>
-                        <span class="prato-avaliacao" title="<?= $av['total'] ?> avaliação(ões)">
+                        <span class="prato-avaliacao">
                             <?= str_repeat('★', round($av['media'])) . str_repeat('☆', 5 - round($av['media'])) ?>
+                            <span class="prato-avaliacao-total">(<?= $av['total'] ?>)</span>
                         </span>
                         <?php endif; ?>
                         <span class="prato-opcao-preco"><?= number_format($prato['preco'], 2, ',', '') ?>€</span>
@@ -352,14 +367,21 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
         </div>
 
         <?php
-        $precoMC = $precosMenuCompleto[$data] ?? null;
-        if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !empty($pratosPrincipais)): ?>
-        <label class="menu-completo-toggle">
-            <input type="checkbox" class="checkbox-menu-completo"
-                   data-preco-mc="<?= $precoMC ?>">
-            Menu completo (sopa + sobremesa + bebida incluídas) — <?= number_format($precoMC, 2, ',', '') ?>€
-        </label>
-        <?php endif; ?>
+$precoMC = $precosMenuCompleto[$data] ?? null;
+if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !empty($pratosPrincipais)): ?>
+<label class="menu-completo-toggle">
+    <input type="checkbox" class="checkbox-menu-completo"
+           data-preco-mc="<?= $precoMC ?>">
+    Menu completo (sopa + sobremesa + bebida incluídas) — <?= number_format($precoMC, 2, ',', '') ?>€
+</label>
+<div class="menu-completo-resumo">
+    <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
+    <span class="menu-completo-item-incluido">
+        <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($tipoNome) ?>
+    </span>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
         <?php if (!empty($componentesExtra) && !$jaComprado && !$diaBloqueado): ?>
         <div class="dia-componentes-wrap">
@@ -411,8 +433,9 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
                 <?php if (isset($mediasAvaliacoes[$e['RM_NOME']])):
                     $av = $mediasAvaliacoes[$e['RM_NOME']];
                 ?>
-                <span class="prato-avaliacao" title="<?= $av['total'] ?> avaliação(ões)">
+                <span class="prato-avaliacao">
                     <?= str_repeat('★', round($av['media'])) . str_repeat('☆', 5 - round($av['media'])) ?>
+                    <span class="prato-avaliacao-total">(<?= $av['total'] ?>)</span>
                 </span>
                 <?php endif; ?>
                 <span class="preco-extra"><?= number_format($e['preco'], 2, ',', '') ?>€</span>

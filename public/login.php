@@ -155,6 +155,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
                 <i class="bi bi-briefcase"></i> Colaborador
             </div>
         </div>
+        <p class="text-muted small mt-1" style="font-size:0.78rem; text-align:center;">
+            O sistema deteta automaticamente o teu perfil de acesso.
+        </p>
 
         <!-- Formulário de autenticação -->
         <form method="POST">

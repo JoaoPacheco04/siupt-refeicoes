@@ -47,6 +47,9 @@ function abrirModalAvaliacao(pedidoId) {
         <div class="avaliacao-estrelas-input" id="estrelasInput">
             ${[1,2,3,4,5].map(n => `<i class="bi bi-star" data-valor="${n}"></i>`).join('')}
         </div>
+        <p class="text-danger small mt-2" id="erroEstrelas" style="display:none;">
+            <i class="bi bi-exclamation-circle"></i> Escolhe pelo menos 1 estrela.
+        </p>
         <div class="avaliacao-motivo-wrap" id="motivoWrap" style="display:none;">
             <label for="motivoSelect" class="avaliacao-motivo-label">O que correu mal? (opcional)</label>
             <select id="motivoSelect" class="avaliacao-motivo-select">
@@ -62,8 +65,15 @@ function abrirModalAvaliacao(pedidoId) {
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
     const btnSubmeter = modal.addFooterBtn('Enviar avaliação', 'tingle-btn tingle-btn--primary', async () => {
-        if (estrelaSelecionada === 0) { alert('Escolhe pelo menos 1 estrela.'); return; }
-        // BUG 1 FIX: campo correto é "motivo", não "comentario"
+        if (estrelaSelecionada === 0) {
+            // Item 3 FIX: mensagem inline em vez de alert() nativo
+            const erroEstrelas = document.getElementById('erroEstrelas');
+            if (erroEstrelas) {
+                erroEstrelas.style.display = 'block';
+                setTimeout(() => { erroEstrelas.style.display = 'none'; }, 2500);
+            }
+            return;
+        }
         const motivo = document.getElementById('motivoSelect')?.value || '';
         await submeterAvaliacao(pedidoId, estrelaSelecionada, motivo, modal);
     });
@@ -109,7 +119,6 @@ async function submeterAvaliacao(pedidoId, estrelas, motivo, modal) {
             body: new URLSearchParams({
                 pedido_id: pedidoId,
                 estrelas: estrelas,
-                // BUG 1 FIX: campo "motivo" (antes enviava "comentario" — API ignorava)
                 motivo: motivo,
                 csrf_token: window.CSRF_TOKEN
             })
@@ -136,7 +145,6 @@ function mostrarErroAvaliacao(mensagem) {
         closeMethods: ['overlay', 'button', 'escape'],
         cssClass: ['tingle-siupt']
     });
-    // SEC 2 FIX: escapar mensagem antes de inserir em innerHTML (previne XSS)
     modalErro.setContent(`
         <div class="modal-siupt-header erro"><i class="bi bi-x-circle-fill"></i><h4>Erro na avaliação</h4></div>
         <p class="text-muted small">${escHtmlAvaliar(mensagem)}</p>

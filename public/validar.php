@@ -15,6 +15,8 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('funcionario');
 $validacoesHoje = Database::contarValidacoesHoje((int) $utilizador['id']);
+$refeicoesPorLevantar = Database::contarRefeicoesAtivasHoje(); // NOVO — item 2
+$naoLevantadosAnteriores = Database::contarNaoLevantadosAntesDeHoje(); // NOVO
 $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 ?>
 <!DOCTYPE html>
@@ -78,6 +80,25 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         validações hoje
     </div>
 
+    <!-- NOVO — item 2: refeições pagas por levantar hoje -->
+    <?php if ($refeicoesPorLevantar > 0): ?>
+    <div class="validacoes-contador validacoes-contador--aviso">
+        <i class="bi bi-hourglass-split"></i>
+        <span class="num" id="contadorPorLevantar"><?= $refeicoesPorLevantar ?></span>
+        por levantar hoje
+    </div>
+    <?php endif; ?>
+
+    <!-- NOVO -->
+    <?php if ($naoLevantadosAnteriores > 0): ?>
+    <div class="validacoes-contador validacoes-contador--erro">
+        <i class="bi bi-exclamation-triangle-fill"></i>
+        <span class="num"><?= $naoLevantadosAnteriores ?></span>
+        não levantadas (dias anteriores)
+    </div>
+    <?php endif; ?>
+
+
     <!-- Área de validação -->
     <div class="scan-card">
 
@@ -117,11 +138,25 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <ul class="resultado-linhas" id="resultadoLinhas"></ul>
     </div>
 
-    <!-- Histórico de validações -->
+    <!-- Histórico de validações com navegação por data -->
     <div class="validacoes-lista-header">
-        <h2 class="validacoes-lista-titulo">Validações de hoje</h2>
+        <h2 class="validacoes-lista-titulo" id="validacoesListaTitulo">Validações de hoje</h2>
 
-        <a href="api/exportar_validacoes.php" class="btn-exportar-log">
+        <div class="validacoes-data-nav">
+            <button class="btn-nav-data" id="btnDataAnterior" title="Dia anterior">
+                <i class="bi bi-chevron-left"></i>
+            </button>
+            <input type="date" id="inputDataValidacoes"
+                   value="<?= date('Y-m-d') ?>"
+                   max="<?= date('Y-m-d') ?>"
+                   class="input-data-validacoes">
+            <button class="btn-nav-data" id="btnDataSeguinte" title="Dia seguinte" disabled>
+                <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+
+        <!-- item 4: id + href já inclui a data de hoje; validar.js atualiza dinamicamente -->
+        <a href="api/exportar_validacoes.php?data=<?= date('Y-m-d') ?>" class="btn-exportar-log" id="btnExportarLog">
             <i class="bi bi-download"></i> Exportar
         </a>
     </div>

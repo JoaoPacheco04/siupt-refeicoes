@@ -54,6 +54,8 @@ formNovoExtra.addEventListener('submit', async (e) => {
         const dados = await resposta.json();
 
         if (dados.status === 'ok') {
+            // NOVO: confirmação visual antes do reload
+            mostrarSucesso(`"${nome}" foi criado com sucesso.`);
             location.reload();
         } else {
             mostrarErro(dados.mensagem || 'Não foi possível criar o extra.');
@@ -192,38 +194,62 @@ async function guardarEdicao(rmId, tipoId, novoNome, novoPreco, nomeAtual, preco
  * eliminar ou desativar o extra na base de dados.
  */
 document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
-    btn.addEventListener('click', async () => {
+    btn.addEventListener('click', () => {
         const item = btn.closest('.extra-item');
         const rmId = item.dataset.rmId;
         const nome = item.querySelector('.extra-nome').textContent.trim();
 
-        if (!confirm(`Eliminar "${nome}"? Esta ação não pode ser desfeita.`)) return;
+        // B9 FIX: modal tingle em vez de confirm() nativo
+        const modalConfirm = new tingle.modal({
+            footer: true,
+            closeMethods: ['overlay', 'button', 'escape'],
+            cssClass: ['tingle-siupt'],
+            onClose: function () { modalConfirm.destroy(); }
+        });
 
-        // Estado de loading: desativa o botão e mostra spinner
-        btn.disabled = true;
-        const iconeOriginal = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+        modalConfirm.setContent(`
+            <div class="modal-siupt-header aviso">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <h4>Eliminar extra?</h4>
+            </div>
+            <p class="text-muted small text-center">
+                Tens a certeza que queres eliminar <strong>${escHtml(nome)}</strong>?<br>
+                Esta ação não pode ser desfeita.
+            </p>
+        `);
 
-        try {
-            const resposta = await fetch('api/gerir_extras_apagar.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ rm_id: rmId, csrf_token: CSRF_TOKEN })
-            });
-            const dados = await resposta.json();
+        modalConfirm.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modalConfirm.close());
+        modalConfirm.addFooterBtn('Sim, eliminar', 'tingle-btn tingle-btn--danger', async () => {
+            modalConfirm.close();
 
-            if (dados.status === 'ok') {
-                location.reload();
-            } else {
-                mostrarErro(dados.mensagem || 'Não foi possível eliminar o extra.');
+            // Estado de loading: desativa o botão e mostra spinner
+            btn.disabled = true;
+            const iconeOriginal = btn.innerHTML;
+            btn.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+
+            try {
+                const resposta = await fetch('api/gerir_extras_apagar.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ rm_id: rmId, csrf_token: CSRF_TOKEN })
+                });
+                const dados = await resposta.json();
+
+                if (dados.status === 'ok') {
+                    location.reload();
+                } else {
+                    mostrarErro(dados.mensagem || 'Não foi possível eliminar o extra.');
+                    btn.disabled = false;
+                    btn.innerHTML = iconeOriginal;
+                }
+            } catch (err) {
+                mostrarErro('Erro de rede ao eliminar o extra.');
                 btn.disabled = false;
                 btn.innerHTML = iconeOriginal;
             }
-        } catch (err) {
-            mostrarErro('Erro de rede ao eliminar o extra.');
-            btn.disabled = false;
-            btn.innerHTML = iconeOriginal;
-        }
+        });
+
+        modalConfirm.open();
     });
 });
 
@@ -289,4 +315,20 @@ function mostrarErro(mensagem) {
     `);
     modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--primary', () => modal.close());
     modal.open();
+}
+
+/**
+ * Apresenta um toast discreto de sucesso, que desaparece sozinho.
+ */
+function mostrarSucesso(mensagem) {
+    const toast = document.createElement('div');
+    toast.className = 'toast-sucesso';
+    toast.innerHTML = `<i class="bi bi-check-circle-fill"></i> ${escHtml(mensagem)}`;
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => toast.classList.add('visivel'));
+    setTimeout(() => {
+        toast.classList.remove('visivel');
+        setTimeout(() => toast.remove(), 300);
+    }, 800);
 }

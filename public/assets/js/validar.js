@@ -2,6 +2,19 @@
 const API_URL    = window.API_URL;
 const CSRF_TOKEN = window.CSRF_TOKEN;
 
+// ── Escape de HTML (Prevenção XSS) ──────────────────────────────────────
+/**
+ * Escapa caracteres HTML antes de inserir texto no DOM com innerHTML,
+ * prevenindo ataques de injeção de código (XSS).
+ */
+function escHtml(str) {
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 // ── Elementos principais da interface de validação ──────────────────────
 const resultadoCard   = document.getElementById('resultadoCard');
 const resultadoIcone  = document.getElementById('resultadoIcone');
@@ -277,4 +290,127 @@ function mostrarResultado(status, dados = {}) {
     }
 }
 
-/* escHtml — já declarada no início deste ficheiro */
+/* ======================================================================
+   N2 — NAVEGAÇÃO POR DATA NAS VALIDAÇÕES
+   ====================================================================== */
+
+const inputData       = document.getElementById('inputDataValidacoes');
+const btnDataAnterior = document.getElementById('btnDataAnterior');
+const btnDataSeguinte = document.getElementById('btnDataSeguinte');
+const tituloLista     = document.getElementById('validacoesListaTitulo');
+const btnExportarLog  = document.getElementById('btnExportarLog'); // NOVO — item 4
+const hojeISO         = new Date().toISOString().split('T')[0];
+
+/**
+ * Carrega via fetch as validações para a data indicada e re-renderiza a lista.
+ */
+async function carregarValidacoesPorData(data) {
+    if (!listaEl) return;
+
+    // Feedback de loading
+    listaEl.innerHTML = `
+        <p class="lista-validacoes-vazia">
+            <i class="bi bi-hourglass-split"></i> A carregar…
+        </p>`;
+
+    // NOVO: feedback visual no contador enquanto a nova data carrega
+    if (contadorEl) contadorEl.classList.add('contador-a-atualizar');
+
+    // Atualiza o título
+    if (tituloLista) {
+        tituloLista.textContent = data === hojeISO
+            ? 'Validações de hoje'
+            : `Validações de ${new Date(data + 'T00:00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+    }
+
+    // Atualiza estado dos botões de navegação
+    if (btnDataSeguinte) btnDataSeguinte.disabled = (data >= hojeISO);
+
+    // NOVO — item 4: mantém o link de exportar sincronizado com a data selecionada
+    if (btnExportarLog) {
+        btnExportarLog.href = `api/exportar_validacoes.php?data=${data}`;
+    }
+
+    try {
+        const resposta = await fetch('api/listar_validacoes_por_data.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ data, csrf_token: CSRF_TOKEN })
+        });
+        const dados = await resposta.json();
+
+        if (dados.status !== 'ok') {
+            listaEl.innerHTML = `<p class="lista-validacoes-vazia"><i class="bi bi-exclamation-circle"></i> Erro ao carregar validações.</p>`;
+            return;
+        }
+
+        if (dados.validacoes.length === 0) {
+            listaEl.innerHTML = `<p class="lista-validacoes-vazia" id="listaVazia"><i class="bi bi-inbox"></i> Nenhuma validação neste dia.</p>`;
+            return;
+        }
+
+        listaEl.innerHTML = '';
+        dados.validacoes.forEach(v => {
+            const hora = new Date(v.RV_DATA_VALIDACAO).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+            const item = document.createElement('div');
+            item.className = 'validacao-item';
+            item.innerHTML = `
+                <div class="validacao-hora">${hora}</div>
+                <div class="validacao-info">
+                    <span class="validacao-nome">${escHtml(v.U_NOME ?? '')}</span>
+                    <span class="validacao-numero">Nº ${escHtml(v.U_BICC ?? '')}</span>
+                    <span class="validacao-refeicao">${escHtml(v.itens ?? 'Sem itens registados')}</span>
+                </div>
+                <div class="validacao-pedido">#${v.RP_ID ?? ''}</div>
+            `;
+            listaEl.appendChild(item);
+        });
+
+        // Atualiza o contador (só para "hoje")
+        if (data === hojeISO && contadorEl) {
+            contadorEl.textContent = dados.total;
+        }
+        // NOVO: remove o estado de "a atualizar" independentemente do resultado
+        if (contadorEl) contadorEl.classList.remove('contador-a-atualizar');
+
+    } catch (e) {
+        listaEl.innerHTML = `<p class="lista-validacoes-vazia"><i class="bi bi-wifi-off"></i> Erro de ligação.</p>`;
+        // NOVO: garante que o contador não fica preso em estado de loading
+        if (contadorEl) contadorEl.classList.remove('contador-a-atualizar');
+    }
+}
+
+// ── Eventos de navegação por data ─────────────────────────────────────────
+if (inputData) {
+    inputData.addEventListener('change', () => {
+        const data = inputData.value;
+        if (data && data <= hojeISO) {
+            carregarValidacoesPorData(data);
+        }
+    });
+}
+
+if (btnDataAnterior) {
+    btnDataAnterior.addEventListener('click', () => {
+        if (!inputData) return;
+        const atual = new Date(inputData.value + 'T00:00:00');
+        atual.setDate(atual.getDate() - 1);
+        inputData.value = atual.toISOString().split('T')[0];
+        carregarValidacoesPorData(inputData.value);
+    });
+}
+
+if (btnDataSeguinte) {
+    btnDataSeguinte.addEventListener('click', () => {
+        if (!inputData) return;
+        const atual = new Date(inputData.value + 'T00:00:00');
+        atual.setDate(atual.getDate() + 1);
+        const nova = atual.toISOString().split('T')[0];
+        if (nova <= hojeISO) {
+            inputData.value = nova;
+            carregarValidacoesPorData(nova);
+        }
+    });
+}
+
+/* escHtml — já declarada no início deste ficheiro */

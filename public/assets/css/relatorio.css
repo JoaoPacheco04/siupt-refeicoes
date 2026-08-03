@@ -444,4 +444,56 @@
 .avaliacao-prato-barra.barra-boa   { background: #16a34a; }
 .avaliacao-prato-barra.barra-media { background: #d97706; }
 .avaliacao-prato-barra.barra-ma    { background: #dc2626; }
+
+/* ======================================================================
+   N5 — MOTIVOS DE RECLAMAÇÃO
+   ====================================================================== */
+
+.motivos-tabela {
+    gap: 0.5rem;
+}
+
+.motivo-linha {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0.85rem;
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e8ecf0;
+}
+
+.motivo-nome {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #2d3748;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.motivo-barra-wrap {
+    background: #f3f4f6;
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.motivo-barra {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #dc2626, #f87171);
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 4px;
+}
+
+.motivo-contagem {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #dc2626;
+    white-space: nowrap;
+}
 

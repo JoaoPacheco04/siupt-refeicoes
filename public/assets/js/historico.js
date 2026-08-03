@@ -15,6 +15,29 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+// ── Modal de erro genérico ──────────────────────────────────────────────
+/**
+ * Apresenta uma janela modal tingle estandardizada com a mensagem de erro,
+ * substituindo o alert() nativo para manter consistência visual.
+ */
+function mostrarErroModal(mensagem) {
+    const modal = new tingle.modal({
+        footer: true,
+        closeMethods: ['overlay', 'button', 'escape'],
+        cssClass: ['tingle-siupt'],
+        onClose: function () { modal.destroy(); }
+    });
+    modal.setContent(`
+        <div class="modal-siupt-header erro">
+            <i class="bi bi-x-circle-fill"></i>
+            <h4>Erro</h4>
+        </div>
+        <p class="text-muted small text-center">${escHtml(mensagem)}</p>
+    `);
+    modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--primary', () => modal.close());
+    modal.open();
+}
+
 /* ======================================================================
    PAGINAÇÃO + FILTROS DE ESTADO (HISTÓRICO)
    ====================================================================== */
@@ -114,6 +137,7 @@ document.querySelectorAll('.btn-ver-qr').forEach(btn => {
 /**
  * Constrói uma janela modal e utiliza a biblioteca QRCode.js
  * para desenhar visualmente o código de levantamento na cantina.
+ * N4: Inclui botão para guardar/download do QR code como imagem PNG.
  */
 function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
     const idUnico = `qr-historico-${++qrModalCounter}`;
@@ -141,6 +165,26 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
             Apresenta este código na cantina no momento da recolha.
         </p>
     `);
+
+    // N4: Botão de fechar + botão de download
+    modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--default', () => modal.close());
+    const btnDownload = modal.addFooterBtn(
+        '<i class="bi bi-download"></i> Guardar QR',
+        'tingle-btn tingle-btn--primary',
+        () => {
+            const elQrCanvas = document.querySelector(`#${idUnico} canvas`);
+            const elQrImg    = document.querySelector(`#${idUnico} img`);
+            const src = elQrCanvas ? elQrCanvas.toDataURL('image/png')
+                      : elQrImg    ? elQrImg.src
+                      : null;
+            if (!src) return;
+            const a = document.createElement('a');
+            a.href = src;
+            a.download = `qr-refeicao-${codigoCurto || 'siupt'}.png`;
+            a.click();
+        }
+    );
+    btnDownload.innerHTML = '<i class="bi bi-download"></i> Guardar QR';
 
     modal.open();
 
@@ -337,6 +381,7 @@ function mostrarConfirmacaoCancelar(pedidoId) {
  * Envia o pedido de cancelamento à API.
  * Em caso de sucesso, remove visualmente o cartão do DOM sem necessidade
  * de recarregar a página inteira, tornando a interface mais fluida.
+ * U2 FIX: Atualiza os contadores dos filtros «Pendentes» e «Todos» sem reload.
  */
 async function cancelarPedido(pedidoId, modal) {
     modal.close();
@@ -353,13 +398,36 @@ async function cancelarPedido(pedidoId, modal) {
         const dados = await resposta.json();
 
         if (dados.status === 'ok') {
-            // Remove o elemento visualmente de imediato
-            document.querySelector(`.compra-card[data-id='${pedidoId}']`)?.remove();
+            // Remove o card do DOM
+            const card = document.querySelector(`.compra-card[data-id='${pedidoId}']`);
+            if (card) card.remove();
+
+            // U2: atualiza os contadores dos filtros sem reload
+            const btnPendentes = document.getElementById('filtro-nao_pago');
+            const btnTodos     = document.getElementById('filtro-todos');
+            if (btnPendentes) {
+                const spanPend = btnPendentes.querySelector('.filtro-conta');
+                if (spanPend) {
+                    const novoValor = Math.max(0, parseInt(spanPend.textContent, 10) - 1);
+                    spanPend.textContent = novoValor;
+                    if (novoValor === 0) btnPendentes.classList.add('filtro-vazio');
+                }
+            }
+            if (btnTodos) {
+                const spanTodos = btnTodos.querySelector('.filtro-conta');
+                if (spanTodos) {
+                    const novoTotal = Math.max(0, parseInt(spanTodos.textContent, 10) - 1);
+                    spanTodos.textContent = novoTotal;
+                }
+            }
+
+            // Reinicia a paginação com os cards restantes
+            aplicarFiltro(document.querySelector('.btn-filtro.ativo-filtro')?.dataset?.filtro ?? 'todos');
         } else {
-            alert(dados.mensagem || 'Ocorreu um erro ao cancelar o pedido.');
+            mostrarErroModal(dados.mensagem || 'Ocorreu um erro ao cancelar o pedido.');
         }
     } catch (e) {
-        alert('Ocorreu um erro de comunicação. Tenta novamente.');
+        mostrarErroModal('Ocorreu um erro de comunicação. Tenta novamente.');
     }
 }
 
@@ -407,7 +475,15 @@ function mostrarModalAvaliacao(pedidoId) {
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
     const btnSubmeter = modal.addFooterBtn('Enviar avaliação', 'tingle-btn tingle-btn--primary', async () => {
-        if (estrelaSelecionada === 0) { alert('Escolhe pelo menos 1 estrela.'); return; }
+        if (estrelaSelecionada === 0) {
+            // Item 3: mensagem inline em vez de alert() nativo
+            const erroEstrelas = document.getElementById('erroEstrelas');
+            if (erroEstrelas) {
+                erroEstrelas.style.display = 'block';
+                setTimeout(() => { erroEstrelas.style.display = 'none'; }, 2500);
+            }
+            return;
+        }
         const motivo = document.getElementById('motivoSelect')?.value || '';
         await enviarAvaliacao(pedidoId, estrelaSelecionada, motivo, modal);
     });
@@ -436,10 +512,7 @@ function mostrarModalAvaliacao(pedidoId) {
 
 /**
  * Envia a avaliação (estrelas e motivo opcional) para a API.
- * @param {string} pedidoId
- * @param {number} estrelas
- * @param {string} motivo
- * @param {object} modal
+ * B5 FIX: Usa modal tingle em vez de alert() nativo para mostrar erros.
  */
 async function enviarAvaliacao(pedidoId, estrelas, motivo, modal) {
     try {
@@ -458,11 +531,11 @@ async function enviarAvaliacao(pedidoId, estrelas, motivo, modal) {
         if (dados.status === 'ok') {
             location.reload();
         } else {
-            alert(dados.mensagem || 'Não foi possível enviar a avaliação.');
+            mostrarErroModal(dados.mensagem || 'Não foi possível enviar a avaliação.');
         }
     } catch (e) {
         modal.close();
-        alert('Erro de rede ao enviar a avaliação.');
+        mostrarErroModal('Erro de rede ao enviar a avaliação.');
     }
 }
 
@@ -472,25 +545,101 @@ document.querySelectorAll('.btn-transferir').forEach(btn => {
     });
 });
 
+/**
+ * Modal de transferência com dois passos:
+ * 1. Utilizador introduz o número do destinatário
+ * 2. App faz lookup e mostra o nome para confirmação
+ * A transferência só é executada após confirmação explícita.
+ */
 function mostrarModalTransferir(pedidoId) {
-    const modal = new tingle.modal({ footer: true, closeMethods: ['overlay', 'button', 'escape'], cssClass: ['tingle-siupt'] });
-
-    modal.setContent(`
-        <div class="modal-siupt-header">
-            <i class="bi bi-send"></i>
-            <h4>Transferir refeição</h4>
-        </div>
-        <p class="text-muted small">Introduz o número de estudante/colaborador de quem vai receber.</p>
-        <input type="text" id="biccDestinoInput" class="form-control" placeholder="Número">
-    `);
-
-    modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
-    modal.addFooterBtn('Transferir', 'tingle-btn tingle-btn--primary', async () => {
-        const bicc = document.getElementById('biccDestinoInput').value.trim();
-        if (!bicc) return;
-        await transferirPedido(pedidoId, bicc, modal);
+    const modal = new tingle.modal({
+        footer: true,
+        closeMethods: ['overlay', 'button', 'escape'],
+        cssClass: ['tingle-siupt'],
+        onClose: function () { modal.destroy(); }
     });
 
+    // ── Passo 1: introduzir o número ──────────────────────────────────────
+    function mostrarPasso1(erro) {
+        modal.setContent(`
+            <div class="modal-siupt-header">
+                <i class="bi bi-send"></i>
+                <h4>Transferir refeição</h4>
+            </div>
+            <p class="text-muted small">Introduz o número de estudante/colaborador de quem vai receber.</p>
+            <input type="text" id="biccDestinoInput" class="form-control"
+                   placeholder="Número" autocomplete="off" spellcheck="false">
+            ${erro ? `<p class="text-danger small mt-2"><i class="bi bi-exclamation-circle"></i> ${escHtml(erro)}</p>` : ''}
+        `);
+
+        modal.setFooterContent('');
+        modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
+        modal.addFooterBtn('Continuar →', 'tingle-btn tingle-btn--primary', async () => {
+            const bicc = document.getElementById('biccDestinoInput')?.value.trim();
+            if (!bicc) return;
+
+            const btnContinuar = modal.modal.querySelector('.tingle-btn--primary');
+            if (btnContinuar) { btnContinuar.disabled = true; btnContinuar.textContent = 'A verificar…'; }
+
+            try {
+                const r = await fetch('api/verificar_utilizador.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ bicc, csrf_token: window.CSRF_TOKEN })
+                });
+                const dados = await r.json();
+
+                if (dados.status === 'ok') {
+                    mostrarPasso2(bicc, dados.nome);
+                } else {
+                    mostrarPasso1(dados.mensagem || 'Utilizador não encontrado.');
+                }
+            } catch (e) {
+                mostrarPasso1('Erro de ligação. Tenta novamente.');
+            }
+        });
+
+        // Submeter com Enter
+        setTimeout(() => {
+            const input = document.getElementById('biccDestinoInput');
+            if (input) {
+                input.focus();
+                input.addEventListener('keydown', e => {
+                    if (e.key === 'Enter') modal.modal.querySelector('.tingle-btn--primary')?.click();
+                });
+            }
+        }, 50);
+    }
+
+    // ── Passo 2: confirmar com o nome do destinatário ─────────────────────
+    function mostrarPasso2(bicc, nomeDestino) {
+        modal.setContent(`
+            <div class="modal-siupt-header aviso">
+                <i class="bi bi-send-check"></i>
+                <h4>Confirmar transferência</h4>
+            </div>
+            <p class="text-muted small text-center">
+                Vais transferir esta refeição para:
+            </p>
+            <p class="transferencia-destinatario">
+                <i class="bi bi-person-circle"></i>
+                <strong>${escHtml(nomeDestino)}</strong>
+                <span class="text-muted">(Nº ${escHtml(bicc)})</span>
+            </p>
+            <p class="text-muted small text-center" style="font-size:0.8rem;">
+                <i class="bi bi-exclamation-triangle"></i>
+                Esta ação é irreversível e só pode ser feita uma vez.
+            </p>
+        `);
+
+        modal.setFooterContent('');
+        modal.addFooterBtn('← Voltar', 'tingle-btn tingle-btn--default', () => mostrarPasso1(''));
+        modal.addFooterBtn('Confirmar transferência', 'tingle-btn tingle-btn--primary', async () => {
+            await transferirPedido(pedidoId, bicc, modal);
+        });
+    }
+
+    mostrarPasso1('');
     modal.open();
 }
 
@@ -506,10 +655,11 @@ async function transferirPedido(pedidoId, biccDestino, modal) {
         if (dados.status === 'ok') {
             location.reload();
         } else {
-            alert(dados.mensagem || 'Não foi possível transferir.');
+            // B5 FIX: usa modal tingle em vez de alert() nativo
+            mostrarErroModal(dados.mensagem || 'Não foi possível transferir.');
         }
     } catch (e) {
         modal.close();
-        alert('Erro de rede ao transferir.');
+        mostrarErroModal('Erro de rede ao transferir.');
     }
 }

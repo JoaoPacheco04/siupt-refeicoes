@@ -275,11 +275,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5rem;
     margin: 1.75rem 0 0.75rem 0;
 }
 
 .validacoes-lista-header .validacoes-lista-titulo {
     margin: 0;
+    flex: 1 1 auto;
 }
 
 /* ── Botão de exportar log ─────────────────────── */
@@ -436,4 +439,91 @@
     font-size: 0.85rem;
     margin: 0;
     line-height: 1.5;
+}
+
+/* ======================================================================
+   N2 — NAVEGAÇÃO POR DATA NAS VALIDAÇÕES
+   ====================================================================== */
+
+.validacoes-data-nav {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex: 0 0 auto;
+}
+
+.input-data-validacoes {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #1a3a63;
+    background: #f0f4f8;
+    border: 1px solid #d1d8e0;
+    border-radius: 6px;
+    padding: 0.35rem 0.5rem;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.input-data-validacoes:focus {
+    border-color: #3a78b5;
+    background: #fff;
+}
+
+.btn-nav-data {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: #f0f4f8;
+    border: 1px solid #d1d8e0;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #1a3a63;
+    font-size: 0.75rem;
+    transition: background 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-nav-data:hover:not(:disabled) {
+    background: #e5ecf3;
+}
+
+.btn-nav-data:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* ======================================================================
+   ITEM 2 — CONTADOR "POR LEVANTAR" (variante de aviso)
+   ====================================================================== */
+
+.validacoes-contador--aviso {
+    background: #fffbeb;
+    color: #92400e;
+    margin-left: 0.5rem;
+}
+
+.validacoes-contador--aviso i {
+    color: #d97706;
+}
+
+.validacoes-contador--aviso .num {
+    color: #92400e;
+}
+
+.validacoes-contador--erro {
+    background: #fef2f2;
+    color: #991b1b;
+    margin-left: 0.5rem;
+}
+
+.validacoes-contador--erro i {
+    color: #dc2626;
+}
+
+.validacoes-contador--erro .num {
+    color: #991b1b;
 }

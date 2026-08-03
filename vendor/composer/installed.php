@@ -3,7 +3,7 @@
         'name' => 'joaopacheco/siupt-refeicoes',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '945588d775e1662b969063e976a02a10e2182f54',
+        'reference' => '3a8f4122f443f619c86208892b691c18a7721598',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -40,7 +40,7 @@
         'joaopacheco/siupt-refeicoes' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '945588d775e1662b969063e976a02a10e2182f54',
+            'reference' => '3a8f4122f443f619c86208892b691c18a7721598',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

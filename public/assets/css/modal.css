@@ -159,3 +159,29 @@
     text-align: center;
     margin-top: 0.5rem;
 }
+
+/* ======================================================================
+   Modal não deve ultrapassar a altura da janela
+   ====================================================================== */
+
+.tingle-modal {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 1.5rem 0 !important;
+    overflow-y: auto !important;
+}
+
+.tingle-modal-box {
+    position: relative !important;
+    top: auto !important;
+    margin: 0 !important;
+    max-height: calc(100vh - 3rem);
+    display: flex;
+    flex-direction: column;
+}
+
+.tingle-modal-box__content {
+    overflow-y: auto;
+    flex: 1;
+}
