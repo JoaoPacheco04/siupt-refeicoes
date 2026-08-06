@@ -24,6 +24,7 @@ $pedidos = Database::listarPedidosDoUtilizador($utilizador['id']);
 $pedidoIds = array_column($pedidos, 'RP_ID');
 $todasLinhas = Database::listarLinhasDePedidos($pedidoIds);
 $transferencias = Database::listarTransferenciasPorPedidos($pedidoIds);
+$motivosDisponiveis = Database::listarMotivosReclamacaoAtivos();
 
 $pedidosUtilizados = array_column(array_filter($pedidos, fn($p) => $p['estado'] === 'utilizado'), 'RP_ID');
 $avaliacoes = Database::listarAvaliacoesPorPedidos($pedidosUtilizados);
@@ -342,6 +343,7 @@ foreach ($pedidos as $p) {
 
 <script>
 window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
+window.MOTIVOS_RECLAMACAO = <?= json_encode($motivosDisponiveis) ?>;
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>

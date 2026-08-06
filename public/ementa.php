@@ -12,6 +12,11 @@ require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
+$anoAtual = (int) date('Y');
+if (!Database::feriadosDoAnoJaExistem($anoAtual)) {
+    Database::gerarTodosFeriadosDoAno($anoAtual);
+}
+
 // Garante que apenas utilizadores autenticados podem aceder.
 $utilizador = exigirLogin();
 
@@ -27,6 +32,8 @@ $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->
 // Carrega em lote os limites de compra para os tipos de prato da semana.
 $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
 $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
+$feriadosNaSemana = Database::listarFeriadosNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+$datasComEmenta = Database::listarDatasComEmentaConfigurada($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
 
 /**
  * Verifica se todos os pratos de uma lista já estão fora do prazo de compra.
@@ -92,6 +99,18 @@ foreach ($pratos as $p) {
         'preco' => $precosBatch[(int) $p['RM_TP_ID']] ?? null,
         'tp_id' => (int) $p['RM_TP_ID'],
     ];
+}
+
+// NOVO — garante que TODOS os dias úteis da semana aparecem como cartão,
+// mesmo sem ementa configurada, para distinguir "Feriado" de "Encerrado"
+// (dias sem prato do dia, ex: agosto, eventos internos).
+$diaCursor = clone $segunda;
+while ($diaCursor <= $sexta) {
+    $dataStr = $diaCursor->format('Y-m-d');
+    if (!isset($diasEmenta[$dataStr])) {
+        $diasEmenta[$dataStr] = []; // dia vazio — decide-se o estado mais abaixo
+    }
+    $diaCursor->modify('+1 day');
 }
 ksort($diasEmenta);
 
@@ -304,11 +323,17 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
         }
     ?>
     <?php $jaComprado = isset($datasComPedido[$data]); ?>
-    <div class="dia-card<?= $diaBloqueado ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?>" data-data="<?= $data ?>">
+    <?php $ehFeriado = isset($feriadosNaSemana[$data]); ?>
+    <?php $ehEncerrado = !$ehFeriado && !in_array($data, $datasComEmenta, true); ?>
+    <div class="dia-card<?= $diaBloqueado ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?><?= $ehFeriado ? ' dia-feriado' : '' ?><?= $ehEncerrado ? ' dia-encerrado' : '' ?>" data-data="<?= $data ?>">
         <div class="dia-card-header">
             <span class="dia-abrev"><?= $numDia ?></span>
             <span class="dia-data"><?= date('d/m', strtotime($data)) ?></span>
-            <?php if ($diaBloqueado): ?>
+            <?php if ($ehFeriado): ?>
+            <span class="dia-feriado-badge"><i class="bi bi-calendar-x"></i> <?= htmlspecialchars($feriadosNaSemana[$data]) ?></span>
+            <?php elseif ($ehEncerrado): ?>
+            <span class="dia-encerrado-badge"><i class="bi bi-door-closed"></i> encerrado</span>
+            <?php elseif ($diaBloqueado): ?>
             <span class="dia-passado-badge">fora de prazo</span>
             <?php elseif ($jaComprado): ?>
             <span class="dia-comprado-badge"><i class="bi bi-check-circle-fill"></i> já comprado</span>
@@ -338,7 +363,7 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
                            data-rm-id="<?= $prato['rm_id'] ?>"
                            data-preco="<?= $prato['preco'] ?>"
                            data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $prato['nome']) ?>"
-                           <?= ($diaBloqueado || $jaComprado) ? 'disabled' : '' ?>>
+                           <?= ($diaBloqueado || $jaComprado || $ehFeriado) ? 'disabled' : '' ?>>
                     <span class="prato-tipo-icone"><?= $iconePrato[$tipoNome] ?? '' ?></span>
                     <span class="prato-opcao-label">
                         <strong><?= htmlspecialchars($tipoNome) ?></strong>

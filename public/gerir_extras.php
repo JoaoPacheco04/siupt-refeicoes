@@ -67,6 +67,14 @@ $extras = Database::listarDetalhesExtrasParaGestao();
         <i class="bi bi-egg-fried"></i>
     </a>
 
+    <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
+        <i class="bi bi-chat-square-text"></i>
+    </a>
+
+    <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados">
+        <i class="bi bi-calendar-x"></i>
+    </a>
+
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>

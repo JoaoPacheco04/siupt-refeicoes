@@ -66,7 +66,6 @@ function abrirModalAvaliacao(pedidoId) {
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
     const btnSubmeter = modal.addFooterBtn('Enviar avaliação', 'tingle-btn tingle-btn--primary', async () => {
         if (estrelaSelecionada === 0) {
-            // Item 3 FIX: mensagem inline em vez de alert() nativo
             const erroEstrelas = document.getElementById('erroEstrelas');
             if (erroEstrelas) {
                 erroEstrelas.style.display = 'block';

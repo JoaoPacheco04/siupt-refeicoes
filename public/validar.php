@@ -50,6 +50,14 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <i class="bi bi-egg-fried"></i>
     </a>
 
+    <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
+        <i class="bi bi-chat-square-text"></i>
+    </a>
+
+    <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados">
+        <i class="bi bi-calendar-x"></i>
+    </a>
+
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>
@@ -148,6 +156,10 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <!-- item 4: id + href já inclui a data de hoje; validar.js atualiza dinamicamente -->
         <a href="api/exportar_validacoes.php?data=<?= date('Y-m-d') ?>" class="btn-exportar-log" id="btnExportarLog">
             <i class="bi bi-download"></i> Exportar
+        </a>
+
+        <a href="api/exportar_codigos_contingencia.php" target="_blank" class="btn-exportar-log" title="Imprimir lista de contingência">
+            <i class="bi bi-printer"></i> Lista de contingência
         </a>
     </div>
 

@@ -36,16 +36,15 @@ $avaliacoesPorPrato = Database::obterMediaAvaliacoesPorPrato(1, $anoMes);
 // N5: motivos de reclamação das avaliações com 1-2 estrelas
 $motivosProblemas  = Database::obterMotivosProblemasMensal($anoMes);
 
-// Labels legíveis para os motivos
-$motivosLabels = [
-    'comida_fria'       => 'Comida fria',
-    'porcao_pequena'    => 'Porção pequena',
-    'qualidade_abaixo'  => 'Qualidade abaixo do esperado',
-    'erro_pedido'       => 'Refeição errada',
-    'demora_entrega'    => 'Demora na entrega',
-];
+// Labels vêm agora da BD (editáveis via gerir_motivos.php)
+$motivosLabels = [];
+foreach (Database::listarTodosMotivosReclamacao() as $m) {
+    $motivosLabels[$m['RMR_CODIGO']] = $m['RMR_LABEL'];
+}
 
-// NOVO — ícone visual por motivo, para leitura mais rápida na lista
+// Ícones continuam fixos no código — são só uma pista visual, não fazem
+// parte dos dados geridos pela funcionária. Novos motivos criados no
+// backoffice usam o ícone genérico de fallback já existente no template.
 $motivosIcones = [
     'comida_fria'       => 'bi-thermometer-snow',
     'porcao_pequena'    => 'bi-arrows-angle-contract',
@@ -123,6 +122,9 @@ foreach ($vendasDiarias as $d) {
     </a>
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
+    </a>
+    <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
+        <i class="bi bi-chat-square-text"></i>
     </a>
     <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>

@@ -464,11 +464,9 @@ function mostrarModalAvaliacao(pedidoId) {
             <label for="motivoSelect" class="avaliacao-motivo-label">O que correu mal? (opcional)</label>
             <select id="motivoSelect" class="avaliacao-motivo-select">
                 <option value="">Selecionar motivo…</option>
-                <option value="comida_fria">Comida fria</option>
-                <option value="porcao_pequena">Porção pequena</option>
-                <option value="qualidade_abaixo">Qualidade abaixo do esperado</option>
-                <option value="erro_pedido">Refeição errada</option>
-                <option value="demora_entrega">Demora na entrega</option>
+                ${(window.MOTIVOS_RECLAMACAO || []).map(m => 
+                    `<option value="${escHtml(m.RMR_CODIGO)}">${escHtml(m.RMR_LABEL)}</option>`
+                ).join('')}
             </select>
         </div>
     `);
@@ -655,7 +653,6 @@ async function transferirPedido(pedidoId, biccDestino, modal) {
         if (dados.status === 'ok') {
             location.reload();
         } else {
-            // B5 FIX: usa modal tingle em vez de alert() nativo
             mostrarErroModal(dados.mensagem || 'Não foi possível transferir.');
         }
     } catch (e) {

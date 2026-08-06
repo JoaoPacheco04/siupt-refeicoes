@@ -291,14 +291,14 @@ function mostrarResultado(status, dados = {}) {
 }
 
 /* ======================================================================
-   N2 — NAVEGAÇÃO POR DATA NAS VALIDAÇÕES
+   NAVEGAÇÃO POR DATA NAS VALIDAÇÕES
    ====================================================================== */
 
 const inputData       = document.getElementById('inputDataValidacoes');
 const btnDataAnterior = document.getElementById('btnDataAnterior');
 const btnDataSeguinte = document.getElementById('btnDataSeguinte');
 const tituloLista     = document.getElementById('validacoesListaTitulo');
-const btnExportarLog  = document.getElementById('btnExportarLog'); // NOVO — item 4
+const btnExportarLog  = document.getElementById('btnExportarLog'); 
 const hojeISO         = new Date().toISOString().split('T')[0];
 
 /**
@@ -313,7 +313,6 @@ async function carregarValidacoesPorData(data) {
             <i class="bi bi-hourglass-split"></i> A carregar…
         </p>`;
 
-    // NOVO: feedback visual no contador enquanto a nova data carrega
     if (contadorEl) contadorEl.classList.add('contador-a-atualizar');
 
     // Atualiza o título
@@ -326,7 +325,6 @@ async function carregarValidacoesPorData(data) {
     // Atualiza estado dos botões de navegação
     if (btnDataSeguinte) btnDataSeguinte.disabled = (data >= hojeISO);
 
-    // NOVO — item 4: mantém o link de exportar sincronizado com a data selecionada
     if (btnExportarLog) {
         btnExportarLog.href = `api/exportar_validacoes.php?data=${data}`;
     }
@@ -370,12 +368,10 @@ async function carregarValidacoesPorData(data) {
         if (data === hojeISO && contadorEl) {
             contadorEl.textContent = dados.total;
         }
-        // NOVO: remove o estado de "a atualizar" independentemente do resultado
         if (contadorEl) contadorEl.classList.remove('contador-a-atualizar');
 
     } catch (e) {
         listaEl.innerHTML = `<p class="lista-validacoes-vazia"><i class="bi bi-wifi-off"></i> Erro de ligação.</p>`;
-        // NOVO: garante que o contador não fica preso em estado de loading
         if (contadorEl) contadorEl.classList.remove('contador-a-atualizar');
     }
 }

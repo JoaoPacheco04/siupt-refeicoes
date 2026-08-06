@@ -285,6 +285,72 @@ class Database {
         return date('Y-m-d H:i:s') > $dataLimite;
     }
 
+    /**
+     * Verifica se uma data específica é feriado. Usado tanto para bloquear
+     * a criação de pedidos como para marcar visualmente a ementa.
+     */
+    public static function ehFeriado(string $data): bool {
+        $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_DATA = ?");
+        $stmt->execute([$data]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Devolve os feriados dentro de um intervalo de datas, como
+     * [data => nome], para marcar a ementa semanal sem fazer uma
+     * query por dia (evita N+1).
+     */
+    public static function listarFeriadosNoPeriodo(string $inicio, string $fim): array {
+        $stmt = self::conexao()->prepare("
+            SELECT RF_DATA, RF_NOME FROM restaurante_feriado
+            WHERE RF_DATA BETWEEN ? AND ?
+        ");
+        $stmt->execute([$inicio, $fim]);
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            // RF_DATA vem como objeto DateTime do driver — normaliza para string Y-m-d
+            $dataStr = $row['RF_DATA'] instanceof DateTime ? $row['RF_DATA']->format('Y-m-d') : (string) $row['RF_DATA'];
+            $resultado[$dataStr] = $row['RF_NOME'];
+        }
+        return $resultado;
+    }
+
+    /**
+     * Devolve as datas com ementa configurada dentro de um período,
+     * para distinguir dias "Encerrado" de dias normais sem ementa.
+     */
+    public static function listarDatasComEmentaConfigurada(string $inicio, string $fim): array {
+        $stmt = self::conexao()->prepare("
+            SELECT DISTINCT RM_DATA FROM restaurante_menu
+            WHERE RM_DATA IS NOT NULL AND RM_DATA BETWEEN ? AND ?
+        ");
+        $stmt->execute([$inicio, $fim]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    public static function listarFeriados(): array {
+        $stmt = self::conexao()->prepare("SELECT RF_ID, RF_DATA, RF_NOME FROM restaurante_feriado ORDER BY RF_DATA");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    public static function criarFeriado(string $data, string $nome): string {
+        $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_DATA = ?");
+        $stmt->execute([$data]);
+        if ($stmt->fetch()) {
+            return 'data_duplicada';
+        }
+        self::conexao()->prepare("INSERT INTO restaurante_feriado (RF_DATA, RF_NOME) VALUES (?, ?)")->execute([$data, $nome]);
+        return 'ok';
+    }
+
+    public static function apagarFeriado(int $id): bool {
+        $stmt = self::conexao()->prepare("DELETE FROM restaurante_feriado WHERE RF_ID = ?");
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
+
     // ============================================
     // Pedidos e compras
     // ============================================
@@ -301,6 +367,12 @@ class Database {
     // independentemente da lógica de prazo por tipo de refeição
     if ($dataRefeicao < date('Y-m-d')) {
         return 'data_no_passado';
+    }
+
+    // NOVO — nunca aceitar um pedido para um dia feriado, mesmo que a
+    // interface tenha falhado a esconder a opção (rede de segurança)
+    if (self::ehFeriado($dataRefeicao)) {
+        return 'dia_feriado';
     }
 
         $pdo = self::conexao();
@@ -345,6 +417,17 @@ class Database {
                 if (!$prato) {
                     $pdo->rollBack();
                     return 'prato_invalido';
+                }
+
+                // NOVO — se o prato tem data (é da ementa, não é extra) e esse dia
+                // não tem ementa configurada, o dia está "encerrado" — bloqueia.
+                // Extras (RM_DATA NULL) não são afetados por esta regra.
+                if ($prato['RM_DATA'] !== null) {
+                    $temEmentaNesseDia = in_array($dataRefeicao, self::listarDatasComEmentaConfigurada($dataRefeicao, $dataRefeicao), true);
+                    if (!$temEmentaNesseDia) {
+                        $pdo->rollBack();
+                        return 'dia_encerrado';
+                    }
                 }
 
                 $menuCompleto = !empty($item['menu_completo']);
@@ -967,6 +1050,8 @@ class Database {
         // Lista fechada de motivos válidos — protege contra valores arbitrários vindos da API
         $motivosValidos = ['comida_fria', 'porcao_pequena', 'qualidade_abaixo', 'erro_pedido', 'demora_entrega'];
         $motivoFinal = ($estrelas <= 2 && in_array($motivo, $motivosValidos, true)) ? $motivo : null;
+        // Valida o motivo contra a tabela restaurante_motivo_reclamacao (editável no backoffice)
+        $motivoFinal = ($estrelas <= 2 && $motivo !== null && self::motivoReclamacaoValido($motivo)) ? $motivo : null;
 
         self::conexao()->prepare("
             INSERT INTO restaurante_avaliacao (RAV_RP_ID, RAV_ESTRELAS, RAV_MOTIVO)
@@ -1085,6 +1170,28 @@ class Database {
         return (int) $stmt->fetchColumn();
     }
 
+    /**
+     * Lista os pedidos pagos e ainda não levantados do dia atual,
+     * com nome/número do comprador e itens — usado para gerar uma
+     * lista de contingência em papel, caso o sistema de validação
+     * fique indisponível durante o serviço.
+     */
+    public static function listarRefeicoesPorLevantarHoje(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rp.RP_ID, rp.RP_CODIGO_CURTO, u.U_NOME, u.U_BICC,
+                   STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS itens
+            FROM restaurante_pedido rp
+            JOIN users u ON rp.RP_U_ID = u.U_ID
+            LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+            LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            WHERE rp.RP_PAGO = 1 AND rp.RP_UTILIZADO = 0 
+              AND rp.RP_DATA_REFEICAO = CAST(GETDATE() AS DATE)
+            GROUP BY rp.RP_ID, rp.RP_CODIGO_CURTO, u.U_NOME, u.U_BICC
+            ORDER BY u.U_NOME
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 
     /**
      * Busca informação de transferência (quem enviou) para uma lista de pedidos,
@@ -1124,4 +1231,147 @@ class Database {
             // impeça a resposta normal (sucesso ou erro) ao utilizador
         }
     }
+
+    /**
+ * Lista os motivos de reclamação ativos, para popular o dropdown
+ * de avaliação. Geridos pela funcionária via gerir_motivos.php.
+ */
+public static function listarMotivosReclamacaoAtivos(): array {
+    $stmt = self::conexao()->prepare("
+        SELECT RMR_CODIGO, RMR_LABEL 
+        FROM restaurante_motivo_reclamacao 
+        WHERE RMR_ATIVO = 1
+        ORDER BY RMR_LABEL
+    ");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+/**
+ * Lista TODOS os motivos (ativos e inativos), para a página de gestão.
+ */
+public static function listarTodosMotivosReclamacao(): array {
+    $stmt = self::conexao()->prepare("
+        SELECT RMR_ID, RMR_CODIGO, RMR_LABEL, RMR_ATIVO 
+        FROM restaurante_motivo_reclamacao 
+        ORDER BY RMR_ATIVO DESC, RMR_LABEL
+    ");
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
+/**
+ * Verifica se um código de motivo é válido (ativo) na base de dados.
+ */
+public static function motivoReclamacaoValido(string $codigo): bool {
+    $stmt = self::conexao()->prepare("
+        SELECT 1 FROM restaurante_motivo_reclamacao 
+        WHERE RMR_CODIGO = ? AND RMR_ATIVO = 1
+    ");
+    $stmt->execute([$codigo]);
+    return (bool) $stmt->fetchColumn();
+}
+
+/**
+ * Cria um novo motivo de reclamação.
+ */
+public static function criarMotivoReclamacao(string $codigo, string $label): string {
+    $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE RMR_CODIGO = ?");
+    $stmt->execute([$codigo]);
+    if ($stmt->fetch()) {
+        return 'codigo_duplicado';
+    }
+
+    self::conexao()->prepare("
+        INSERT INTO restaurante_motivo_reclamacao (RMR_CODIGO, RMR_LABEL) VALUES (?, ?)
+    ")->execute([$codigo, $label]);
+
+    return 'ok';
+}
+
+/**
+ * Desativa (soft-delete) um motivo — preserva histórico de avaliações antigas.
+ */
+public static function desativarMotivoReclamacao(int $id): bool {
+    $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_ATIVO = 0 WHERE RMR_ID = ?");
+    $stmt->execute([$id]);
+    return $stmt->rowCount() > 0;
+}
+
+/**
+ * Reativa um motivo previamente desativado.
+ */
+public static function reativarMotivoReclamacao(int $id): bool {
+    $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_ATIVO = 1 WHERE RMR_ID = ?");
+    $stmt->execute([$id]);
+    return $stmt->rowCount() > 0;
+}
+
+/**
+ * Atualiza o texto (label) de um motivo já existente.
+ * O código interno (RMR_CODIGO) nunca muda — é a chave usada
+ * em avaliações já registadas, alterá-lo quebraria o histórico.
+ */
+public static function atualizarLabelMotivoReclamacao(int $id, string $novoLabel): bool {
+    $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_LABEL = ? WHERE RMR_ID = ?");
+    $stmt->execute([$novoLabel, $id]);
+    return $stmt->rowCount() > 0;
+}
+
+/**
+ * Gera automaticamente todos os feriados de um ano: fixos nacionais,
+ * o municipal do Porto (São João), e os móveis (dependentes da Páscoa).
+ * Não duplica datas já existentes.
+ */
+public static function gerarTodosFeriadosDoAno(int $ano): void {
+    $feriadosFixos = [
+        "{$ano}-01-01" => 'Ano Novo',
+        "{$ano}-04-25" => 'Dia da Liberdade',
+        "{$ano}-05-01" => 'Dia do Trabalhador',
+        "{$ano}-06-10" => 'Dia de Portugal',
+        "{$ano}-06-24" => 'São João (feriado municipal do Porto)',
+        "{$ano}-08-15" => 'Assunção de Nossa Senhora',
+        "{$ano}-10-05" => 'Implantação da República',
+        "{$ano}-11-01" => 'Dia de Todos os Santos',
+        "{$ano}-12-01" => 'Restauração da Independência',
+        "{$ano}-12-08" => 'Imaculada Conceição',
+        "{$ano}-12-25" => 'Natal',
+    ];
+    foreach ($feriadosFixos as $data => $nome) {
+        self::inserirFeriadoSeNaoExistir($data, $nome);
+    }
+
+    $timestampPascoa = easter_date($ano);
+    $pascoa = new DateTime('@' . $timestampPascoa);
+    $pascoa->setTimezone(new DateTimeZone(date_default_timezone_get() ?: 'Europe/Lisbon'));
+
+    $feriadosMoveis = [
+        'Páscoa' => 0,
+        'Sexta-feira Santa' => -2,
+        'Carnaval' => -47,
+        'Corpo de Deus' => 60,
+    ];
+    foreach ($feriadosMoveis as $nome => $offsetDias) {
+        $data = (clone $pascoa)->modify("{$offsetDias} days")->format('Y-m-d');
+        self::inserirFeriadoSeNaoExistir($data, $nome);
+    }
+}
+
+private static function inserirFeriadoSeNaoExistir(string $data, string $nome): void {
+    $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_DATA = ?");
+    $stmt->execute([$data]);
+    if (!$stmt->fetch()) {
+        self::conexao()->prepare("INSERT INTO restaurante_feriado (RF_DATA, RF_NOME) VALUES (?, ?)")
+            ->execute([$data, $nome]);
+    }
+}
+
+/**
+ * Verifica se os feriados de um ano já foram gerados.
+ */
+public static function feriadosDoAnoJaExistem(int $ano): bool {
+    $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_NOME = 'Ano Novo' AND YEAR(RF_DATA) = ?");
+    $stmt->execute([$ano]);
+    return (bool) $stmt->fetchColumn();
+}
 }

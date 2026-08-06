@@ -16,6 +16,8 @@ A **única** tabela partilhada com o sistema existente é `users`, e é usada **
 | `restaurante_menu` | Pratos — com data (ementa semanal) ou sem data (extras sempre disponíveis); `RM_ATIVO` permite soft-delete de extras já comprados |
 | `restaurante_preco_tipo_refeicao` | Histórico de preços por tipo, com data de início — permite alterar preços sem afetar pedidos já feitos |
 | `restaurante_data_limite` | Prazo de compra por tipo de refeição (hora + dias de antecedência) |
+| `restaurante_feriado` | Datas de feriados (nacionais e municipais) — a ementa marca-os visualmente e a criação de pedidos é bloqueada nesses dias. Distinto de um dia "encerrado" (sem prato principal configurado), que é detetado automaticamente sem precisar de tabela própria — ver secção 8. |
+| `restaurante_motivo_reclamacao` | Motivos disponíveis na avaliação de refeições com nota baixa — editável pela funcionária via `gerir_motivos.php`, sem precisar de alterações ao código |
 | `restaurante_pedido` | Cabeçalho do pedido — QR code, código curto, estado pago/utilizado |
 | `restaurante_compra` | Linhas de um pedido (um prato por linha, com o preço praticado no momento) |
 | `restaurante_pagamento` | Histórico de tentativas de pagamento (simulado) |
@@ -70,13 +72,17 @@ Correr `siupt_refeicoes.sql` no SSMS contra a base de dados criada.
 
 Aceder via `http://localhost/siupt-refeicoes/public/login.php` (ajustar caminho conforme o servidor local).
 
-**Nota sobre dependências:** o export de relatório em PDF (`api/exportar_relatorio_pdf.php`) depende do Dompdf, instalado via Composer. Sem correr `composer install`, esse endpoint específico falha com "Class not found" — o resto do sistema funciona normalmente sem esta dependência.
+**Nota sobre dependências:** o export de relatório em PDF (`api/exportar_relatorio_pdf.php`) e a lista de contingência (`api/exportar_codigos_contingencia.php`) dependem do Dompdf, instalado via Composer. Sem correr `composer install`, esses dois endpoints falham com "Class not found" — o resto do sistema funciona normalmente sem esta dependência.
 
 ## 5. Limitações conhecidas (decisões conscientes, não bugs)
 
 - **Avaliação por pedido, não por prato individual.** Um pedido com vários itens (ex: menu completo) só tem uma nota e um motivo, aplicados ao pedido inteiro. A UI de avaliação e o relatório assumem essa nota como representativa de todos os pratos desse pedido. Decisão de simplicidade — avaliar item a item aumentaria significativamente a complexidade do modal de avaliação para um ganho de informação considerado secundário.
 - **Sem gestão de stock/limite de doses por prato.** A ementa não impede compras acima de um número máximo de porções disponíveis.
 - **`login.php` é só simulação** — ver secção 3.1.
+- **Feriados assumem manutenção manual da tabela `restaurante_feriado`.** O sistema deteta e bloqueia automaticamente compras em datas marcadas como feriado, mas alguém (funcionária, via interface direta na BD por agora) precisa de manter a lista atualizada todos os anos, já que feriados móveis (Páscoa, Carnaval) não são calculados automaticamente.
+- **Distinção entre "Feriado" e "Encerrado".** Um dia sem prato principal configurado na ementa (`restaurante_menu`) é automaticamente tratado como "Encerrado" (ex: agosto, eventos internos), sem precisar de nenhuma configuração extra. Um dia listado em `restaurante_feriado` tem prioridade visual sobre "Encerrado" quando ambos se aplicam. Em ambos os casos, a compra de pratos extra continua disponível, já que os extras não dependem da ementa diária.
+
+> Nota: esta distinção resultou de feedback direto do orientador de estágio — inicialmente a ideia era só uma tabela de feriados, mas foi identificado que dias sem menu do dia (ex: agosto inteiro, eventos internos) precisavam de ser tratados de forma diferente de feriados oficiais.
 
 ## 6. Testes
 
@@ -92,3 +98,33 @@ vendor\bin\phpunit --testdox
 Os testes correm contra uma base de dados de teste isolada (`siupt_refeicoes_test`), separada da base de desenvolvimento/produção — nunca contra dados reais. Antes de correr pela primeira vez, cria essa base e aplica o mesmo esquema de `siupt_refeicoes.sql`.
 
 Complementarmente, o módulo foi também validado manualmente, fluxo a fluxo, com dados de exemplo cobrindo todos os estados possíveis (pendente, ativo, utilizado, expirado, avaliações positivas e negativas, extras, transferências).
+
+## 7. Dados de teste na base de desenvolvimento
+
+A base de dados de desenvolvimento contém utilizadores fictícios (`Aluno Teste`, `Aluno Dois`, `Aluno Três`, `Funcionário Teste` — password `teste123` para todos) e pedidos de teste acumulados ao longo do desenvolvimento, usados para validar todas as funcionalidades.
+
+**Antes de uma integração real**, recomenda-se limpar as tabelas transacionais, mantendo apenas a configuração:
+
+```sql
+-- Limpa dados transacionais de teste (respeita ordem de FKs)
+DELETE FROM restaurante_transferencia_tentativa;
+DELETE FROM restaurante_transferencia;
+DELETE FROM restaurante_avaliacao;
+DELETE FROM restaurante_validacao;
+DELETE FROM restaurante_pagamento;
+DELETE FROM restaurante_compra;
+DELETE FROM restaurante_pedido;
+
+-- Mantém: users, restaurante_tipo_refeicao, restaurante_menu,
+-- restaurante_preco_tipo_refeicao, restaurante_data_limite,
+-- restaurante_feriado, restaurante_motivo_reclamacao
+```
+
+Os utilizadores de teste em `users` também devem ser removidos ou substituídos por dados reais, consoante a decisão da equipa de integração sobre a origem final dos utilizadores (ver secção 3.1).
+
+## 8. Funcionalidades adicionais (backoffice)
+
+- **Gestão de motivos de reclamação** (`gerir_motivos.php`) — criar, editar, desativar e reativar os motivos disponíveis na avaliação, sem tocar em código.
+- **Lista de contingência** (`api/exportar_codigos_contingencia.php`, botão em `validar.php`) — PDF com os códigos das refeições por levantar no dia, pensado para ser impresso no início do turno como precaução caso o sistema de validação fique indisponível durante o serviço.
+- **Feriados automáticos** — a ementa assinala visualmente os dias feriado (badge com o nome), e a criação de pedidos é bloqueada nesses dias mesmo que haja erro na gestão da ementa.
+- **Distinção automática entre feriado e dia encerrado** — a ementa (`ementa.php`) percorre todos os dias úteis da semana, não só os que têm pratos configurados. Cada dia é classificado como Feriado (está em `restaurante_feriado`), Encerrado (sem prato principal configurado, ex: restaurante fechado por período prolongado) ou Normal. A criação de pedidos (`Database::criarPedido()`) rejeita automaticamente compras de pratos principais em dias sem ementa, com validação equivalente no backend (`api/criar_pedido.php`) para além da proteção visual na interface. Pratos extra continuam sempre disponíveis, independentemente do estado do dia.
