@@ -1,8 +1,8 @@
-<?php
+﻿<?php
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
-$utilizador = exigirLogin('funcionario');
+$utilizador = exigirLogin('admin_cantina');
 
 $anoMes = $_GET['mes'] ?? date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
@@ -29,30 +29,30 @@ fwrite($saida, "\xEF\xBB\xBF");
 fputcsv($saida, ['Resumo'], ';');
 fputcsv($saida, ['Total vendido', number_format($resumo['total_vendido'], 2, ',', '')], ';');
 fputcsv($saida, ['Pedidos pagos', $resumo['total_pedidos']], ';');
-fputcsv($saida, ['Refeições levantadas', $resumo['total_levantados']], ';');
-fputcsv($saida, ['Não levantadas', $resumo['total_nao_levantados']], ';');
-fputcsv($saida, ['Preço médio por pedido', number_format($precoMedio, 2, ',', '')], ';');
+fputcsv($saida, ['RefeiÃ§Ãµes levantadas', $resumo['total_levantados']], ';');
+fputcsv($saida, ['NÃ£o levantadas', $resumo['total_nao_levantados']], ';');
+fputcsv($saida, ['PreÃ§o mÃ©dio por pedido', number_format($precoMedio, 2, ',', '')], ';');
 if ($percentagem !== null) {
-    fputcsv($saida, ['Variação vs. mês anterior', number_format($percentagem, 1, ',', '') . '%'], ';');
+    fputcsv($saida, ['VariaÃ§Ã£o vs. mÃªs anterior', number_format($percentagem, 1, ',', '') . '%'], ';');
 }
 fputcsv($saida, [], ';');
 
-fputcsv($saida, ['Vendas por tipo — ementa'], ';');
-fputcsv($saida, ['Tipo', 'Quantidade', 'Total (€)'], ';');
+fputcsv($saida, ['Vendas por tipo â€” ementa'], ';');
+fputcsv($saida, ['Tipo', 'Quantidade', 'Total (â‚¬)'], ';');
 foreach ($pratosEmenta as $t) {
     fputcsv($saida, [$t['RTP_NOME'], $t['quantidade'], number_format((float) $t['total'], 2, ',', '')], ';');
 }
 fputcsv($saida, [], ';');
 
-fputcsv($saida, ['Vendas por tipo — extras'], ';');
-fputcsv($saida, ['Tipo', 'Quantidade', 'Total (€)'], ';');
+fputcsv($saida, ['Vendas por tipo â€” extras'], ';');
+fputcsv($saida, ['Tipo', 'Quantidade', 'Total (â‚¬)'], ';');
 foreach ($extrasVendas as $t) {
     fputcsv($saida, [str_replace('Extra: ', '', $t['RTP_NOME']), $t['quantidade'], number_format((float) $t['total'], 2, ',', '')], ';');
 }
 fputcsv($saida, [], ';');
 
-fputcsv($saida, ['Vendas diárias'], ';');
-fputcsv($saida, ['Data', 'Pedidos', 'Total (€)'], ';');
+fputcsv($saida, ['Vendas diÃ¡rias'], ';');
+fputcsv($saida, ['Data', 'Pedidos', 'Total (â‚¬)'], ';');
 foreach ($vendasDiarias as $d) {
     fputcsv($saida, [
         date('d/m/Y', strtotime($d['RP_DATA_REFEICAO'])),

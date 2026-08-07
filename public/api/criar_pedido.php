@@ -1,10 +1,15 @@
 <?php
 /**
- * Endpoint AJAX para criação de um pedido de refeição.
+ * Endpoint: Criar pedido
  *
- * Recebe a data da refeição e os itens selecionados,
- * valida os dados recebidos e cria o pedido,
- * devolvendo uma resposta em formato JSON.
+ * Recebe a data da refeição e a lista de itens selecionados,
+ * valida os dados e delega toda a lógica de negócio a Database::criarPedido().
+ *
+ * Resposta JSON:
+ *  { "status": "ok",   "pedido_id": int }
+ *  { "status": "erro", "mensagem": string }
+ *
+ * @package siupt_refeicoes
  */
 
 require_once __DIR__ . '/../../src/Support/Auth.php';
@@ -12,121 +17,70 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json');
 
+// Qualquer utilizador autenticado (aluno ou funcionário) pode criar pedidos.
 $utilizador = exigirLogin('aluno', true);
 verificarCsrfToken(true);
 
-$dataRefeicao = $_POST['data_refeicao'] ?? '';
-$itensJson = $_POST['itens'] ?? '';
+$dataRefeicao = trim($_POST['data_refeicao'] ?? '');
+$itensRaw     = trim($_POST['itens'] ?? '');
 
-if ($dataRefeicao === '' || $itensJson === '') {
-    echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Faltam parametros: data_refeicao e itens'
-    ]);
+// Validação básica dos campos obrigatórios.
+if ($dataRefeicao === '' || $itensRaw === '') {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Dados em falta.']);
     exit;
 }
 
-/**
- * Valida o formato e a existência da data da refeição.
- */
+// Valida o formato da data (YYYY-MM-DD).
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataRefeicao)) {
-    echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Formato de data inválido'
-    ]);
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Data inválida.']);
     exit;
 }
 
-[$ano, $mes, $dia] = explode('-', $dataRefeicao);
-
-if (!checkdate((int) $mes, (int) $dia, (int) $ano)) {
-    echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Data inválida'
-    ]);
-    exit;
-}
-
-$itens = json_decode($itensJson, true);
-
+// Desserializa e valida a lista de itens.
+$itens = json_decode($itensRaw, true);
 if (!is_array($itens) || empty($itens)) {
-    echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Itens invalidos'
-    ]);
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Lista de itens inválida.']);
     exit;
 }
 
-/**
- * Normaliza os itens recebidos antes da criação do pedido.
- */
-$itensValidados = [];
-
+// Garante que cada item tem rm_id inteiro e menu_completo booleano.
+$itensSanitizados = [];
 foreach ($itens as $item) {
-    if (!isset($item['rm_id'])) {
-        continue;
-    }
-
-    $rmId = (int) $item['rm_id'];
-
+    $rmId = (int) ($item['rm_id'] ?? 0);
     if ($rmId <= 0) {
-        echo json_encode([
-            'status'   => 'erro',
-            'mensagem' => 'Item inválido na lista de seleção.'
-        ]);
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Item inválido na lista.']);
         exit;
     }
-
-    $itensValidados[] = [
+    $itensSanitizados[] = [
         'rm_id'        => $rmId,
         'menu_completo' => !empty($item['menu_completo']),
     ];
 }
 
-$resultado = Database::criarPedido(
-    $utilizador['id'],
-    $dataRefeicao,
-    $itensValidados
-);
-
-/**
- * Mapeia os códigos devolvidos pela camada de negócio
- * para mensagens apresentadas ao utilizador.
- */
+// Mensagens de erro amigáveis para os códigos devolvidos por Database::criarPedido().
 $mensagens = [
-    'sem_itens'                         => 'Nenhum item selecionado',
-    'data_no_passado'                   => 'Não é possível criar um pedido para uma data já passada',
-    'dia_feriado'                       => 'Não é possível criar um pedido para um dia feriado',
-    'dia_encerrado'                     => 'O restaurante está encerrado neste dia',
-    'prato_invalido'                    => 'Prato não encontrado',
-    'menu_completo_invalido_para_extra' => 'Menu completo só é válido para pratos da ementa',
-    'fora_de_prazo'                     => 'Fora do prazo de compra para este prato',
-    'extra_fora_de_horario'             => 'Já não é possível comprar para hoje — fora do horário de compra',
-    'menu_completo_nao_configurado' => 'Preço do menu completo não está configurado',
-    'sem_preco_definido'                => 'Preço não definido para este prato',
-    'pedido_duplicado'                  => 'Já tens um pedido pago para este dia',
-    'extra_duplicado'                   => 'Já compraste este extra para este dia',
+    'sem_itens'                         => 'Nenhum item selecionado.',
+    'data_no_passado'                   => 'Não é possível criar pedidos para datas passadas.',
+    'dia_feriado'                       => 'Não é possível comprar pratos da ementa em dias feriados.',
+    'fora_de_prazo'                     => 'O prazo de compra para este dia já terminou.',
+    'pedido_duplicado'                  => 'Já tens um pedido ativo para este dia.',
+    'dia_encerrado'                     => 'A cantina está encerrada neste dia.',
+    'extra_fora_de_horario'             => 'O prazo de compra de extras para hoje já terminou.',
+    'extra_duplicado'                   => 'Já compraste este prato extra para este dia.',
+    'prato_invalido'                    => 'Um dos pratos selecionados não existe.',
+    'sem_preco_definido'                => 'Preço não configurado para um dos itens.',
+    'menu_completo_invalido_para_extra' => 'O menu completo não pode ser aplicado a pratos extra.',
+    'menu_completo_nao_configurado'     => 'Preço do menu completo não configurado.',
 ];
 
-if (is_string($resultado) && isset($mensagens[$resultado])) {
-    echo json_encode([
-        'status' => 'erro',
-        'mensagem' => $mensagens[$resultado]
-    ]);
-} elseif (is_int($resultado)) {
+$resultado = Database::criarPedido((int) $utilizador['id'], $dataRefeicao, $itensSanitizados);
 
-    $pedido = Database::obterPedido($resultado);
-
-    echo json_encode([
-        'status' => 'ok',
-        'pedido_id' => $resultado,
-        'qrcode' => $pedido['RP_QRCODE'],
-        'codigo_curto' => $pedido['RP_CODIGO_CURTO'],
-        'preco_total' => $pedido['RP_PRECO_TOTAL'],
-    ]);
+if (is_int($resultado)) {
+    // Sucesso — devolve o ID do pedido criado para o frontend fazer o pagamento.
+    echo json_encode(['status' => 'ok', 'pedido_id' => $resultado]);
 } else {
     echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Erro desconhecido'
+        'status'   => 'erro',
+        'mensagem' => $mensagens[$resultado] ?? 'Não foi possível criar o pedido.',
     ]);
 }

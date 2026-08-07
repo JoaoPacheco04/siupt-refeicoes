@@ -334,3 +334,118 @@ JOIN sys.tables tp ON fkc.parent_object_id = tp.object_id
 JOIN sys.columns cp ON fkc.parent_object_id = cp.object_id AND fkc.parent_column_id = cp.column_id
 JOIN sys.tables tr ON fkc.referenced_object_id = tr.object_id
 JOIN sys.columns cr ON fkc.referenced_object_id = cr.object_id AND fkc.referenced_column_id = cr.column_id;
+
+
+-- =========================================================================
+-- 12. MIGRAÇÃO — tabela restaurante_dia_especial
+-- Dias em que a cantina encerra por razões não feriado (férias, greve, evento).
+-- RDE_PERMITE_EXTRAS = 1 → dia encerrado mas extras ainda podem ser comprados.
+-- RDE_PERMITE_EXTRAS = 0 → encerrado total, sem qualquer compra.
+-- =========================================================================
+
+CREATE TABLE restaurante_dia_especial (
+    RDE_ID             INT IDENTITY(1,1) PRIMARY KEY,
+    RDE_DATA           DATE NOT NULL UNIQUE,
+    RDE_MOTIVO         VARCHAR(150) NULL,
+    RDE_PERMITE_EXTRAS BIT NOT NULL DEFAULT 0
+);
+GO
+
+
+-- =========================================================================
+-- 13. MIGRAÇÃO — tabela restaurante_papel_utilizador
+-- Atribui papéis de gestão da cantina a utilizadores específicos.
+-- Um utilizador pode ter 'atendente', 'admin_cantina' ou ambos.
+-- Alunos e colaboradores que apenas compram NÃO têm entradas aqui.
+-- =========================================================================
+
+CREATE TABLE restaurante_papel_utilizador (
+    RPU_ID    INT IDENTITY(1,1) PRIMARY KEY,
+    RPU_U_ID  INT NOT NULL REFERENCES users(U_ID),
+    RPU_PAPEL VARCHAR(20) NOT NULL,  -- 'atendente' | 'admin_cantina'
+    UNIQUE (RPU_U_ID, RPU_PAPEL)
+);
+GO
+
+-- Dado de teste: promover o utilizador funcionário (BI/CC 87654321) a atendente e admin.
+-- Ajusta o BI/CC se o teu utilizador de teste for diferente.
+INSERT INTO restaurante_papel_utilizador (RPU_U_ID, RPU_PAPEL)
+SELECT U_ID, 'atendente'    FROM users WHERE U_BICC = '87654321';
+INSERT INTO restaurante_papel_utilizador (RPU_U_ID, RPU_PAPEL)
+SELECT U_ID, 'admin_cantina' FROM users WHERE U_BICC = '87654321';
+GO
+
+
+-- =========================================================================
+-- 14. MIGRAÇÕES — tabelas em falta no esquema inicial
+-- (Adicionadas ao longo do desenvolvimento; registadas aqui para que
+--  uma instalação de raiz consiga criar tudo num único script.)
+-- =========================================================================
+
+-- Feriados nacionais e municipais
+CREATE TABLE restaurante_feriado (
+    RF_ID   INT IDENTITY(1,1) PRIMARY KEY,
+    RF_DATA DATE NOT NULL UNIQUE,
+    RF_NOME VARCHAR(100) NOT NULL
+);
+GO
+
+-- Avaliações das refeições (1-5 estrelas, com motivo opcional para <= 2)
+CREATE TABLE restaurante_avaliacao (
+    RAV_ID      INT IDENTITY(1,1) PRIMARY KEY,
+    RAV_RP_ID   INT NOT NULL REFERENCES restaurante_pedido(RP_ID),
+    RAV_ESTRELAS TINYINT NOT NULL CHECK (RAV_ESTRELAS BETWEEN 1 AND 5),
+    RAV_MOTIVO  VARCHAR(50) NULL,
+    UNIQUE (RAV_RP_ID)  -- um pedido só pode ter uma avaliação
+);
+GO
+
+-- Motivos de reclamação editáveis no backoffice
+CREATE TABLE restaurante_motivo_reclamacao (
+    RMR_ID     INT IDENTITY(1,1) PRIMARY KEY,
+    RMR_CODIGO VARCHAR(50) NOT NULL UNIQUE,
+    RMR_LABEL  VARCHAR(150) NOT NULL,
+    RMR_ATIVO  BIT NOT NULL DEFAULT 1
+);
+GO
+
+-- Transferências bem-sucedidas entre utilizadores
+CREATE TABLE restaurante_transferencia (
+    RT_ID        INT IDENTITY(1,1) PRIMARY KEY,
+    RT_RP_ID     INT NOT NULL REFERENCES restaurante_pedido(RP_ID),
+    RT_DE_U_ID   INT NOT NULL REFERENCES users(U_ID),
+    RT_PARA_U_ID INT NOT NULL REFERENCES users(U_ID),
+    RT_DATA      DATETIME NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- Tentativas de transferência falhadas (auditoria)
+CREATE TABLE restaurante_transferencia_tentativa (
+    RTT_ID           INT IDENTITY(1,1) PRIMARY KEY,
+    RTT_RP_ID        INT NOT NULL,
+    RTT_DE_U_ID      INT NOT NULL,
+    RTT_BICC_DESTINO VARCHAR(20) NOT NULL,
+    RTT_MOTIVO_FALHA VARCHAR(50) NOT NULL,
+    RTT_DATA         DATETIME NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- =========================================================================
+-- 15. MIGRAÇÃO — tabela restaurante_feriado_geracao (MELHORIA 2)
+-- Controlo de geração automática de feriados por ano.
+-- Substitui o limiar de contagem (>= 14) que causava regeneração
+-- inesperada quando o admin apagava feriados manualmente.
+-- =========================================================================
+
+CREATE TABLE restaurante_feriado_geracao (
+    RFG_ID   INT IDENTITY(1,1) PRIMARY KEY,
+    RFG_ANO  INT NOT NULL UNIQUE,
+    RFG_DATA DATETIME NOT NULL DEFAULT GETDATE()
+);
+GO
+
+-- Popular com os anos já gerados (se a BD já existir e tiver feriados):
+-- INSERT INTO restaurante_feriado_geracao (RFG_ANO)
+-- SELECT DISTINCT YEAR(RF_DATA) FROM restaurante_feriado
+-- WHERE YEAR(RF_DATA) NOT IN (SELECT RFG_ANO FROM restaurante_feriado_geracao);
+

@@ -4,6 +4,12 @@
  * Garante que existe um utilizador autenticado e, opcionalmente,
  * que possui o perfil indicado.
  *
+ * Tipos suportados:
+ *  - 'aluno'        — qualquer utilizador autenticado
+ *  - 'funcionario'  — qualquer utilizador autenticado (alias para compatibilidade)
+ *  - 'atendente'    — utilizador com papel 'atendente' ou 'admin_cantina'
+ *  - 'admin_cantina'— utilizador com papel 'admin_cantina'
+ *
  * Redireciona para a página de login ou devolve uma resposta JSON
  * caso a autenticação ou autorização falhe.
  *
@@ -34,31 +40,62 @@ function exigirLogin(?string $tipo_exigido = null, bool $isApi = false): array
         exit;
     }
 
-    if ($tipo_exigido !== null && $_SESSION['user_tipo'] !== $tipo_exigido) {
-        if ($isApi) {
-            http_response_code(403);
-            header('Content-Type: application/json');
-            echo json_encode([
-                'status' => 'erro',
-                'mensagem' => 'Sem permissão para este recurso.'
-            ]);
-            exit;
+    // Verificação de autorização por tipo/papel
+    if ($tipo_exigido !== null) {
+        $temAcesso = false;
+        $papeis    = $_SESSION['user_papeis'] ?? [];
+
+        if (in_array($tipo_exigido, ['aluno', 'funcionario'])) {
+            // Qualquer utilizador autenticado tem acesso
+            $temAcesso = true;
+        } elseif ($tipo_exigido === 'atendente') {
+            // Atendente OU admin_cantina (admin inclui acesso à validação)
+            $temAcesso = in_array('atendente', $papeis) || in_array('admin_cantina', $papeis);
+        } elseif ($tipo_exigido === 'admin_cantina') {
+            $temAcesso = in_array('admin_cantina', $papeis);
         }
 
-        $paginaCorreta = $_SESSION['user_tipo'] === 'funcionario'
-            ? 'validar.php'
-            : 'ementa.php';
+        if (!$temAcesso) {
+            if ($isApi) {
+                http_response_code(403);
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'status' => 'erro',
+                    'mensagem' => 'Sem permissão para este recurso.'
+                ]);
+                exit;
+            }
 
-        header('Location: ' . $paginaCorreta);
-        exit;
+            // Redireciona para a página adequada ao perfil
+            $paginaCorreta = !empty($papeis)
+                ? 'validar.php'
+                : 'ementa.php';
+
+            header('Location: ' . APP_BASE_URL . '/' . $paginaCorreta);
+            exit;
+        }
     }
 
     return [
-        'id'   => $_SESSION['user_id'],
-        'nome' => $_SESSION['user_nome'],
-        'tipo' => $_SESSION['user_tipo'],
+        'id'     => $_SESSION['user_id'],
+        'nome'   => $_SESSION['user_nome'],
+        'tipo'   => $_SESSION['user_tipo'],
+        'papeis' => $_SESSION['user_papeis'] ?? [],
     ];
 }
+
+/**
+ * Verifica rapidamente se o utilizador da sessão atual tem um papel de cantina.
+ * Útil para condicionar elementos de UI (ex: links de gestão na navbar).
+ */
+function temPapelSessao(string $papel): bool
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    return in_array($papel, $_SESSION['user_papeis'] ?? []);
+}
+
 
 // ============================================
 // PROTEÇÃO CSRF
@@ -83,6 +120,39 @@ function gerarCsrfToken(): string
 }
 
 /**
+ * Obtém o token CSRF enviado no pedido, suportando tanto
+ * formulários tradicionais (application/x-www-form-urlencoded,
+ * multipart/form-data) como pedidos JSON (fetch com
+ * Content-Type: application/json), onde $_POST fica sempre vazio.
+ *
+ * @return string Token recebido (string vazia se não encontrado).
+ */
+function obterCsrfTokenRecebido(): string
+{
+    if (!empty($_POST['csrf_token'])) {
+        return $_POST['csrf_token'];
+    }
+
+    // Fallback: também aceita o token no cabeçalho (alternativa comum
+    // para pedidos JSON, sem precisar de o incluir no corpo)
+    $headerToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+    if (!empty($headerToken)) {
+        return $headerToken;
+    }
+
+    // Fallback: corpo JSON (fetch com Content-Type: application/json)
+    $raw = file_get_contents('php://input');
+    if (!empty($raw)) {
+        $dados = json_decode($raw, true);
+        if (is_array($dados) && !empty($dados['csrf_token'])) {
+            return $dados['csrf_token'];
+        }
+    }
+
+    return '';
+}
+
+/**
  * Valida o token CSRF enviado no pedido.
  *
  * Em caso de falha, devolve uma resposta JSON ou termina
@@ -96,7 +166,7 @@ function verificarCsrfToken(bool $isApi = false): void
         session_start();
     }
 
-    $tokenRecebido = $_POST['csrf_token'] ?? '';
+    $tokenRecebido = obterCsrfTokenRecebido();
 
     if (
         empty($_SESSION['csrf_token']) ||

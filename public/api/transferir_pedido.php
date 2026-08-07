@@ -25,11 +25,12 @@ if (!$pedido || (int) $pedido['RP_U_ID'] !== (int) $utilizador['id']) {
 }
 
 $mensagens = [
-    'nao_transferivel'           => 'Este pedido já não pode ser transferido (só pedidos ativos).',
-    'ja_transferido' => 'Esta refeição já foi transferida uma vez e não pode ser reenviada.',
-    'destinatario_nao_encontrado' => 'Não encontrámos nenhum utilizador com esse número.',
-    'mesmo_utilizador'           => 'Não podes transferir para ti próprio.',
-    'erro_bd'                    => 'Erro ao processar a transferência.',
+    'nao_transferivel'             => 'Este pedido já não pode ser transferido (só pedidos ativos).',
+    'ja_transferido'               => 'Esta refeição já foi transferida uma vez e não pode ser reenviada.',
+    'destinatario_nao_encontrado'  => 'Não encontrámos nenhum utilizador com esse número.',
+    'mesmo_utilizador'             => 'Não podes transferir para ti próprio.',
+    'destinatario_ja_tem_pedido'   => 'Esse utilizador já tem uma refeição ativa nesse dia.',
+    'erro_bd'                      => 'Erro ao processar a transferência.',
 ];
 
 $resultado = Database::transferirPedido($pedidoId, (int) $utilizador['id'], $biccDestino);

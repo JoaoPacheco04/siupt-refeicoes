@@ -1,8 +1,8 @@
-<?php
+﻿<?php
 /**
- * Endpoint AJAX para criação de um prato extra.
+ * Endpoint AJAX para criaÃ§Ã£o de um prato extra.
  *
- * Recebe o nome e o preço do prato extra,
+ * Recebe o nome e o preÃ§o do prato extra,
  * criando o respetivo registo e devolvendo
  * uma resposta em formato JSON.
  */
@@ -12,7 +12,7 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json');
 
-$utilizador = exigirLogin('funcionario', true);
+$utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
 
 $nome = trim($_POST['nome'] ?? '');
@@ -26,7 +26,7 @@ if (
 ) {
     echo json_encode([
         'status' => 'erro',
-        'mensagem' => 'Dados inválidos'
+        'mensagem' => 'Dados invÃ¡lidos'
     ]);
     exit;
 }

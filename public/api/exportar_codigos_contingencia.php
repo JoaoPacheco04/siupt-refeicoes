@@ -14,7 +14,7 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
-$utilizador = exigirLogin('funcionario');
+$utilizador = exigirLogin('admin_cantina');
 
 $refeicoes = Database::listarRefeicoesPorLevantarHoje();
 $hoje = date('d/m/Y');
@@ -30,17 +30,17 @@ $html = '<html><head><meta charset="UTF-8"><style>
     .codigo { font-family: monospace; font-weight: bold; letter-spacing: 1px; }
 </style></head><body>';
 
-$html .= "<h1>Lista de contingência — validação manual</h1>";
-$html .= "<p class=\"info\">Gerado em {$hoje} — usar apenas se o sistema de validação estiver indisponível. Riscar o código à medida que o aluno levanta a refeição.</p>";
+$html .= '<h1>Lista de contingência &mdash; validação manual</h1>';
+$html .= '<p class="info">Gerado em ' . $hoje . ' &mdash; usar apenas se o sistema de validação estiver indisponível. Riscar o código à medida que o aluno levanta a refeição.</p>';
 
-$html .= '<table><tr><th class="checkbox">✓</th><th>Código</th><th>Nome</th><th>Nº</th><th>Refeição</th></tr>';
+$html .= '<table><tr><th class="checkbox">&#10003;</th><th>Código</th><th>Nome</th><th>Nº</th><th>Refeição</th></tr>';
 foreach ($refeicoes as $r) {
     $html .= '<tr>
-        <td class="checkbox">☐</td>
-        <td class="codigo">' . htmlspecialchars($r['RP_CODIGO_CURTO']) . '</td>
-        <td>' . htmlspecialchars($r['U_NOME']) . '</td>
-        <td>' . htmlspecialchars($r['U_BICC']) . '</td>
-        <td>' . htmlspecialchars($r['itens'] ?? 'Sem itens registados') . '</td>
+        <td class="checkbox">&#9744;</td>
+        <td class="codigo">' . htmlspecialchars($r['RP_CODIGO_CURTO'], ENT_QUOTES, 'UTF-8') . '</td>
+        <td>' . htmlspecialchars($r['U_NOME'], ENT_QUOTES, 'UTF-8') . '</td>
+        <td>' . htmlspecialchars($r['U_BICC'], ENT_QUOTES, 'UTF-8') . '</td>
+        <td>' . htmlspecialchars($r['itens'] ?? 'Sem itens registados', ENT_QUOTES, 'UTF-8') . '</td>
     </tr>';
 }
 $html .= '</table>';
@@ -54,7 +54,7 @@ $html .= '</body></html>';
 $options = new Options();
 $options->set('isRemoteEnabled', false);
 $dompdf = new Dompdf($options);
-$dompdf->loadHtml($html);
+$dompdf->loadHtml($html, 'UTF-8');
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->render();
 $dompdf->stream('lista_contingencia_' . date('Y-m-d') . '.pdf', ['Attachment' => false]);

@@ -41,6 +41,9 @@ $refGatewayBatch = 'SIM-' . uniqid();
 
 $resultados = [];
 
+// Cada pedido do lote é processado de forma independente (não atómico):
+// se um falhar, os restantes continuam a ser processados normalmente.
+// Decisão: um erro pontual não deve bloquear a confirmação dos outros dias.
 foreach ($pedidoIds as $id) {
 
     $pedido = Database::obterPedido($id);

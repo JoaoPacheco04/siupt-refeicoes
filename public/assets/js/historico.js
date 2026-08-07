@@ -274,7 +274,7 @@ async function confirmarPagamentoHistorico(pedidoId, sucesso, modalPagamento) {
         dados = { status: 'erro', detalhe: [] };
     }
 
-    const confirmado = (dados.detalhe || []).find(d => d.status === 'confirmado');
+    const confirmado = (dados.detalhe || []).find(d => d.status === 'confirmado' || d.status === 'ja_pago');
     const idUnicoPago = `qr-hist-pago-${++qrPagoCounter}`;
 
     const modalResultado = new tingle.modal({
@@ -460,6 +460,9 @@ function mostrarModalAvaliacao(pedidoId) {
         <div class="avaliacao-estrelas-input" id="estrelasInput">
             ${[1,2,3,4,5].map(n => `<i class="bi bi-star" data-valor="${n}"></i>`).join('')}
         </div>
+        <p class="text-danger small mt-2" id="erroEstrelas" style="display:none;">
+            <i class="bi bi-exclamation-circle"></i> Escolhe pelo menos 1 estrela.
+        </p>
         <div class="avaliacao-motivo-wrap" id="motivoWrap" style="display:none;">
             <label for="motivoSelect" class="avaliacao-motivo-label">O que correu mal? (opcional)</label>
             <select id="motivoSelect" class="avaliacao-motivo-select">

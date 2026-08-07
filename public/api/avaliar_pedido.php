@@ -3,9 +3,9 @@
  * Endpoint: Avaliar refeição
  *
  * Permite ao aluno avaliar (1-5 estrelas) uma refeição já levantada.
- * Se a avaliação for de 1 estrela, aceita também um motivo pré-definido
- * (ex: "comida fria"), para dar ao gestor um sinal acionável no relatório
- * mensal, sem recorrer a texto livre.
+ * Se a avaliação for de 1 ou 2 estrelas, aceita também um motivo
+ * pré-definido (ex: "comida fria"), para dar ao gestor um sinal
+ * acionável no relatório mensal, sem recorrer a texto livre.
  *
  *
  * @package siupt_refeicoes
@@ -17,7 +17,7 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json');
 
-// Só alunos avaliam refeições — o funcionário não tem esta ação.
+// Qualquer comprador (aluno ou funcionário) pode avaliar as suas próprias refeições.
 $utilizador = exigirLogin('aluno', true);
 verificarCsrfToken(true);
 

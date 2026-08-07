@@ -74,12 +74,22 @@ document.querySelectorAll('.radio-prato-principal').forEach(radio => {
 
                 // Remove também todos os componentes adicionais
                 card.querySelectorAll('.checkbox-componente').forEach(c => c.checked = false);
+
+                // MELHORIA 4: atualiza a visibilidade do hint e dos componentes
+                // (sem esta chamada, o hint ficava oculto e os componentes visíveis
+                //  mesmo após desmarcar o prato)
                 syncComponentesVisibility(card);
             }
 
             atualizarResumo();
         } else {
             ultimoSelecionado[grupo] = this;
+
+            // MELHORIA 4: garante que o hint desaparece e os componentes aparecem
+            // quando um prato é selecionado pela primeira vez (ex: ao mudar de radio)
+            const card = this.closest('.dia-card');
+            if (card) syncComponentesVisibility(card);
+
             atualizarResumo();
         }
     });
@@ -200,9 +210,17 @@ function coletarSelecoes() {
         const menuCompletoChecked = menuCompletoBox?.checked ?? false;
 
         const precoMcRaw = menuCompletoBox?.dataset?.precoMc;
-        const precoItem = menuCompletoChecked
-            ? (precoMcRaw !== undefined && precoMcRaw !== '' ? parseFloat(precoMcRaw) : parseFloat(radioPrato.dataset.preco))
-            : parseFloat(radioPrato.dataset.preco);
+        let precoItem;
+        if (menuCompletoChecked) {
+            if (precoMcRaw !== undefined && precoMcRaw !== '') {
+                precoItem = parseFloat(precoMcRaw);
+            } else {
+                console.warn('data-preco-mc em falta no checkbox de menu completo — resumo pode não refletir o preço real cobrado pelo servidor.');
+                precoItem = parseFloat(radioPrato.dataset.preco);
+            }
+        } else {
+            precoItem = parseFloat(radioPrato.dataset.preco);
+        }
 
         const itens = [{
             rm_id: radioPrato.dataset.rmId,
@@ -291,7 +309,6 @@ btnComprar.addEventListener('click', () => {
     const selecoes = coletarSelecoes();
     if (selecoes.length === 0) return;
 
-    // NOVO: feedback imediato — evita duplo clique em ligação lenta
     btnComprar.disabled = true;
     const btnSpanOriginal = btnComprar.querySelector('span');
     if (btnSpanOriginal) btnSpanOriginal.textContent = 'A preparar...';
@@ -310,7 +327,6 @@ btnComprar.addEventListener('click', () => {
         closeMethods: ['overlay', 'button', 'escape'],
         closeLabel: 'Fechar',
         cssClass: ['tingle-siupt'],
-        // NOVO: restaura o botão se o utilizador fechar o modal sem confirmar
         onClose: function () {
             btnComprar.disabled = false;
             if (btnSpanOriginal) btnSpanOriginal.textContent = 'Confirmar compra';
@@ -333,7 +349,6 @@ btnComprar.addEventListener('click', () => {
 
     modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
     const btnConfirmar = modal.addFooterBtn('Confirmar e pagar', 'tingle-btn tingle-btn--primary', async () => {
-        // UX4 FIX: desativar imediatamente para evitar duplo clique
         btnConfirmar.disabled = true;
         btnConfirmar.textContent = 'A processar…';
         modal.close();
@@ -482,7 +497,7 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
         dados = { status: 'erro', detalhe: [] };
     }
 
-    const confirmados = (dados.detalhe || []).filter(d => d.status === 'confirmado');
+    const confirmados = (dados.detalhe || []).filter(d => d.status === 'confirmado' || d.status === 'ja_pago');
 
     const modalResultado = new tingle.modal({
         footer: true,
@@ -494,9 +509,9 @@ async function confirmarPagamento(pedidoIds, sucesso, modalPagamento, falhas) {
     if (confirmados.length > 0) {
         const qrHtml = confirmados.map((c, idx) => `
             <div class="qr-resultado">
-                <p class="text-muted small mb-1">Pedido #${c.pedido_id}</p>
+                <p class="text-muted small mb-1">Pedido #${escHtml(c.pedido_id)}</p>
                 <div id="qr-${idx}" style="display:inline-block;"></div>
-                <p class="codigo-curto">${c.codigo_curto ?? ''}</p>
+                <p class="codigo-curto">${escHtml(c.codigo_curto ?? '')}</p>
             </div>
         `).join('');
 

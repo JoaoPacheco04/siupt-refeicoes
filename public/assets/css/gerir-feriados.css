@@ -1,0 +1,34 @@
+/* ======================================================================
+   gerir-feriados.css — Estilos para as páginas de gestão de feriados
+   e dias especiais.
+   ====================================================================== */
+
+/* Coluna de ações nas tabelas — largura mínima para não ocupar espaço
+   desnecessário e alinhar os botões de apagar à direita. */
+.table-actions {
+    width: 1%;
+    white-space: nowrap;
+}
+
+/* Botão de apagar nas tabelas de feriados e dias especiais. */
+.btn-apagar {
+    color: #dc3545;
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-apagar:hover {
+    color: #fff;
+    background-color: #dc3545;
+}
+
+/* Formulário de geração de feriados móveis — alinha em linha. */
+.form-gerar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}

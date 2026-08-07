@@ -107,9 +107,13 @@ document.querySelectorAll('[data-editar]').forEach(btn => {
         `);
 
         modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
-        modal.addFooterBtn('Guardar', 'tingle-btn tingle-btn--primary', async () => {
+
+        
+        const btnGuardar = modal.addFooterBtn('Guardar', 'tingle-btn tingle-btn--primary', async () => {
             const novoLabel = document.getElementById('editLabel').value.trim();
             if (!novoLabel) return;
+
+            btnGuardar.disabled = true;
 
             try {
                 const resposta = await fetch('api/gerir_motivos_atualizar.php', {

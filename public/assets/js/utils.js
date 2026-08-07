@@ -1,17 +1,15 @@
 /**
- * Funções utilitárias partilhadas entre as páginas da aplicação.
+ * utils.js — Funções utilitárias partilhadas entre páginas.
  *
- * Carregado antes de qualquer script de página para garantir
- * que as funções estão disponíveis em todo o contexto.
+ * Incluir antes de qualquer script de página que precise destas funções.
  */
 
-// ── Escape de HTML (Prevenção XSS) ──────────────────────────────────────
 /**
- * Escapa caracteres HTML antes de inserir texto no DOM com innerHTML,
+ * Escapa caracteres HTML antes de inserir texto no DOM,
  * prevenindo ataques de injeção de código (XSS).
  *
- * @param {*} str Valor a escapar.
- * @returns {string} String com caracteres especiais escapados.
+ * @param {*} str  Valor a escapar (convertido para string automaticamente).
+ * @returns {string} String com os caracteres HTML escapados.
  */
 function escHtml(str) {
     return String(str)

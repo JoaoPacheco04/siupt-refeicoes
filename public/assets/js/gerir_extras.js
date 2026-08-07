@@ -54,9 +54,8 @@ formNovoExtra.addEventListener('submit', async (e) => {
         const dados = await resposta.json();
 
         if (dados.status === 'ok') {
-            // NOVO: confirmação visual antes do reload
             mostrarSucesso(`"${nome}" foi criado com sucesso.`);
-            location.reload();
+            setTimeout(() => location.reload(), 900);
         } else {
             mostrarErro(dados.mensagem || 'Não foi possível criar o extra.');
             btnSubmit.disabled = false;
@@ -81,10 +80,10 @@ document.querySelectorAll('.btn-editar-extra').forEach(btn => {
         const item = btn.closest('.extra-item');
         const rmId = item.dataset.rmId;
         const tipoId = item.dataset.tipoId;
-        
+
         const nomeAtual = item.querySelector('.extra-nome').textContent.trim();
         const precoAtualTexto = item.querySelector('.extra-preco').textContent.trim();
-        
+
         // Converte o texto do preço (ex: "1,50€") num formato numérico (ex: "1.50")
         const precoAtual = precoAtualTexto.endsWith('€')
             ? precoAtualTexto.replace('€', '').replace(',', '.')

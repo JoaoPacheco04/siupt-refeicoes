@@ -1,6 +1,6 @@
-<?php
+﻿<?php
 /**
- * Endpoint AJAX para reativação de um prato extra.
+ * Endpoint AJAX para reativaÃ§Ã£o de um prato extra.
  *
  * Recebe o identificador de um prato extra,
  * reativando-o e devolvendo uma resposta
@@ -12,7 +12,7 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json');
 
-$utilizador = exigirLogin('funcionario', true);
+$utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
 
 $rmId = (int) ($_POST['rm_id'] ?? 0);
@@ -20,7 +20,7 @@ $rmId = (int) ($_POST['rm_id'] ?? 0);
 if ($rmId <= 0) {
     echo json_encode([
         'status' => 'erro',
-        'mensagem' => 'Dados inválidos'
+        'mensagem' => 'Dados invÃ¡lidos'
     ]);
     exit;
 }
@@ -32,6 +32,6 @@ echo json_encode(
         ? ['status' => 'ok']
         : [
             'status' => 'erro',
-            'mensagem' => 'Extra não encontrado'
+            'mensagem' => 'Extra nÃ£o encontrado'
         ]
 );

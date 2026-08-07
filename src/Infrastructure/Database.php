@@ -39,16 +39,6 @@ class Database {
         return $perfil === self::PERFIL_FUNCIONARIO ? 'funcionario' : 'aluno';
     }
 
-    /**
-     * Decide o tipo de acesso ao SIUPT Refeições — NÃO usa U_PERFIL diretamente,
-     * porque "funcionário" no SIUPT pode incluir professores e outros colaboradores
-     * que compram refeições como qualquer aluno, não validam. Só quem está
-     * registado em restaurante_validador_cantina tem acesso à validação.
-     */
-    public static function tipoAcessoSiupt(array $utilizador): string {
-        return !empty($utilizador['U_VALIDADOR_CANTINA']) ? 'funcionario' : 'aluno';
-    }
-
     // ============================================
     // Menu e preços
     // ============================================
@@ -285,6 +275,47 @@ class Database {
         return date('Y-m-d H:i:s') > $dataLimite;
     }
 
+    // ── F4: Gestão de prazos de compra (backoffice) ─────────────────────────
+
+    /**
+     * Lista todos os prazos configurados com o nome do tipo de refeição.
+     * Usada na página gerir_prazos.php.
+     */
+    public static function listarPrazos(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rdl.RDL_ID, rdl.RDL_RTP_ID, rtp.RTP_NOME,
+                   rdl.RDL_HORA, rdl.RDL_DIA_ANTECEDENCIA
+            FROM restaurante_data_limite rdl
+            JOIN restaurante_tipo_refeicao rtp ON rdl.RDL_RTP_ID = rtp.RTP_ID
+            ORDER BY rtp.RTP_NOME
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Atualiza a hora limite e a antecedência de um prazo existente.
+     * Retorna true em caso de sucesso, string de erro caso contrário.
+     */
+    public static function atualizarPrazo(int $id, string $hora, int $diasAntecedencia): bool|string {
+        if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $hora)) {
+            return 'hora_invalida';
+        }
+        if ($diasAntecedencia < 0 || $diasAntecedencia > 7) {
+            return 'antecedencia_invalida';
+        }
+        // Normalizar para HH:MM:00
+        $hora = substr($hora, 0, 5) . ':00';
+        $stmt = self::conexao()->prepare("
+            UPDATE restaurante_data_limite
+            SET RDL_HORA = ?, RDL_DIA_ANTECEDENCIA = ?
+            WHERE RDL_ID = ?
+        ");
+        $stmt->execute([$hora, $diasAntecedencia, $id]);
+        return $stmt->rowCount() > 0;
+    }
+
+
     /**
      * Verifica se uma data específica é feriado. Usado tanto para bloquear
      * a criação de pedidos como para marcar visualmente a ementa.
@@ -321,7 +352,8 @@ class Database {
      */
     public static function listarDatasComEmentaConfigurada(string $inicio, string $fim): array {
         $stmt = self::conexao()->prepare("
-            SELECT DISTINCT RM_DATA FROM restaurante_menu
+            SELECT DISTINCT CONVERT(VARCHAR(10), RM_DATA, 120) AS RM_DATA
+            FROM restaurante_menu
             WHERE RM_DATA IS NOT NULL AND RM_DATA BETWEEN ? AND ?
         ");
         $stmt->execute([$inicio, $fim]);
@@ -352,6 +384,117 @@ class Database {
 
 
     // ============================================
+    // Dias especiais (encerrado / extras permitidos)
+    // ============================================
+
+    /**
+     * Devolve os dias especiais dentro de um intervalo como
+     * [data => ['RDE_MOTIVO' => ..., 'RDE_PERMITE_EXTRAS' => ...]]
+     * para marcar a ementa semanal sem fazer uma query por dia.
+     */
+    public static function listarDiasEspeciaisNoPeriodo(string $inicio, string $fim): array {
+        $stmt = self::conexao()->prepare("
+            SELECT RDE_DATA, RDE_MOTIVO, RDE_PERMITE_EXTRAS
+            FROM restaurante_dia_especial
+            WHERE RDE_DATA BETWEEN ? AND ?
+        ");
+        $stmt->execute([$inicio, $fim]);
+        $resultado = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $dataStr = $row['RDE_DATA'] instanceof DateTime
+                ? $row['RDE_DATA']->format('Y-m-d')
+                : (string) $row['RDE_DATA'];
+            $resultado[$dataStr] = $row;
+        }
+        return $resultado;
+    }
+
+    /**
+     * Lista todos os dias especiais registados, para a página de gestão.
+     */
+    public static function listarTodosDiasEspeciais(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT RDE_ID, RDE_DATA, RDE_MOTIVO, RDE_PERMITE_EXTRAS
+            FROM restaurante_dia_especial
+            ORDER BY RDE_DATA
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Cria um dia especial. Devolve 'data_duplicada' se já existir,
+     * 'eh_feriado' se a data já for feriado, ou 'ok'.
+     */
+    public static function criarDiaEspecial(string $data, string $motivo, bool $permiteExtras): string {
+        // Não sobrepor a um feriado existente
+        if (self::ehFeriado($data)) {
+            return 'eh_feriado';
+        }
+        $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_dia_especial WHERE RDE_DATA = ?");
+        $stmt->execute([$data]);
+        if ($stmt->fetch()) {
+            return 'data_duplicada';
+        }
+        self::conexao()->prepare("
+            INSERT INTO restaurante_dia_especial (RDE_DATA, RDE_MOTIVO, RDE_PERMITE_EXTRAS)
+            VALUES (?, ?, ?)
+        ")->execute([$data, $motivo ?: null, $permiteExtras ? 1 : 0]);
+        return 'ok';
+    }
+
+    /**
+     * Remove um dia especial pelo ID.
+     */
+    public static function apagarDiaEspecial(int $id): bool {
+        $stmt = self::conexao()->prepare("DELETE FROM restaurante_dia_especial WHERE RDE_ID = ?");
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Verifica se uma data é um dia especial e devolve a linha ou false.
+     * Usado em criarPedido() para verificar se extras são permitidos.
+     */
+    public static function ehDiaEspecial(string $data): array|false {
+        $stmt = self::conexao()->prepare("
+            SELECT RDE_ID, RDE_MOTIVO, RDE_PERMITE_EXTRAS
+            FROM restaurante_dia_especial WHERE RDE_DATA = ?
+        ");
+        $stmt->execute([$data]);
+        return $stmt->fetch();
+    }
+
+    // ============================================
+    // Papéis de utilizador (atendente / admin_cantina)
+    // ============================================
+
+    /**
+     * Devolve os papéis de cantina atribuídos a um utilizador.
+     * Ex: ['atendente', 'admin_cantina']
+     * Alunos/colaboradores sem papel devolvem [].
+     */
+    public static function obterPapeisUtilizador(int $userId): array {
+        $stmt = self::conexao()->prepare("
+            SELECT RPU_PAPEL FROM restaurante_papel_utilizador WHERE RPU_U_ID = ?
+        ");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Verifica se um utilizador tem um papel específico de cantina.
+     */
+    public static function temPapel(int $userId, string $papel): bool {
+        $stmt = self::conexao()->prepare("
+            SELECT 1 FROM restaurante_papel_utilizador
+            WHERE RPU_U_ID = ? AND RPU_PAPEL = ?
+        ");
+        $stmt->execute([$userId, $papel]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    // ============================================
     // Pedidos e compras
     // ============================================
 
@@ -363,37 +506,62 @@ class Database {
             return 'sem_itens';
         }
 
-    // NOVO: validação explícita — nunca aceitar uma data já passada,
-    // independentemente da lógica de prazo por tipo de refeição
-    if ($dataRefeicao < date('Y-m-d')) {
-        return 'data_no_passado';
-    }
-
-    // NOVO — nunca aceitar um pedido para um dia feriado, mesmo que a
-    // interface tenha falhado a esconder a opção (rede de segurança)
-    if (self::ehFeriado($dataRefeicao)) {
-        return 'dia_feriado';
-    }
+        // Nunca aceitar uma data já passada — feito antes de abrir transação,
+        // não há nada ainda para reverter.
+        if ($dataRefeicao < date('Y-m-d')) {
+            return 'data_no_passado';
+        }
 
         $pdo = self::conexao();
         $pdo->beginTransaction();
 
         try {
-            // Só bloqueia duplicado se o pedido novo incluir um prato principal
-            // (RM_DATA IS NOT NULL). Extras isolados podem ser comprados mesmo
-            // já havendo um pedido pago para o mesmo dia.
+            // Determina se o pedido inclui pelo menos um prato principal (RM_DATA IS NOT NULL).
             $rmIds = array_values(array_unique(array_map(
                 fn($i) => (int) $i['rm_id'],
                 $itens
             )));
             $ph = implode(',', array_fill(0, count($rmIds), '?'));
-            $stmtTipo = $pdo->prepare("
+            $stmtPratoPrincipal = $pdo->prepare("
                 SELECT COUNT(*) FROM restaurante_menu
                 WHERE RM_ID IN ($ph) AND RM_DATA IS NOT NULL
             ");
-            $stmtTipo->execute($rmIds);
-            $temPratoPrincipal = (int) $stmtTipo->fetchColumn() > 0;
+            $stmtPratoPrincipal->execute($rmIds);
+            $temPratoPrincipal = (int) $stmtPratoPrincipal->fetchColumn() > 0;
 
+            // Feriado só bloqueia se o pedido incluir um prato da ementa.
+            if ($temPratoPrincipal && self::ehFeriado($dataRefeicao)) {
+                $pdo->rollBack();
+                return 'dia_feriado';
+            }
+
+            // CORRIGIDO: prazo de compra (14h30 do dia anterior) nunca era validado
+            // no servidor — só a interface escondia a opção. Um pedido direto via
+            // API conseguia contornar o prazo por completo.
+            if ($temPratoPrincipal) {
+                $stmtTipos = $pdo->prepare("
+                    SELECT DISTINCT RM_TP_ID FROM restaurante_menu
+                    WHERE RM_ID IN ($ph) AND RM_DATA IS NOT NULL
+                ");
+                $stmtTipos->execute($rmIds);
+                $tiposPrincipais = array_map('intval', $stmtTipos->fetchAll(PDO::FETCH_COLUMN));
+
+                $limitesRelevantes = self::obterDataLimitesBatch($tiposPrincipais);
+                foreach ($tiposPrincipais as $tipoId) {
+                    if (self::foraDePrazoBatch($tipoId, $dataRefeicao, $limitesRelevantes)) {
+                        $pdo->rollBack();
+                        return 'fora_de_prazo';
+                    }
+                }
+            }
+
+            // Pré-calcular estado do dia UMA SÓ VEZ antes do loop de itens (evita N+1).
+            $temEmentaNesseDia = !empty(self::listarDatasComEmentaConfigurada($dataRefeicao, $dataRefeicao));
+            $diaEspecial = $temEmentaNesseDia ? false : self::ehDiaEspecial($dataRefeicao);
+            $ehEncerradoExplicito = $diaEspecial && !(bool) $diaEspecial['RDE_PERMITE_EXTRAS'];
+            $extrasPermitidos = !$ehEncerradoExplicito;
+
+            // Só bloqueia duplicado se o pedido novo incluir um prato principal.
             if ($temPratoPrincipal) {
                 $stmtDup = $pdo->prepare("
                     SELECT COUNT(*) FROM restaurante_pedido WITH (UPDLOCK, HOLDLOCK)
@@ -419,26 +587,25 @@ class Database {
                     return 'prato_invalido';
                 }
 
-                // NOVO — se o prato tem data (é da ementa, não é extra) e esse dia
-                // não tem ementa configurada, o dia está "encerrado" — bloqueia.
-                // Extras (RM_DATA NULL) não são afetados por esta regra.
                 if ($prato['RM_DATA'] !== null) {
-                    $temEmentaNesseDia = in_array($dataRefeicao, self::listarDatasComEmentaConfigurada($dataRefeicao, $dataRefeicao), true);
                     if (!$temEmentaNesseDia) {
                         $pdo->rollBack();
                         return 'dia_encerrado';
                     }
-                }
+                } else {
+                    if (!$extrasPermitidos) {
+                        $pdo->rollBack();
+                        return 'dia_encerrado';
+                    }
 
-                $menuCompleto = !empty($item['menu_completo']);
+                    // CORRIGIDO: prazo dos extras (até às 10h do próprio dia) também
+                    // nunca era validado no servidor.
+                    if (self::extraForaDeHorarioHoje($dataRefeicao)) {
+                        $pdo->rollBack();
+                        return 'extra_fora_de_horario';
+                    }
 
-                if ($menuCompleto && $prato['RM_DATA'] === null) {
-                    $pdo->rollBack();
-                    return 'menu_completo_invalido_para_extra';
-                }
-
-                // Impede comprar o mesmo extra duas vezes para o mesmo dia
-                if ($prato['RM_DATA'] === null) {
+                    // Impede comprar o mesmo extra duas vezes para o mesmo dia.
                     $stmtExtraDup = $pdo->prepare("
                         SELECT COUNT(*) FROM restaurante_compra rc
                         JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
@@ -452,6 +619,12 @@ class Database {
                     }
                 }
 
+                $menuCompleto = !empty($item['menu_completo']);
+
+                if ($menuCompleto && $prato['RM_DATA'] === null) {
+                    $pdo->rollBack();
+                    return 'menu_completo_invalido_para_extra';
+                }
 
                 if ($menuCompleto) {
                     $tipoPrecoId = self::obterTipoIdPorNome('Menu Completo');
@@ -484,7 +657,6 @@ class Database {
             $stmt->execute([$utilizadorId, $dataRefeicao, $precoTotal, $qrcode]);
             $pedidoId = (int) $pdo->lastInsertId();
 
-            // Código curto aleatório — verifica colisão antes de gravar (extremamente raro, mas seguro)
             $tentativas = 0;
             do {
                 if (++$tentativas > 10) {
@@ -541,19 +713,91 @@ class Database {
         return $stmt->fetchAll();
     }
 
-    public static function listarPedidosDoUtilizador(int $utilizadorId): array {
+    /**
+     * Lista todos os pedidos de um utilizador, com estado calculado.
+     * Aceita um filtro de mês opcional (formato 'YYYY-MM') para paginação
+     * por período — funcionalidade 2 (filtro de data no histórico).
+     */
+    public static function listarPedidosDoUtilizador(int $utilizadorId, ?string $anoMes = null): array {
+        $params = [$utilizadorId];
+        $filtroMes = '';
+        if ($anoMes !== null && preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
+            $inicio = $anoMes . '-01';
+            $fim    = date('Y-m-t', strtotime($inicio));
+            $filtroMes = 'AND RP_DATA_REFEICAO BETWEEN ? AND ?';
+            $params[] = $inicio;
+            $params[] = $fim;
+        }
         $stmt = self::conexao()->prepare("
             SELECT * FROM restaurante_pedido
-            WHERE RP_U_ID = ?
+            WHERE RP_U_ID = ? $filtroMes
             ORDER BY RP_DATA_REFEICAO DESC
         ");
-        $stmt->execute([$utilizadorId]);
+        $stmt->execute($params);
         $pedidos = $stmt->fetchAll();
-
         foreach ($pedidos as &$p) {
             $p['estado'] = self::calcularEstadoPedido($p);
         }
         return $pedidos;
+    }
+
+    /**
+     * Estatísticas pessoais do utilizador para o painel do histórico.
+     * Opcionalmente filtradas por mês (formato 'YYYY-MM').
+     * Retorna: total_pedidos, total_gasto, total_levantados, prato_favorito.
+     */
+    public static function obterEstatisticasUtilizador(int $utilizadorId, ?string $anoMes = null): array {
+        $params = [$utilizadorId];
+        $filtroMes = '';
+        if ($anoMes !== null && preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
+            $inicio = $anoMes . '-01';
+            $fim    = date('Y-m-t', strtotime($inicio));
+            $filtroMes = 'AND RP_DATA_REFEICAO BETWEEN ? AND ?';
+            $params[] = $inicio;
+            $params[] = $fim;
+        }
+
+        $stmt = self::conexao()->prepare("
+            SELECT
+                COUNT(*)                              AS total_pedidos,
+                ISNULL(SUM(RP_PRECO_TOTAL), 0)        AS total_gasto,
+                SUM(CASE WHEN RP_UTILIZADO = 1 THEN 1 ELSE 0 END) AS total_levantados
+            FROM restaurante_pedido
+            WHERE RP_U_ID = ? AND RP_PAGO = 1 $filtroMes
+        ");
+        $stmt->execute($params);
+        $resumo = $stmt->fetch();
+
+        // Prato mais comprado (apenas pratos do dia para ter nome significativo)
+        $params2 = [$utilizadorId];
+        $filtroMes2 = '';
+        if ($anoMes !== null && preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
+            $filtroMes2 = 'AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?';
+            $params2[] = $inicio;
+            $params2[] = $fim;
+        }
+        $stmtFav = self::conexao()->prepare("
+            SELECT TOP 1 rtp.RTP_NOME AS tipo, COUNT(*) AS total
+            FROM restaurante_compra rc
+            JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
+            JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+            WHERE rp.RP_U_ID = ? AND rp.RP_PAGO = 1
+              AND rm.RM_DATA IS NOT NULL
+              AND rtp.RTP_NOME IN ('Carne', 'Peixe', 'Vegetariano')
+              $filtroMes2
+            GROUP BY rtp.RTP_NOME
+            ORDER BY total DESC
+        ");
+        $stmtFav->execute($params2);
+        $favorito = $stmtFav->fetch();
+
+        return [
+            'total_pedidos'    => (int)   ($resumo['total_pedidos']   ?? 0),
+            'total_gasto'      => (float) ($resumo['total_gasto']     ?? 0),
+            'total_levantados' => (int)   ($resumo['total_levantados'] ?? 0),
+            'prato_favorito'   => $favorito ? $favorito['tipo'] : null,
+        ];
     }
 
     // "Expirado" não é guardado — é sempre calculado no momento da leitura.
@@ -669,6 +913,29 @@ class Database {
         return $stmt->fetchAll();
     }
 
+    public static function listarValidacoesHojeTodos(): array {
+        return self::listarValidacoesPorDataTodos(date('Y-m-d'));
+    }
+
+    public static function listarValidacoesPorDataTodos(string $data): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO,
+                   rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC, func.U_NOME AS funcionario_nome,
+                   STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS itens
+            FROM restaurante_validacao rv
+            JOIN restaurante_pedido rp ON rv.RV_RP_ID = rp.RP_ID
+            JOIN users u ON rp.RP_U_ID = u.U_ID
+            JOIN users func ON rv.RV_FUNCIONARIO_ID = func.U_ID
+            LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+            LEFT JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            WHERE CAST(rv.RV_DATA_VALIDACAO AS DATE) = ?
+            GROUP BY rv.RV_ID, rv.RV_DATA_VALIDACAO, rp.RP_ID, rp.RP_DATA_REFEICAO, rp.RP_PRECO_TOTAL, u.U_NOME, u.U_BICC, func.U_NOME
+            ORDER BY rv.RV_DATA_VALIDACAO DESC
+        ");
+        $stmt->execute([$data]);
+        return $stmt->fetchAll();
+    }
+
     public static function extraForaDeHorarioHoje(string $dataRefeicao): bool {
         if ($dataRefeicao !== date('Y-m-d')) {
             return false;
@@ -677,6 +944,13 @@ class Database {
             return false;
         }
         return date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
+    }
+
+    public static function obterNomeTipoRefeicao(int $tipoId): ?string {
+        $stmt = self::conexao()->prepare("SELECT RTP_NOME FROM restaurante_tipo_refeicao WHERE RTP_ID = ?");
+        $stmt->execute([$tipoId]);
+        $nome = $stmt->fetchColumn();
+        return $nome !== false ? (string) $nome : null;
     }
 
     // ============================================
@@ -867,15 +1141,17 @@ class Database {
         $inicio = $anoMes . '-01';
         $fim = date('Y-m-t', strtotime($inicio));
 
+        // MELHORIA 3: inclui RM_PRATO_DIA para que relatorio.php possa distinguir
+        // pratos da ementa de extras sem depender do prefixo "Extra: " no nome.
         $stmt = self::conexao()->prepare("
-            SELECT rtp.RTP_NOME, COUNT(*) AS quantidade, SUM(rc.RC_PRECO) AS total
+            SELECT rtp.RTP_NOME, rtp.RM_PRATO_DIA, COUNT(*) AS quantidade, SUM(rc.RC_PRECO) AS total
             FROM restaurante_compra rc
             JOIN restaurante_pedido rp ON rc.RC_RP_ID = rp.RP_ID
             JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
             JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
             WHERE rp.RP_PAGO = 1
               AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?
-            GROUP BY rtp.RTP_NOME
+            GROUP BY rtp.RTP_NOME, rtp.RM_PRATO_DIA
             ORDER BY total DESC
         ");
         $stmt->execute([$inicio, $fim]);
@@ -927,13 +1203,25 @@ class Database {
         if (empty($nomes)) return [];
         $nomes = array_values(array_unique($nomes));
         $ph = implode(',', array_fill(0, count($nomes), '?'));
+        // BUG 6 FIX: a avaliação está ao nível do pedido, não do item individual.
+        // Sem filtro, a mesma avaliação seria atribuída a TODOS os itens do pedido
+        // (ex: Carne + Sopa + Sobremesa receberiam a mesma nota), inflando as médias
+        // dos componentes secundários.
+        // Solução: só atribuir a avaliação ao prato principal (Carne/Peixe/Vegetariano,
+        // identificados por RM_DATA IS NOT NULL E tipo não sendo Sopa/Sobremesa/Bebida)
+        // OU a um prato extra (RM_DATA IS NULL).
         $stmt = self::conexao()->prepare("
             SELECT rm.RM_NOME, AVG(CAST(rav.RAV_ESTRELAS AS FLOAT)) AS media, COUNT(*) AS total
             FROM restaurante_avaliacao rav
             JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
             JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
             JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
             WHERE rm.RM_NOME IN ($ph)
+              AND (
+                rm.RM_DATA IS NULL
+                OR rtp.RTP_NOME NOT IN ('Sopa', 'Sobremesa', 'Bebida', 'Menu Completo')
+              )
             GROUP BY rm.RM_NOME
         ");
         $stmt->execute($nomes);
@@ -981,13 +1269,20 @@ class Database {
             $params    = [$inicio, $fim];
         }
 
+        // BUG 6 FIX: mesmo filtro de obterMediaAvaliacoesPorNomes — só atribui
+        // avaliações ao prato principal ou a extras, nunca a sopa/sobremesa/bebida.
         $stmt = self::conexao()->prepare("
             SELECT rm.RM_NOME, AVG(CAST(rav.RAV_ESTRELAS AS FLOAT)) AS media, COUNT(*) AS total
             FROM restaurante_avaliacao rav
             JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
             JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
             JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
             WHERE 1=1 $filtroMes
+              AND (
+                rm.RM_DATA IS NULL
+                OR rtp.RTP_NOME NOT IN ('Sopa', 'Sobremesa', 'Bebida', 'Menu Completo')
+              )
             GROUP BY rm.RM_NOME
             HAVING COUNT(*) >= ?
             ORDER BY media DESC
@@ -1047,9 +1342,6 @@ class Database {
             return 'ja_avaliado';
         }
 
-        // Lista fechada de motivos válidos — protege contra valores arbitrários vindos da API
-        $motivosValidos = ['comida_fria', 'porcao_pequena', 'qualidade_abaixo', 'erro_pedido', 'demora_entrega'];
-        $motivoFinal = ($estrelas <= 2 && in_array($motivo, $motivosValidos, true)) ? $motivo : null;
         // Valida o motivo contra a tabela restaurante_motivo_reclamacao (editável no backoffice)
         $motivoFinal = ($estrelas <= 2 && $motivo !== null && self::motivoReclamacaoValido($motivo)) ? $motivo : null;
 
@@ -1322,8 +1614,13 @@ public static function atualizarLabelMotivoReclamacao(int $id, string $novoLabel
  * Gera automaticamente todos os feriados de um ano: fixos nacionais,
  * o municipal do Porto (São João), e os móveis (dependentes da Páscoa).
  * Não duplica datas já existentes.
+ *
+ * @return array{inseridos: int, ja_existiam: int, total: int}
  */
-public static function gerarTodosFeriadosDoAno(int $ano): void {
+public static function gerarTodosFeriadosDoAno(int $ano): array {
+    $inseridos = 0;
+    $jaExistiam = 0;
+
     $feriadosFixos = [
         "{$ano}-01-01" => 'Ano Novo',
         "{$ano}-04-25" => 'Dia da Liberdade',
@@ -1338,7 +1635,7 @@ public static function gerarTodosFeriadosDoAno(int $ano): void {
         "{$ano}-12-25" => 'Natal',
     ];
     foreach ($feriadosFixos as $data => $nome) {
-        self::inserirFeriadoSeNaoExistir($data, $nome);
+        self::inserirFeriadoSeNaoExistir($data, $nome) ? $inseridos++ : $jaExistiam++;
     }
 
     $timestampPascoa = easter_date($ano);
@@ -1346,32 +1643,58 @@ public static function gerarTodosFeriadosDoAno(int $ano): void {
     $pascoa->setTimezone(new DateTimeZone(date_default_timezone_get() ?: 'Europe/Lisbon'));
 
     $feriadosMoveis = [
-        'Páscoa' => 0,
-        'Sexta-feira Santa' => -2,
-        'Carnaval' => -47,
-        'Corpo de Deus' => 60,
+        'Páscoa'            =>   0,
+        'Sexta-feira Santa' =>  -2,
+        'Carnaval'          => -47,
+        'Corpo de Deus'     =>  60,
     ];
     foreach ($feriadosMoveis as $nome => $offsetDias) {
         $data = (clone $pascoa)->modify("{$offsetDias} days")->format('Y-m-d');
-        self::inserirFeriadoSeNaoExistir($data, $nome);
+        self::inserirFeriadoSeNaoExistir($data, $nome) ? $inseridos++ : $jaExistiam++;
     }
+
+    return ['inseridos' => $inseridos, 'ja_existiam' => $jaExistiam, 'total' => $inseridos + $jaExistiam];
 }
 
-private static function inserirFeriadoSeNaoExistir(string $data, string $nome): void {
+/**
+ * Insere um feriado se a data ainda não existir.
+ * @return bool true se inseriu, false se já existia.
+ */
+private static function inserirFeriadoSeNaoExistir(string $data, string $nome): bool {
     $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_DATA = ?");
     $stmt->execute([$data]);
-    if (!$stmt->fetch()) {
-        self::conexao()->prepare("INSERT INTO restaurante_feriado (RF_DATA, RF_NOME) VALUES (?, ?)")
-            ->execute([$data, $nome]);
+    if ($stmt->fetch()) {
+        return false;
     }
+    self::conexao()->prepare("INSERT INTO restaurante_feriado (RF_DATA, RF_NOME) VALUES (?, ?)")
+        ->execute([$data, $nome]);
+    return true;
 }
 
 /**
  * Verifica se os feriados de um ano já foram gerados.
+ *
+ * Usa contagem total em vez de verificar um feriado específico pelo nome,
+ * para evitar que a remoção pontual de um feriado (ex: "Ano Novo") force
+ * a regeneração completa a cada carregamento da ementa.
+ * O limiar de 14 dá margem a até 1 remoção manual sem desencadear regeneração.
+ */
+/**
+ * Verifica se os feriados de um ano já foram gerados automaticamente,
+ * para evitar a regeneração completa a cada carregamento da ementa.
+ * O limiar de 14 dá margem a até 1 remoção manual sem desencadear regeneração.
  */
 public static function feriadosDoAnoJaExistem(int $ano): bool {
-    $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_NOME = 'Ano Novo' AND YEAR(RF_DATA) = ?");
+    $stmt = self::conexao()->prepare("SELECT COUNT(*) FROM restaurante_feriado WHERE YEAR(RF_DATA) = ?");
     $stmt->execute([$ano]);
+    return (int) $stmt->fetchColumn() >= 14;
+}
+
+public static function pedidoJaPago(int $pedidoId): bool
+{
+    $pdo = self::conexao();
+    $stmt = $pdo->prepare('SELECT RP_PAGO FROM restaurante_pedido WHERE RP_ID = :id');
+    $stmt->execute(['id' => $pedidoId]);
     return (bool) $stmt->fetchColumn();
 }
 }

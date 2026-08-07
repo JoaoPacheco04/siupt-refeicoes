@@ -13,7 +13,7 @@ require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 
-$utilizador = exigirLogin('funcionario');
+$utilizador = exigirLogin('admin_cantina');
 
 /**
  * Obtém o mês pretendido através da query string.
@@ -31,7 +31,6 @@ $resumo            = Database::obterResumoMensal($anoMes);
 $vendasPorTipo     = Database::obterVendasPorTipoMensal($anoMes);
 $vendasDiarias     = Database::obterVendasDiariasMensal($anoMes);
 $mediaAvaliacoes   = Database::obterMediaAvaliacoesMensal($anoMes);
-// FIX 2: passa $anoMes para filtrar apenas as avaliações deste mês
 $avaliacoesPorPrato = Database::obterMediaAvaliacoesPorPrato(1, $anoMes);
 // N5: motivos de reclamação das avaliações com 1-2 estrelas
 $motivosProblemas  = Database::obterMotivosProblemasMensal($anoMes);
@@ -42,9 +41,7 @@ foreach (Database::listarTodosMotivosReclamacao() as $m) {
     $motivosLabels[$m['RMR_CODIGO']] = $m['RMR_LABEL'];
 }
 
-// Ícones continuam fixos no código — são só uma pista visual, não fazem
-// parte dos dados geridos pela funcionária. Novos motivos criados no
-// backoffice usam o ícone genérico de fallback já existente no template.
+
 $motivosIcones = [
     'comida_fria'       => 'bi-thermometer-snow',
     'porcao_pequena'    => 'bi-arrows-angle-contract',
@@ -71,9 +68,18 @@ $percentagemMes = $resumo['total_vendido_mes_anterior'] > 0
 
 /**
  * Separa as vendas entre pratos da ementa e pratos extra.
+ *
+ * LIMITAÇÃO CONHECIDA: este filtro assume que todo o extra tem RTP_NOME
+ * a começar por "Extra: " (prefixo gerado por criarTipoRefeicaoExtra()).
+ * Se existirem vendas ligadas ao tipo genérico antigo 'Prato extra' dos
+ * dados de teste iniciais (antes da migração para tipos dedicados por
+ * extra), essas vendas aparecem incorretamente na secção "ementa".
+ * A confirmar se ainda há dados de teste nessa situação.
  */
-$pratosEmenta = array_values(array_filter($vendasPorTipo, fn($t) => !str_starts_with($t['RTP_NOME'], 'Extra: ')));
-$extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) =>  str_starts_with($t['RTP_NOME'], 'Extra: ')));
+// MELHORIA 3: usa RM_PRATO_DIA=0 para identificar extras em vez do prefixo
+// frágil 'Extra: ' — resistente a dados legados ou renomeações futuras.
+$pratosEmenta = array_values(array_filter($vendasPorTipo, fn($t) => (int) $t['RM_PRATO_DIA'] !== 0 || $t['RTP_NOME'] === 'Menu Completo'));
+$extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) => (int) $t['RM_PRATO_DIA'] === 0 && $t['RTP_NOME'] !== 'Menu Completo'));
 $totalExtras  = array_sum(array_column($extrasVendas, 'total'));
 $qtdExtras    = array_sum(array_column($extrasVendas, 'quantidade'));
 
@@ -126,6 +132,9 @@ foreach ($vendasDiarias as $d) {
     <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
         <i class="bi bi-chat-square-text"></i>
     </a>
+    <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados e dias especiais">
+        <i class="bi bi-calendar-x"></i>
+    </a>
     <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>
@@ -156,7 +165,7 @@ foreach ($vendasDiarias as $d) {
     $mesSeguinteStr = date('Y-m', strtotime($anoMes . '-01 +1 month'));
     $temMesSeguinte = $mesSeguinteStr <= date('Y-m');
     ?>
-    
+
     <div class="relatorio-seletor-mes">
         <a href="?mes=<?= $mesAnteriorStr ?>" class="btn-nav-mes" title="Mês anterior">
             <i class="bi bi-chevron-left"></i>
@@ -214,7 +223,6 @@ foreach ($vendasDiarias as $d) {
         </div>
     </div>
 
-    <!-- FIX 1: Gráfico de vendas diárias -->
     <?php if (!empty($vendasDiarias)): ?>
     <h2 class="relatorio-secao-titulo">evolução de vendas diárias</h2>
     <div class="relatorio-grafico-wrap">
@@ -228,12 +236,17 @@ foreach ($vendasDiarias as $d) {
     <?php endif; ?>
 
     <!-- Vendas por tipo de refeição da ementa -->
-    <h2 class="relatorio-secao-titulo">vendas por tipo — ementa</h2>
-    <?php if (empty($pratosEmenta)): ?>
+    <h2 class="relatorio-secao-titulo">
+        vendas por tipo — ementa
+        <?php if (count($pratosEmenta) > $LIMITE_LINHAS): ?>
+        <span class="relatorio-subtotal">(top <?= $LIMITE_LINHAS ?> de <?= count($pratosEmenta) ?>)</span>
+        <?php endif; ?>
+    </h2>
+    <?php if (empty($pratosEmentaMostrar)): ?>
     <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas de pratos da ementa neste mês.</p>
     <?php else: ?>
     <div class="relatorio-tabela">
-        <?php foreach ($pratosEmenta as $i => $t): ?>
+        <?php foreach ($pratosEmentaMostrar as $i => $t): ?>
         <div class="relatorio-tabela-linha<?= $i === 0 ? ' relatorio-tabela-destaque' : '' ?>">
             <span class="relatorio-tabela-nome">
                 <?= htmlspecialchars($t['RTP_NOME']) ?>
@@ -250,14 +263,19 @@ foreach ($vendasDiarias as $d) {
     <h2 class="relatorio-secao-titulo">
         vendas por tipo — extras
         <?php if (!empty($extrasVendas)): ?>
-        <span class="relatorio-subtotal">(total: <?= number_format($totalExtras, 2, ',', '.') ?>€, <?= $qtdExtras ?>x)</span>
+        <span class="relatorio-subtotal">
+            (total: <?= number_format($totalExtras, 2, ',', '.') ?>€, <?= $qtdExtras ?>x)
+            <?php if (count($extrasVendas) > $LIMITE_LINHAS): ?>
+             — mostrando top <?= $LIMITE_LINHAS ?> de <?= count($extrasVendas) ?>
+            <?php endif; ?>
+        </span>
         <?php endif; ?>
     </h2>
-    <?php if (empty($extrasVendas)): ?>
+    <?php if (empty($extrasMostrar)): ?>
     <p class="relatorio-vazio"><i class="bi bi-inbox"></i> Sem vendas de extras neste mês.</p>
     <?php else: ?>
     <div class="relatorio-tabela">
-        <?php foreach ($extrasVendas as $i => $t): ?>
+        <?php foreach ($extrasMostrar as $i => $t): ?>
         <div class="relatorio-tabela-linha<?= $i === 0 ? ' relatorio-tabela-destaque' : '' ?>">
             <span class="relatorio-tabela-nome">
                 <?= htmlspecialchars(str_replace('Extra: ', '', $t['RTP_NOME'])) ?>
@@ -375,7 +393,6 @@ foreach ($vendasDiarias as $d) {
 </main>
 </div>
 
-<!-- FIX 1: Script de inicialização do Chart.js -->
 <?php if (!empty($vendasDiarias)): ?>
 <script>
 (function () {
@@ -399,8 +416,8 @@ foreach ($vendasDiarias as $d) {
                     borderWidth: 0,
                     borderRadius: 5,
                     borderSkipped: false,
-                    barPercentage: 0.5,        // NOVO — largura da barra relativa ao espaço da categoria
-                    categoryPercentage: 0.6,   // NOVO — espaço da categoria em si
+                    barPercentage: 0.5,
+                    categoryPercentage: 0.6,
                     yAxisID: 'yVendas',
                 },
                 {

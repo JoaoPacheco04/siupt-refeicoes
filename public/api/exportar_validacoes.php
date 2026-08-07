@@ -1,27 +1,30 @@
 <?php
 /**
- * Exporta as validações de refeições de um dia específico em formato CSV.
- * Suporta parâmetro ?data=YYYY-MM-DD (GET); sem parâmetro exporta hoje.
+ * Exporta as validaÃ§Ãµes de refeiÃ§Ãµes de um dia especÃ­fico em formato CSV.
+ * Suporta parÃ¢metro ?data=YYYY-MM-DD (GET); sem parÃ¢metro exporta hoje.
  */
 
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
-$utilizador = exigirLogin('funcionario');
+$utilizador = exigirLogin('atendente');
 
-// Aceitar data via GET; se omitida ou inválida, usa hoje
+// Aceitar data via GET; se omitida ou invÃ¡lida, usa hoje
 $data = $_GET['data'] ?? date('Y-m-d');
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
     $data = date('Y-m-d');
 }
 
-$validacoes = Database::listarValidacoesPorData((int) $utilizador['id'], $data);
+$vejoTudo = temPapelSessao('admin_cantina');
+$validacoes = $vejoTudo
+    ? Database::listarValidacoesPorDataTodos($data)
+    : Database::listarValidacoesPorData((int) $utilizador['id'], $data);
 
 header('Content-Type: text/csv; charset=utf-8');
 header('Content-Disposition: attachment; filename="validacoes_' . $data . '.csv"');
 
 /**
- * Gera o ficheiro CSV e escreve os dados das validações.
+ * Gera o ficheiro CSV e escreve os dados das validaÃ§Ãµes.
  */
 $saida = fopen('php://output', 'w');
 
@@ -29,7 +32,7 @@ fwrite($saida, "\xEF\xBB\xBF");
 
 fputcsv(
     $saida,
-    ['Hora', 'Nome', 'Número', 'Refeição', 'Pedido', 'Data da refeição', 'Preço total (€)'],
+    ['Hora', 'Nome', 'NÃºmero', 'RefeiÃ§Ã£o', 'Pedido', 'Data da refeiÃ§Ã£o', 'PreÃ§o total (â‚¬)'],
     ';'
 );
 

@@ -11,8 +11,8 @@ require_once __DIR__ . '/../src/Support/Assets.php';
 // Importa a camada de acesso à base de dados.
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
-// Garante que apenas funcionários autenticados podem aceder a esta página.
-$utilizador = exigirLogin('funcionario');
+// Garante que apenas administradores da cantina podem aceder a esta página.
+$utilizador = exigirLogin('admin_cantina');
 
 // Obtém todos os pratos extras existentes para apresentação e gestão.
 $extras = Database::listarDetalhesExtrasParaGestao();
@@ -176,7 +176,9 @@ $extras = Database::listarDetalhesExtrasParaGestao();
             <div
                 class="extra-item<?= !$e['RM_ATIVO'] ? ' extra-inativo' : '' ?>"
                 data-rm-id="<?= $e['RM_ID'] ?>"
-                data-tipo-id="<?= $e['RM_TP_ID'] ?>">
+                data-tipo-id="<?= $e['RM_TP_ID'] ?>"
+                data-nome="<?= htmlspecialchars($e['RM_NOME']) ?>"
+                data-preco="<?= $e['preco_atual'] !== null ? htmlspecialchars((string) $e['preco_atual']) : '' ?>">
 
                 <!-- Informação do prato -->
                 <div class="extra-info">

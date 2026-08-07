@@ -61,14 +61,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
 
         session_regenerate_id(true);
 
-        $_SESSION['user_id']   = $utilizador['U_ID'];
-        $_SESSION['user_nome'] = $utilizador['U_NOME'];
-        $_SESSION['user_tipo'] = $tipo;
+        $_SESSION['user_id']     = $utilizador['U_ID'];
+        $_SESSION['user_nome']   = $utilizador['U_NOME'];
+        $_SESSION['user_tipo']   = $tipo;
+        // Carrega os papéis de cantina (atendente / admin_cantina).
+        // Alunos e colaboradores sem papel ficam com array vazio.
+        $_SESSION['user_papeis'] = Database::obterPapeisUtilizador((int) $utilizador['U_ID']);
 
         // Redireciona para a página de origem (passada via ?next=) se for segura.
         // Proteção contra open redirect: só aceita caminhos relativos (sem "://").
         $destino = $_GET['next'] ?? '';
-        $destinoPadrao = $tipo === 'funcionario' ? 'validar.php' : 'ementa.php';
+        $destinoPadrao = !empty($_SESSION['user_papeis']) ? 'validar.php' : 'ementa.php';
         if ($destino !== '' && !str_contains($destino, '://') && !str_starts_with($destino, '//')) {
             $destino = ltrim(basename(parse_url($destino, PHP_URL_PATH)), '/');
         } else {

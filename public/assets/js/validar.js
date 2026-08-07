@@ -148,6 +148,14 @@ async function validarQrCode(qrcode) {
 
     if (dados.status === 'valido') {
         adicionarAListaValidacoes(dados);
+
+        // Decrementa "por levantar hoje" — o elemento só existe no DOM
+        // se o valor inicial era > 0 (ver validar.php).
+        const contadorPorLevantar = document.getElementById('contadorPorLevantar');
+        if (contadorPorLevantar) {
+            const atual = parseInt(contadorPorLevantar.textContent, 10) || 0;
+            contadorPorLevantar.textContent = Math.max(0, atual - 1);
+        }
     }
 
     inputManual.focus();
@@ -201,6 +209,7 @@ function tocarSom(sucesso) {
         gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
         osc.start();
         osc.stop(ctx.currentTime + 0.25);
+        osc.onended = () => ctx.close();
     } catch (e) {
         // Ignora falhas de autoplay ou restrições de contexto de áudio do browser
     }
@@ -298,7 +307,7 @@ const inputData       = document.getElementById('inputDataValidacoes');
 const btnDataAnterior = document.getElementById('btnDataAnterior');
 const btnDataSeguinte = document.getElementById('btnDataSeguinte');
 const tituloLista     = document.getElementById('validacoesListaTitulo');
-const btnExportarLog  = document.getElementById('btnExportarLog'); 
+const btnExportarLog  = document.getElementById('btnExportarLog');
 const hojeISO         = new Date().toISOString().split('T')[0];
 
 /**
@@ -409,4 +418,3 @@ if (btnDataSeguinte) {
     });
 }
 
-/* escHtml — já declarada no início deste ficheiro */

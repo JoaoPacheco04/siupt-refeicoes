@@ -1,0 +1,15 @@
+# ============================================================
+# SIUPT Refeições — .htaccess (public/)
+# ============================================================
+
+# Páginas de erro personalizadas
+# Redireciona erros HTTP para erro.php com o código na query string
+ErrorDocument 404 /siupt-refeicoes/public/erro.php?codigo=404
+ErrorDocument 403 /siupt-refeicoes/public/erro.php?codigo=403
+ErrorDocument 500 /siupt-refeicoes/public/erro.php?codigo=500
+
+# Impede listagem de diretórios
+Options -Indexes
+
+# Força codificação UTF-8 nos conteúdos de texto
+AddDefaultCharset UTF-8

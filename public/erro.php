@@ -44,8 +44,8 @@ $icone = $icones[$codigo] ?? 'bi-exclamation-triangle';
 // Tenta obter o utilizador para decidir o link de "voltar"
 $paginaVoltar = 'login.php';
 if (session_status() === PHP_SESSION_NONE) session_start();
-if (!empty($_SESSION['user_tipo'])) {
-    $paginaVoltar = $_SESSION['user_tipo'] === 'funcionario' ? 'validar.php' : 'ementa.php';
+if (!empty($_SESSION['user_id'])) {
+    $paginaVoltar = !empty($_SESSION['user_papeis']) ? 'validar.php' : 'ementa.php';
 }
 ?>
 <!DOCTYPE html>

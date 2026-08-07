@@ -29,12 +29,18 @@ class PagamentoService
         bool $sucesso,
         ?string $refGatewayBatch = null
     ): array {
-        $estado = $sucesso ? 'sucesso' : 'falhado';
         $pdo = Database::conexao();
-
         $pdo->beginTransaction();
 
         try {
+            
+            if (Database::pedidoJaPago($pedidoId)) {
+                $pdo->rollBack();
+                return ['status' => 'ja_processado'];
+            }
+
+            $estado = $sucesso ? 'sucesso' : 'falhado';
+
             Database::registarTentativaPagamento(
                 $pedidoId,
                 $estado,

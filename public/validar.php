@@ -13,10 +13,13 @@ require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
-$utilizador = exigirLogin('funcionario');
+$utilizador = exigirLogin('atendente');
 $validacoesHoje = Database::contarValidacoesHoje((int) $utilizador['id']);
 $refeicoesPorLevantar = Database::contarRefeicoesAtivasHoje(); // NOVO — item 2
-$listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
+$vejoTudo = temPapelSessao('admin_cantina');
+$listaValidacoes = $vejoTudo
+    ? Database::listarValidacoesHojeTodos()
+    : Database::listarValidacoesHoje((int) $utilizador['id']);
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -46,6 +49,7 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <i class="bi bi-qr-code-scan"></i>
     </a>
 
+    <?php if (temPapelSessao('admin_cantina')): ?>
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
@@ -54,13 +58,14 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <i class="bi bi-chat-square-text"></i>
     </a>
 
-    <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados">
+    <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados e dias especiais">
         <i class="bi bi-calendar-x"></i>
     </a>
 
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>
+    <?php endif; ?>
 
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
@@ -168,7 +173,10 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
         <?php if (empty($listaValidacoes)): ?>
 
             <p class="lista-validacoes-vazia" id="listaVazia">
-                <i class="bi bi-inbox"></i> Ainda não validaste nenhuma refeição hoje.
+                <i class="bi bi-inbox"></i>
+                <?= $vejoTudo
+                    ? 'Ainda não foram registadas validações hoje.'
+                    : 'Ainda não validaste nenhuma refeição hoje.' ?>
             </p>
 
         <?php else: ?>
@@ -190,6 +198,9 @@ $listaValidacoes = Database::listarValidacoesHoje((int) $utilizador['id']);
 
                     <div class="validacao-pedido">
                         #<?= $v['RP_ID'] ?>
+                        <?php if ($vejoTudo && !empty($v['funcionario_nome'])): ?>
+                            <br><small class="text-muted" style="font-size: 0.7em;">Val: <?= htmlspecialchars($v['funcionario_nome']) ?></small>
+                        <?php endif; ?>
                     </div>
                 </div>
 

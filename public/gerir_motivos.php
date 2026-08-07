@@ -5,7 +5,7 @@ require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
-$utilizador = exigirLogin('funcionario');
+$utilizador = exigirLogin('admin_cantina');
 
 $motivos = Database::listarTodosMotivosReclamacao();
 ?>
@@ -143,7 +143,6 @@ window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
-<script src="<?= assetUrl('assets/js/gerir_motivos.js') ?>?v=<?= time() ?>"></script>
-
+<script src="<?= assetUrl('assets/js/gerir_motivos.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/gerir_motivos.js') ?>"></script>
 </body>
 </html>

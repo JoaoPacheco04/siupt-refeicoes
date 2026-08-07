@@ -12,13 +12,17 @@ require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
+// Garante que apenas utilizadores autenticados podem aceder.
+// IMPORTANTE: autenticar primeiro — a geração de feriados só deve
+// correr para utilizadores legítimos (evita queries desnecessárias).
+$utilizador = exigirLogin();
+
+// Verifica se os feriados do ano corrente já foram gerados e,
+// caso contrário, calcula-os automaticamente (fixos + móveis).
 $anoAtual = (int) date('Y');
 if (!Database::feriadosDoAnoJaExistem($anoAtual)) {
     Database::gerarTodosFeriadosDoAno($anoAtual);
 }
-
-// Garante que apenas utilizadores autenticados podem aceder.
-$utilizador = exigirLogin();
 
 // Calcula as datas de início e fim da semana corrente.
 $hoje = new DateTime();
@@ -32,8 +36,9 @@ $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->
 // Carrega em lote os limites de compra para os tipos de prato da semana.
 $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
 $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
-$feriadosNaSemana = Database::listarFeriadosNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
-$datasComEmenta = Database::listarDatasComEmentaConfigurada($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+$feriadosNaSemana    = Database::listarFeriadosNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+$datasComEmenta      = Database::listarDatasComEmentaConfigurada($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+$diasEspeciaisNaSemana = Database::listarDiasEspeciaisNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
 
 /**
  * Verifica se todos os pratos de uma lista já estão fora do prazo de compra.
@@ -101,7 +106,6 @@ foreach ($pratos as $p) {
     ];
 }
 
-// NOVO — garante que TODOS os dias úteis da semana aparecem como cartão,
 // mesmo sem ementa configurada, para distinguir "Feriado" de "Encerrado"
 // (dias sem prato do dia, ex: agosto, eventos internos).
 $diaCursor = clone $segunda;
@@ -138,7 +142,7 @@ $hojeBloqueadoExtras = date('H:i:s') > '10:00:00';
 $diasUteisExtras = [];
 $cursor = new DateTime();
 if ($hojeBloqueadoExtras) {
-    $cursor->modify('+1 day'); // pula "hoje" — já passou o horário de corte
+    $cursor->modify('+1 day'); 
 }
 while (count($diasUteisExtras) < 5) {
     if ((int) $cursor->format('N') <= 5) { // 1=Seg … 5=Sex
@@ -146,6 +150,17 @@ while (count($diasUteisExtras) < 5) {
     }
     $cursor->modify('+1 day');
 }
+
+
+$primeiroDiaExtras = reset($diasUteisExtras);
+$ultimoDiaExtras = end($diasUteisExtras);
+$diasEspeciaisExtras = Database::listarDiasEspeciaisNoPeriodo($primeiroDiaExtras, $ultimoDiaExtras);
+
+$diasUteisExtras = array_values(array_filter($diasUteisExtras, function ($d) use ($diasEspeciaisExtras) {
+    $de = $diasEspeciaisExtras[$d] ?? null;
+    // Exclui só quando há encerramento explícito sem extras permitidos
+    return !($de !== null && !(bool) $de['RDE_PERMITE_EXTRAS']);
+}));
 
 // Verifica quais itens extra o utilizador já comprou para os dias disponíveis.
 $itensExtrasComprados = Database::listarItensExtrasComprados((int) $utilizador['id'], $diasUteisExtras);
@@ -173,7 +188,6 @@ foreach ($extrasComPreco as $e) {
 $mediasAvaliacoes = Database::obterMediaAvaliacoesPorNomes($nomesParaAvaliar);
 
 // ── Aviso de prazo a aproximar-se (só para o dia de hoje) ─────────────────
-// P1 FIX: Constrói mapa nome→id a partir dos pratos já carregados (sem queries extra)
 $mapaTipoNomeParaId = [];
 foreach ($pratos as $p) {
     $mapaTipoNomeParaId[$p['RTP_NOME']] = (int) $p['RM_TP_ID'];
@@ -322,17 +336,30 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
             }
         }
     ?>
-    <?php $jaComprado = isset($datasComPedido[$data]); ?>
-    <?php $ehFeriado = isset($feriadosNaSemana[$data]); ?>
-    <?php $ehEncerrado = !$ehFeriado && !in_array($data, $datasComEmenta, true); ?>
-    <div class="dia-card<?= $diaBloqueado ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?><?= $ehFeriado ? ' dia-feriado' : '' ?><?= $ehEncerrado ? ' dia-encerrado' : '' ?>" data-data="<?= $data ?>">
+    <?php $jaComprado  = isset($datasComPedido[$data]); ?>
+    <?php $ehFeriado   = isset($feriadosNaSemana[$data]); ?>
+    <?php $diaEspecial = $diasEspeciaisNaSemana[$data] ?? null; ?>
+    <?php $temEmenta   = in_array($data, $datasComEmenta, true); ?>
+    <?php
+        // ENCERRADO: só quando há uma marcação explícita em dias_especial com RDE_PERMITE_EXTRAS = 0.
+        // Sem ementa e sem marcação = extras disponíveis por defeito.
+        $ehEncerradoExplicito = !$ehFeriado && !$temEmenta
+            && $diaEspecial !== null && !(bool) $diaEspecial['RDE_PERMITE_EXTRAS'];
+
+        // SÓ EXTRAS: sem ementa, marcado como "permite_extras = 1" ou sem qualquer marcação
+        // (a condição "só extras" é visual — indica que não há menu do dia mas extras estão livres)
+        $apenasExtras = !$ehFeriado && !$temEmenta && !$ehEncerradoExplicito;
+    ?>
+    <div class="dia-card<?= $diaBloqueado ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?><?= $ehFeriado ? ' dia-feriado' : '' ?><?= $ehEncerradoExplicito ? ' dia-encerrado' : '' ?><?= $apenasExtras ? ' dia-apenas-extras' : '' ?>" data-data="<?= $data ?>">
         <div class="dia-card-header">
             <span class="dia-abrev"><?= $numDia ?></span>
             <span class="dia-data"><?= date('d/m', strtotime($data)) ?></span>
             <?php if ($ehFeriado): ?>
             <span class="dia-feriado-badge"><i class="bi bi-calendar-x"></i> <?= htmlspecialchars($feriadosNaSemana[$data]) ?></span>
-            <?php elseif ($ehEncerrado): ?>
-            <span class="dia-encerrado-badge"><i class="bi bi-door-closed"></i> encerrado</span>
+            <?php elseif ($ehEncerradoExplicito): ?>
+            <span class="dia-encerrado-badge"><i class="bi bi-door-closed"></i> encerrado<?= $diaEspecial && $diaEspecial['RDE_MOTIVO'] ? ' — ' . htmlspecialchars($diaEspecial['RDE_MOTIVO']) : '' ?></span>
+            <?php elseif ($apenasExtras && $diaEspecial && $diaEspecial['RDE_MOTIVO']): ?>
+            <span class="dia-encerrado-badge" style="background:var(--cor-aviso,#f59e0b);color:#fff;"><i class="bi bi-bag"></i> só extras — <?= htmlspecialchars($diaEspecial['RDE_MOTIVO']) ?></span>
             <?php elseif ($diaBloqueado): ?>
             <span class="dia-passado-badge">fora de prazo</span>
             <?php elseif ($jaComprado): ?>
@@ -363,7 +390,7 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
                            data-rm-id="<?= $prato['rm_id'] ?>"
                            data-preco="<?= $prato['preco'] ?>"
                            data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $prato['nome']) ?>"
-                           <?= ($diaBloqueado || $jaComprado || $ehFeriado) ? 'disabled' : '' ?>>
+                           <?= ($diaBloqueado || $jaComprado || $ehFeriado || $ehEncerradoExplicito) ? 'disabled' : '' ?>>
                     <span class="prato-tipo-icone"><?= $iconePrato[$tipoNome] ?? '' ?></span>
                     <span class="prato-opcao-label">
                         <strong><?= htmlspecialchars($tipoNome) ?></strong>
@@ -384,7 +411,8 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
 
         <?php
 $precoMC = $precosMenuCompleto[$data] ?? null;
-if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !empty($pratosPrincipais)): ?>
+
+if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEncerradoExplicito && !empty($pratosPrincipais)): ?>
 <label class="menu-completo-toggle">
     <input type="checkbox" class="checkbox-menu-completo"
            data-preco-mc="<?= $precoMC ?>">
@@ -399,7 +427,8 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !empty($pratosPrincip
 </div>
 <?php endif; ?>
 
-        <?php if (!empty($componentesExtra) && !$jaComprado && !$diaBloqueado): ?>
+        <?php
+        if (!empty($componentesExtra) && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEncerradoExplicito): ?>
         <div class="dia-componentes-wrap">
             <p class="componentes-hint"><i class="bi bi-hand-index"></i> Seleciona um prato para adicionar extras</p>
             <div class="dia-componentes">
