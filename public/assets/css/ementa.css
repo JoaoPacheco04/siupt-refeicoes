@@ -144,15 +144,47 @@
     cursor: not-allowed;
 }
 
-.dia-passado-badge {
+/* ── Badge base (reutilizado por todos os badges do header do dia) ── */
+.dia-feriado-badge,
+.dia-encerrado-badge,
+.dia-passado-badge,
+.dia-hoje-badge,
+.dia-comprado-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
     font-size: 0.68rem;
     font-weight: 700;
-    color: #991b1b;
-    background: #fee2e2;
     border-radius: 10px;
     padding: 0.15rem 0.55rem;
     margin-left: auto;
     letter-spacing: 0.3px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Feriado ─────────────────────────────────────── */
+.dia-feriado-badge {
+    color: #7c3aed;
+    background: #ede9fe;
+}
+
+/* ── Encerrado / Só extras ───────────────────────── */
+.dia-encerrado-badge {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+/* Variante "só extras" (aplicada por JS via classe adicional) */
+.dia-encerrado-badge.so-extras {
+    color: #fff;
+    background: #f59e0b;
+}
+
+/* ── Fora de prazo ───────────────────────────────── */
+.dia-passado-badge {
+    color: #991b1b;
+    background: #fee2e2;
 }
 
 .dia-card.dia-hoje {
@@ -161,14 +193,8 @@
 }
 
 .dia-hoje-badge {
-    font-size: 0.68rem;
-    font-weight: 700;
     color: #166534;
     background: #dcfce7;
-    border-radius: 10px;
-    padding: 0.15rem 0.55rem;
-    margin-left: auto;
-    letter-spacing: 0.3px;
 }
 
 .dia-card.dia-ja-comprado {
@@ -177,17 +203,8 @@
 }
 
 .dia-comprado-badge {
-    font-size: 0.68rem;
-    font-weight: 700;
     color: #166534;
     background: #dcfce7;
-    border-radius: 10px;
-    padding: 0.15rem 0.55rem;
-    margin-left: auto;
-    letter-spacing: 0.3px;
-    display: flex;
-    align-items: center;
-    gap: 0.3rem;
 }
 
 .aviso-duplicado {
@@ -237,10 +254,18 @@
 
 /* ── Ícone tipo de prato ────────────────────────── */
 .prato-tipo-icone {
-    font-size: 1.35rem;
+    font-size: 1.25rem;
     line-height: 1;
     flex-shrink: 0;
     user-select: none;
+    /* Garante renderização de emoji consistente entre browsers e SO */
+    font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    /* Alinha verticalmente com o texto ao lado */
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
 }
 
 .prato-opcao {

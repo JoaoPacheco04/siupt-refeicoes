@@ -494,6 +494,116 @@ class Database {
         return (bool) $stmt->fetchColumn();
     }
 
+    /**
+     * Lista todos os utilizadores que têm pelo menos um papel de cantina,
+     * agrupando os seus papéis numa string (ex: "atendente, admin_cantina").
+     * Ordenado pelo nome, para facilitar a gestão.
+     * Usado na página gerir_atendentes.php.
+     *
+     * @return array Cada linha: [U_ID, U_NOME, U_BICC, U_PERFIL, papeis]
+     */
+    public static function listarUtilizadoresComPapeis(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT
+                u.U_ID, u.U_NOME, u.U_BICC, u.U_PERFIL,
+                STRING_AGG(rpu.RPU_PAPEL, ', ') WITHIN GROUP (ORDER BY rpu.RPU_PAPEL) AS papeis
+            FROM users u
+            JOIN restaurante_papel_utilizador rpu ON u.U_ID = rpu.RPU_U_ID
+            GROUP BY u.U_ID, u.U_NOME, u.U_BICC, u.U_PERFIL
+            ORDER BY u.U_NOME
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Pesquisa utilizadores por número BICC ou por nome (parcial, case-insensitive).
+     * Devolve no máximo 10 resultados para não sobrecarregar a UI.
+     * Inclui os papéis já atribuídos a cada utilizador encontrado.
+     * Usado no campo de pesquisa de gerir_atendentes.php.
+     *
+     * @param  string $query Texto a pesquisar (mínimo 2 caracteres recomendado)
+     * @return array  Cada linha: [U_ID, U_NOME, U_BICC, U_PERFIL, papeis]
+     */
+    public static function pesquisarUtilizador(string $query): array {
+        $like = '%' . $query . '%';
+        $stmt = self::conexao()->prepare("
+            SELECT TOP 10
+                u.U_ID, u.U_NOME, u.U_BICC, u.U_PERFIL,
+                (
+                    SELECT STRING_AGG(rpu2.RPU_PAPEL, ',') WITHIN GROUP (ORDER BY rpu2.RPU_PAPEL)
+                    FROM restaurante_papel_utilizador rpu2
+                    WHERE rpu2.RPU_U_ID = u.U_ID
+                ) AS papeis
+            FROM users u
+            WHERE u.U_PERFIL = 2 AND (u.U_BICC LIKE ? OR u.U_NOME LIKE ?)
+            ORDER BY u.U_NOME
+        ");
+        $stmt->execute([$like, $like]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Atribui um papel de cantina a um utilizador.
+     * Papéis válidos: 'atendente', 'admin_cantina'.
+     * Se o papel já existir (UNIQUE constraint), devolve 'ja_existe' sem erro.
+     *
+     * @return string 'ok' | 'papel_invalido' | 'utilizador_nao_encontrado' | 'ja_existe'
+     */
+    public static function atribuirPapel(int $userId, string $papel): string {
+        if (!in_array($papel, ['atendente', 'admin_cantina'], true)) {
+            return 'papel_invalido';
+        }
+
+        // Verificar se o utilizador existe
+        $stmt = self::conexao()->prepare("SELECT 1 FROM users WHERE U_ID = ?");
+        $stmt->execute([$userId]);
+        if (!$stmt->fetchColumn()) {
+            return 'utilizador_nao_encontrado';
+        }
+
+        // Verificar se já tem o papel
+        if (self::temPapel($userId, $papel)) {
+            return 'ja_existe';
+        }
+
+        self::conexao()->prepare("
+            INSERT INTO restaurante_papel_utilizador (RPU_U_ID, RPU_PAPEL) VALUES (?, ?)
+        ")->execute([$userId, $papel]);
+
+        return 'ok';
+    }
+
+    /**
+     * Revoga um papel de cantina de um utilizador.
+     * Proteção: impede revogar o último admin_cantina do sistema,
+     * para evitar ficar sem nenhum administrador.
+     *
+     * @return string 'ok' | 'papel_invalido' | 'nao_encontrado' | 'ultimo_admin'
+     */
+    public static function revogarPapel(int $userId, string $papel): string {
+        if (!in_array($papel, ['atendente', 'admin_cantina'], true)) {
+            return 'papel_invalido';
+        }
+
+        // Proteger o último admin_cantina — sem ele ninguém consegue aceder à gestão
+        if ($papel === 'admin_cantina') {
+            $stmt = self::conexao()->prepare("
+                SELECT COUNT(*) FROM restaurante_papel_utilizador WHERE RPU_PAPEL = 'admin_cantina'
+            ");
+            $stmt->execute();
+            if ((int) $stmt->fetchColumn() <= 1) {
+                return 'ultimo_admin';
+            }
+        }
+
+        $stmt = self::conexao()->prepare("
+            DELETE FROM restaurante_papel_utilizador WHERE RPU_U_ID = ? AND RPU_PAPEL = ?
+        ");
+        $stmt->execute([$userId, $papel]);
+        return $stmt->rowCount() > 0 ? 'ok' : 'nao_encontrado';
+    }
+
     // ============================================
     // Pedidos e compras
     // ============================================
@@ -529,8 +639,8 @@ class Database {
             $stmtPratoPrincipal->execute($rmIds);
             $temPratoPrincipal = (int) $stmtPratoPrincipal->fetchColumn() > 0;
 
-            // Feriado só bloqueia se o pedido incluir um prato da ementa.
-            if ($temPratoPrincipal && self::ehFeriado($dataRefeicao)) {
+            $ehFeriado = self::ehFeriado($dataRefeicao);
+            if ($ehFeriado) {
                 $pdo->rollBack();
                 return 'dia_feriado';
             }
@@ -558,8 +668,15 @@ class Database {
             // Pré-calcular estado do dia UMA SÓ VEZ antes do loop de itens (evita N+1).
             $temEmentaNesseDia = !empty(self::listarDatasComEmentaConfigurada($dataRefeicao, $dataRefeicao));
             $diaEspecial = $temEmentaNesseDia ? false : self::ehDiaEspecial($dataRefeicao);
-            $ehEncerradoExplicito = $diaEspecial && !(bool) $diaEspecial['RDE_PERMITE_EXTRAS'];
-            $extrasPermitidos = !$ehEncerradoExplicito;
+            
+            if ($temEmentaNesseDia) {
+                // Se tem ementa, os extras só são bloqueados se for feriado
+                $extrasPermitidos = !$ehFeriado;
+            } else {
+                // Se NÃO tem ementa, a cantina está encerrada por defeito.
+                // Extras só são permitidos se houver uma autorização explícita (Dia Especial com PERMITE_EXTRAS = 1)
+                $extrasPermitidos = $diaEspecial && (bool) $diaEspecial['RDE_PERMITE_EXTRAS'] && !$ehFeriado;
+            }
 
             // Só bloqueia duplicado se o pedido novo incluir um prato principal.
             if ($temPratoPrincipal) {
@@ -1525,90 +1642,90 @@ class Database {
     }
 
     /**
- * Lista os motivos de reclamação ativos, para popular o dropdown
- * de avaliação. Geridos pela funcionária via gerir_motivos.php.
- */
-public static function listarMotivosReclamacaoAtivos(): array {
-    $stmt = self::conexao()->prepare("
-        SELECT RMR_CODIGO, RMR_LABEL 
-        FROM restaurante_motivo_reclamacao 
-        WHERE RMR_ATIVO = 1
-        ORDER BY RMR_LABEL
-    ");
-    $stmt->execute();
-    return $stmt->fetchAll();
-}
-
-/**
- * Lista TODOS os motivos (ativos e inativos), para a página de gestão.
- */
-public static function listarTodosMotivosReclamacao(): array {
-    $stmt = self::conexao()->prepare("
-        SELECT RMR_ID, RMR_CODIGO, RMR_LABEL, RMR_ATIVO 
-        FROM restaurante_motivo_reclamacao 
-        ORDER BY RMR_ATIVO DESC, RMR_LABEL
-    ");
-    $stmt->execute();
-    return $stmt->fetchAll();
-}
-
-/**
- * Verifica se um código de motivo é válido (ativo) na base de dados.
- */
-public static function motivoReclamacaoValido(string $codigo): bool {
-    $stmt = self::conexao()->prepare("
-        SELECT 1 FROM restaurante_motivo_reclamacao 
-        WHERE RMR_CODIGO = ? AND RMR_ATIVO = 1
-    ");
-    $stmt->execute([$codigo]);
-    return (bool) $stmt->fetchColumn();
-}
-
-/**
- * Cria um novo motivo de reclamação.
- */
-public static function criarMotivoReclamacao(string $codigo, string $label): string {
-    $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE RMR_CODIGO = ?");
-    $stmt->execute([$codigo]);
-    if ($stmt->fetch()) {
-        return 'codigo_duplicado';
+     * Lista os motivos de reclamação ativos, para popular o dropdown
+     * de avaliação. Geridos pela funcionária via gerir_motivos.php.
+     */
+    public static function listarMotivosReclamacaoAtivos(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT RMR_CODIGO, RMR_LABEL 
+            FROM restaurante_motivo_reclamacao 
+            WHERE RMR_ATIVO = 1
+            ORDER BY RMR_LABEL
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
     }
 
-    self::conexao()->prepare("
-        INSERT INTO restaurante_motivo_reclamacao (RMR_CODIGO, RMR_LABEL) VALUES (?, ?)
-    ")->execute([$codigo, $label]);
+    /**
+     * Lista TODOS os motivos (ativos e inativos), para a página de gestão.
+     */
+    public static function listarTodosMotivosReclamacao(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT RMR_ID, RMR_CODIGO, RMR_LABEL, RMR_ATIVO 
+            FROM restaurante_motivo_reclamacao 
+            ORDER BY RMR_ATIVO DESC, RMR_LABEL
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
 
-    return 'ok';
-}
+    /**
+     * Verifica se um código de motivo é válido (ativo) na base de dados.
+     */
+    public static function motivoReclamacaoValido(string $codigo): bool {
+        $stmt = self::conexao()->prepare("
+            SELECT 1 FROM restaurante_motivo_reclamacao 
+            WHERE RMR_CODIGO = ? AND RMR_ATIVO = 1
+        ");
+        $stmt->execute([$codigo]);
+        return (bool) $stmt->fetchColumn();
+    }
 
-/**
- * Desativa (soft-delete) um motivo — preserva histórico de avaliações antigas.
- */
-public static function desativarMotivoReclamacao(int $id): bool {
-    $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_ATIVO = 0 WHERE RMR_ID = ?");
-    $stmt->execute([$id]);
-    return $stmt->rowCount() > 0;
-}
+    /**
+     * Cria um novo motivo de reclamação.
+     */
+    public static function criarMotivoReclamacao(string $codigo, string $label): string {
+        $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE RMR_CODIGO = ?");
+        $stmt->execute([$codigo]);
+        if ($stmt->fetch()) {
+            return 'codigo_duplicado';
+        }
 
-/**
- * Reativa um motivo previamente desativado.
- */
-public static function reativarMotivoReclamacao(int $id): bool {
-    $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_ATIVO = 1 WHERE RMR_ID = ?");
-    $stmt->execute([$id]);
-    return $stmt->rowCount() > 0;
-}
+        self::conexao()->prepare("
+            INSERT INTO restaurante_motivo_reclamacao (RMR_CODIGO, RMR_LABEL) VALUES (?, ?)
+        ")->execute([$codigo, $label]);
 
-/**
- * Atualiza o texto (label) de um motivo já existente.
- * O código interno (RMR_CODIGO) nunca muda — é a chave usada
- * em avaliações já registadas, alterá-lo quebraria o histórico.
- */
-public static function atualizarLabelMotivoReclamacao(int $id, string $novoLabel): bool {
-    $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_LABEL = ? WHERE RMR_ID = ?");
-    $stmt->execute([$novoLabel, $id]);
-    return $stmt->rowCount() > 0;
-}
+        return 'ok';
+    }
+
+    /**
+     * Desativa (soft-delete) um motivo — preserva histórico de avaliações antigas.
+     */
+    public static function desativarMotivoReclamacao(int $id): bool {
+        $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_ATIVO = 0 WHERE RMR_ID = ?");
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Reativa um motivo previamente desativado.
+     */
+    public static function reativarMotivoReclamacao(int $id): bool {
+        $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_ATIVO = 1 WHERE RMR_ID = ?");
+        $stmt->execute([$id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Atualiza o texto (label) de um motivo já existente.
+     * O código interno (RMR_CODIGO) nunca muda — é a chave usada
+     * em avaliações já registadas, alterá-lo quebraria o histórico.
+     */
+    public static function atualizarLabelMotivoReclamacao(int $id, string $novoLabel): bool {
+        $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_LABEL = ? WHERE RMR_ID = ?");
+        $stmt->execute([$novoLabel, $id]);
+        return $stmt->rowCount() > 0;
+    }
 
 /**
  * Gera automaticamente todos os feriados de um ano: fixos nacionais,
@@ -1679,12 +1796,12 @@ private static function inserirFeriadoSeNaoExistir(string $data, string $nome): 
  * a regeneração completa a cada carregamento da ementa.
  * O limiar de 14 dá margem a até 1 remoção manual sem desencadear regeneração.
  */
-/**
- * Verifica se os feriados de um ano já foram gerados automaticamente,
- * para evitar a regeneração completa a cada carregamento da ementa.
- * O limiar de 14 dá margem a até 1 remoção manual sem desencadear regeneração.
- */
-public static function feriadosDoAnoJaExistem(int $ano): bool {
+    /**
+     * Verifica se os feriados de um ano já foram gerados automaticamente,
+     * para evitar a regeneração completa a cada carregamento da ementa.
+     * O limiar de 14 dá margem a até 1 remoção manual sem desencadear regeneração.
+     */
+    public static function feriadosDoAnoJaExistem(int $ano): bool {
     $stmt = self::conexao()->prepare("SELECT COUNT(*) FROM restaurante_feriado WHERE YEAR(RF_DATA) = ?");
     $stmt->execute([$ano]);
     return (int) $stmt->fetchColumn() >= 14;

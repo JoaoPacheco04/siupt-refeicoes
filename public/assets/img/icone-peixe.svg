@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#1e88e5">
+    <!-- Sardinha (fina e alongada) num só caminho contínuo -->
+    <path d="M 22,12 
+             Q 12,5 5,10 
+             L 1,7 
+             Q 3,12 1,17 
+             L 5,14 
+             Q 12,19 22,12 Z" />
+    <!-- Olho -->
+    <circle cx="17" cy="11" r="1.2" fill="#fff" />
+</svg>

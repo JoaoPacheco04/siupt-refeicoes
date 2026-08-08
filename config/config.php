@@ -60,3 +60,29 @@ define('DB_PASS', getenv('DB_PASS') ?: '');
  * seja instalada numa localização diferente.
  */
 define('APP_BASE_URL', getenv('APP_BASE_URL') ?: '/siupt-refeicoes/public');
+
+// ==========================================
+// FUSO HORÁRIO
+// ==========================================
+
+/**
+ * Define explicitamente o fuso horário para Europe/Lisbon.
+ * Sem isto, date() e new DateTime() usam o fuso do php.ini do servidor,
+ * que pode não estar configurado para Portugal em produção — causando
+ * erros silenciosos nos cálculos de prazos de compra.
+ */
+date_default_timezone_set('Europe/Lisbon');
+
+// ==========================================
+// PRAZOS DE EXTRAS
+// ==========================================
+
+/**
+ * Hora limite de compra de extras para o próprio dia (formato HH:MM:SS).
+ * Usada em Database::extraForaDeHorarioHoje() para bloquear compras tardias.
+ *
+ * NOTA: Se esta constante não estiver definida, a função retorna sempre false
+ * (extras sempre disponíveis), sem dar qualquer erro. Por isso é definida aqui
+ * com um valor explícito, em vez de depender de uma definição externa silenciosa.
+ */
+define('EXTRA_HORA_LIMITE_HOJE', getenv('EXTRA_HORA_LIMITE') ?: '10:00:00');

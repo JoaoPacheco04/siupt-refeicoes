@@ -1,0 +1,183 @@
+/* ======================================================================
+   gerir-atendentes.css — Estilos para a página de gestão de papéis
+   de cantina (atendente / administrador).
+   ====================================================================== */
+
+/* ── Área de pesquisa ─────────────────────────────────────────────────── */
+.pesquisa-wrapper {
+    position: relative;
+}
+
+.pesquisa-resultados {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    z-index: 200;
+    max-height: 320px;
+    overflow-y: auto;
+}
+
+.pesquisa-resultados:empty {
+    display: none;
+}
+
+/* Cada linha de resultado de pesquisa */
+.resultado-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.12s ease;
+}
+
+.resultado-item:last-child {
+    border-bottom: none;
+}
+
+.resultado-item:hover {
+    background-color: #f5f7ff;
+}
+
+/* Avatar com inicial do nome */
+.resultado-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #4e73df;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}
+
+.resultado-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.resultado-nome {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #212529;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.resultado-bicc {
+    font-size: 0.78rem;
+    color: #6c757d;
+}
+
+.resultado-papeis-atuais {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+}
+
+/* ── Tabela de utilizadores com papéis ───────────────────────────────── */
+.table-actions {
+    width: 1%;
+    white-space: nowrap;
+}
+
+/* Avatar na tabela */
+.perfil-avatar-sm {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #4e73df;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+/* Linha de nome + avatar */
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-nome {
+    font-weight: 600;
+    line-height: 1.2;
+    font-size: 0.9rem;
+}
+
+.user-bicc {
+    font-size: 0.78rem;
+    color: #6c757d;
+}
+
+/* Badges de papel */
+.badge-atendente {
+    background-color: #0d6efd;
+    color: #fff;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.badge-admin {
+    background-color: #198754;
+    color: #fff;
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+/* Botões de ação inline */
+.btn-papel {
+    padding: 3px 9px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    border: 1px solid currentColor;
+    cursor: pointer;
+    background: transparent;
+    transition: background-color 0.15s ease, color 0.15s ease;
+    white-space: nowrap;
+}
+
+.btn-papel-add {
+    color: #0d6efd;
+}
+
+.btn-papel-add:hover {
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.btn-papel-remove {
+    color: #dc3545;
+}
+
+.btn-papel-remove:hover {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+/* ── Secção de pesquisa + atribuição ─────────────────────────────────── */
+.painel-pesquisa {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 24px;
+}

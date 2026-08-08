@@ -7,8 +7,7 @@
  * consultar e exportar as validações realizadas no dia.
  */
 
-session_start();
-
+// Auth.php inicia a sessão internamente se ainda não estiver ativa.
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
@@ -60,6 +59,10 @@ $listaValidacoes = $vejoTudo
 
     <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados e dias especiais">
         <i class="bi bi-calendar-x"></i>
+    </a>
+
+    <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
+        <i class="bi bi-people"></i>
     </a>
 
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">

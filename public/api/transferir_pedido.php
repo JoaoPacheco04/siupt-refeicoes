@@ -1,4 +1,21 @@
 <?php
+/**
+ * Endpoint: Transferir pedido
+ *
+ * Permite a um aluno transferir um dos seus pedidos de refeição para outro utilizador.
+ * O destinatário não pode ter já um pedido ativo no mesmo dia.
+ * Requer papel aluno.
+ *
+ * Parâmetros POST:
+ *  - pedido_id     int     Identificador do pedido a transferir
+ *  - bicc_destino  string  BI/CC do destinatário
+ *
+ * Resposta JSON:
+ *  { "status": "ok" }
+ *  { "status": "erro", "mensagem": string }
+ *
+ * @package siupt_refeicoes
+ */
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 

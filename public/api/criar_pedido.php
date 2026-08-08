@@ -61,7 +61,7 @@ foreach ($itens as $item) {
 $mensagens = [
     'sem_itens'                         => 'Nenhum item selecionado.',
     'data_no_passado'                   => 'Não é possível criar pedidos para datas passadas.',
-    'dia_feriado'                       => 'Não é possível comprar pratos da ementa em dias feriados.',
+    'dia_feriado'                       => 'A cantina está encerrada por motivo de feriado.',
     'fora_de_prazo'                     => 'O prazo de compra para este dia já terminou.',
     'pedido_duplicado'                  => 'Já tens um pedido ativo para este dia.',
     'dia_encerrado'                     => 'A cantina está encerrada neste dia.',

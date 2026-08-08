@@ -8,7 +8,7 @@
  * e avaliações por prato (filtradas pelo mês selecionado).
  */
 
-session_start();
+// Auth.php inicia a sessão internamente se ainda não estiver ativa.
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 require_once __DIR__ . '/../src/Support/Assets.php';

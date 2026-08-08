@@ -354,16 +354,18 @@ GO
 
 -- =========================================================================
 -- 13. MIGRAÇÃO — tabela restaurante_papel_utilizador
+-- Controlo de papéis adicionais da cantina (Atendente e Administrador)
 -- Atribui papéis de gestão da cantina a utilizadores específicos.
 -- Um utilizador pode ter 'atendente', 'admin_cantina' ou ambos.
 -- Alunos e colaboradores que apenas compram NÃO têm entradas aqui.
 -- =========================================================================
 
 CREATE TABLE restaurante_papel_utilizador (
-    RPU_ID    INT IDENTITY(1,1) PRIMARY KEY,
-    RPU_U_ID  INT NOT NULL REFERENCES users(U_ID),
-    RPU_PAPEL VARCHAR(20) NOT NULL,  -- 'atendente' | 'admin_cantina'
-    UNIQUE (RPU_U_ID, RPU_PAPEL)
+    RPU_ID     INT IDENTITY(1,1) PRIMARY KEY,
+    RPU_U_ID   INT NOT NULL REFERENCES users(U_ID),
+    RPU_PAPEL  VARCHAR(50) NOT NULL,
+    RPU_DATA   DATETIME NOT NULL DEFAULT GETDATE(),
+    CONSTRAINT UQ_Papel_Utilizador UNIQUE (RPU_U_ID, RPU_PAPEL)
 );
 GO
 
@@ -448,4 +450,6 @@ GO
 -- INSERT INTO restaurante_feriado_geracao (RFG_ANO)
 -- SELECT DISTINCT YEAR(RF_DATA) FROM restaurante_feriado
 -- WHERE YEAR(RF_DATA) NOT IN (SELECT RFG_ANO FROM restaurante_feriado_geracao);
+
+
 

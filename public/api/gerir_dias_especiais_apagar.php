@@ -1,4 +1,20 @@
 <?php
+/**
+ * Endpoint: Apagar dia especial
+ *
+ * Remove um registo de dia especial da tabela restaurante_dia_especial.
+ * Requer papel admin_cantina.
+ *
+ * Parâmetros POST:
+ *  - id  int  Identificador do dia especial (obrigatório)
+ *
+ * Resposta JSON:
+ *  { "status": "ok" }
+ *  { "status": "erro", "mensagem": string }
+ *
+ * @package siupt_refeicoes
+ */
+
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
@@ -8,11 +24,11 @@ verificarCsrfToken(true);
 
 $id = (int) ($_POST['id'] ?? 0);
 if ($id <= 0) {
-    echo json_encode(['status' => 'erro', 'mensagem' => 'Dados invalidos.']);
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Dados inválidos.']);
     exit;
 }
 
 $ok = Database::apagarDiaEspecial($id);
 echo json_encode($ok
     ? ['status' => 'ok']
-    : ['status' => 'erro', 'mensagem' => 'Dia especial nao encontrado.']);
+    : ['status' => 'erro', 'mensagem' => 'Dia especial não encontrado.']);

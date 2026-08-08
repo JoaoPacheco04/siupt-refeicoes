@@ -1,4 +1,24 @@
 <?php
+/**
+ * Página de gestão de feriados e dias especiais.
+ *
+ * Permite ao administrador da cantina (admin_cantina):
+ *  - Gerar automaticamente os feriados nacionais + móveis para um dado ano
+ *    (via Database::gerarTodosFeriadosDoAno, que usa easter_date() para os móveis)
+ *  - Adicionar feriados manualmente (legislação nova ou suspensão de um feriado)
+ *  - Remover feriados existentes
+ *  - Registar dias especiais (encerramentos por férias, greve ou evento interno),
+ *    com controlo individual sobre se os pratos extra continuam disponíveis nesses dias
+ *
+ * Distinção importante:
+ *  - Feriado (restaurante_feriado): data simbólica/legal — bloqueia a compra
+ *    tanto de pratos da ementa como de pratos extra (cantina totalmente encerrada).
+ *  - Dia especial (restaurante_dia_especial): encerramento operacional por outro motivo — pode
+ *    bloquear também os extras (RDE_PERMITE_EXTRAS = 0) ou permitir apenas extras (RDE_PERMITE_EXTRAS = 1).
+ *
+ * Requer papel: admin_cantina
+ */
+
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';

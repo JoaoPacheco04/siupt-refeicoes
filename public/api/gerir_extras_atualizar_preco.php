@@ -1,10 +1,22 @@
 <?php
 /**
- * Endpoint AJAX para atualizaÃ§Ã£o do preÃ§o de um tipo de refeiÃ§Ã£o.
+ * Endpoint: Atualizar preço de extra
  *
- * Recebe o identificador do tipo de refeiÃ§Ã£o e o novo preÃ§o,
+ * Endpoint AJAX para atualização do preço de um tipo de refeição.
+ * Recebe o identificador do tipo de refeição e o novo preço,
  * atualizando o respetivo valor e devolvendo uma resposta
  * em formato JSON.
+ * Requer papel admin_cantina.
+ *
+ * Parâmetros POST:
+ *  - tipo_id int    Identificador do tipo de refeição (Extra)
+ *  - preco   float  Novo preço
+ *
+ * Resposta JSON:
+ *  { "status": "ok" }
+ *  { "status": "erro", "mensagem": string }
+ *
+ * @package siupt_refeicoes
  */
 
 require_once __DIR__ . '/../../src/Support/Auth.php';
@@ -26,7 +38,7 @@ if (
 ) {
     echo json_encode([
         'status' => 'erro',
-        'mensagem' => 'Dados invÃ¡lidos'
+        'mensagem' => 'Dados inválidos'
     ]);
     exit;
 }

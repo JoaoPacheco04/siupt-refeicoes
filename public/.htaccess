@@ -2,14 +2,44 @@
 # SIUPT Refeições — .htaccess (public/)
 # ============================================================
 
-# Páginas de erro personalizadas
-# Redireciona erros HTTP para erro.php com o código na query string
+# ── Páginas de erro personalizadas ──────────────────────────
+# NOTA PARA INTEGRAÇÃO: se o módulo for montado numa subpasta diferente
+# de /siupt-refeicoes/public/ (ex: /siupt/refeicoes/public/),
+# basta alterar o prefixo das três linhas abaixo para o caminho real.
+# Em produção, se o módulo ficar na raiz do domínio, usar apenas /erro.php?codigo=XXX
 ErrorDocument 404 /siupt-refeicoes/public/erro.php?codigo=404
 ErrorDocument 403 /siupt-refeicoes/public/erro.php?codigo=403
 ErrorDocument 500 /siupt-refeicoes/public/erro.php?codigo=500
 
+# ── Segurança ────────────────────────────────────────────────
+
 # Impede listagem de diretórios
 Options -Indexes
+
+# Bloqueia acesso direto ao ficheiro de configuração de ambiente
+<Files ".env">
+    Require all denied
+</Files>
+
+# Bloqueia acesso ao ficheiro de configuração do PHPUnit (só dev)
+<Files "phpunit.xml">
+    Require all denied
+</Files>
+
+# ── Cabeçalhos de segurança HTTP ────────────────────────────
+# Requer mod_headers ativo no Apache (ativo por defeito no Laragon e na maioria dos ambientes).
+# NOTA PARA INTEGRAÇÃO: estes cabeçalhos devem ser mantidos ou replicados
+# no servidor de produção da UPT (Apache, Nginx ou IIS).
+<IfModule mod_headers.c>
+    # Impede que a aplicação seja carregada dentro de um iframe noutro domínio (clickjacking)
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # Impede que o browser interprete ficheiros com um tipo MIME diferente do declarado
+    Header always set X-Content-Type-Options "nosniff"
+
+    # Controla a informação de origem enviada em pedidos cross-origin
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
 
 # Força codificação UTF-8 nos conteúdos de texto
 AddDefaultCharset UTF-8

@@ -63,6 +63,11 @@ if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $segunda->modify('+7 days');
     $sexta->modify('+7 days');
     $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+    // Recarregar variáveis que dependem do período da semana
+    $datasComEmenta = Database::listarDatasComEmentaConfigurada($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+    $diasEspeciaisNaSemana = Database::listarDiasEspeciaisNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+    $feriadosNaSemana = Database::listarFeriadosNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+    
     // Recarregar limites para a nova semana (tipos podem ser diferentes)
     $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
     $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
@@ -70,9 +75,9 @@ if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
 
 // Configuração dos ícones para cada tipo de prato principal.
 $iconePrato = [
-    'Carne'       => '🥩',
-    'Peixe'       => '🐟',
-    'Vegetariano' => '🌿',
+    'Carne'       => '<img src="assets/img/icone-carne.svg" alt="Carne" style="width: 28px; height: 28px; object-fit: contain;">',
+    'Peixe'       => '<img src="assets/img/icone-peixe.svg" alt="Peixe" style="width: 28px; height: 28px; object-fit: contain;">',
+    'Vegetariano' => '<img src="assets/img/icone-vegetariano.svg" alt="Vegetariano" style="width: 28px; height: 28px; object-fit: contain;">',
 ];
 
 // Carrega os pratos extras, o ID do tipo "Menu Completo" e o texto do prazo.
@@ -155,11 +160,23 @@ while (count($diasUteisExtras) < 5) {
 $primeiroDiaExtras = reset($diasUteisExtras);
 $ultimoDiaExtras = end($diasUteisExtras);
 $diasEspeciaisExtras = Database::listarDiasEspeciaisNoPeriodo($primeiroDiaExtras, $ultimoDiaExtras);
+$feriadosExtras = Database::listarFeriadosNoPeriodo($primeiroDiaExtras, $ultimoDiaExtras);
+$datasEmentaExtras = Database::listarDatasComEmentaConfigurada($primeiroDiaExtras, $ultimoDiaExtras);
 
-$diasUteisExtras = array_values(array_filter($diasUteisExtras, function ($d) use ($diasEspeciaisExtras) {
+$diasUteisExtras = array_values(array_filter($diasUteisExtras, function ($d) use ($diasEspeciaisExtras, $feriadosExtras, $datasEmentaExtras) {
+    if (isset($feriadosExtras[$d])) {
+        return false; // Feriado bloqueia extras
+    }
+    
+    $temEmenta = in_array($d, $datasEmentaExtras, true);
     $de = $diasEspeciaisExtras[$d] ?? null;
-    // Exclui só quando há encerramento explícito sem extras permitidos
-    return !($de !== null && !(bool) $de['RDE_PERMITE_EXTRAS']);
+    
+    if ($temEmenta) {
+        return true;
+    } else {
+        // Sem ementa: o extra só é permitido se houver autorização explícita (Dia Especial)
+        return $de !== null && (bool) $de['RDE_PERMITE_EXTRAS'];
+    }
 }));
 
 // Verifica quais itens extra o utilizador já comprou para os dias disponíveis.
@@ -341,14 +358,11 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     <?php $diaEspecial = $diasEspeciaisNaSemana[$data] ?? null; ?>
     <?php $temEmenta   = in_array($data, $datasComEmenta, true); ?>
     <?php
-        // ENCERRADO: só quando há uma marcação explícita em dias_especial com RDE_PERMITE_EXTRAS = 0.
-        // Sem ementa e sem marcação = extras disponíveis por defeito.
-        $ehEncerradoExplicito = !$ehFeriado && !$temEmenta
-            && $diaEspecial !== null && !(bool) $diaEspecial['RDE_PERMITE_EXTRAS'];
+        // ENCERRADO: Feriado ou (Sem Ementa E Sem Autorização Explícita de Extras)
+        $ehEncerradoExplicito = $ehFeriado || (!$temEmenta && (!$diaEspecial || !(bool) $diaEspecial['RDE_PERMITE_EXTRAS']));
 
-        // SÓ EXTRAS: sem ementa, marcado como "permite_extras = 1" ou sem qualquer marcação
-        // (a condição "só extras" é visual — indica que não há menu do dia mas extras estão livres)
-        $apenasExtras = !$ehFeriado && !$temEmenta && !$ehEncerradoExplicito;
+        // SÓ EXTRAS: Sem Ementa MAS com Autorização Explícita
+        $apenasExtras = !$ehFeriado && !$temEmenta && $diaEspecial && (bool) $diaEspecial['RDE_PERMITE_EXTRAS'];
     ?>
     <div class="dia-card<?= $diaBloqueado ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?><?= $ehFeriado ? ' dia-feriado' : '' ?><?= $ehEncerradoExplicito ? ' dia-encerrado' : '' ?><?= $apenasExtras ? ' dia-apenas-extras' : '' ?>" data-data="<?= $data ?>">
         <div class="dia-card-header">
@@ -358,8 +372,8 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
             <span class="dia-feriado-badge"><i class="bi bi-calendar-x"></i> <?= htmlspecialchars($feriadosNaSemana[$data]) ?></span>
             <?php elseif ($ehEncerradoExplicito): ?>
             <span class="dia-encerrado-badge"><i class="bi bi-door-closed"></i> encerrado<?= $diaEspecial && $diaEspecial['RDE_MOTIVO'] ? ' — ' . htmlspecialchars($diaEspecial['RDE_MOTIVO']) : '' ?></span>
-            <?php elseif ($apenasExtras && $diaEspecial && $diaEspecial['RDE_MOTIVO']): ?>
-            <span class="dia-encerrado-badge" style="background:var(--cor-aviso,#f59e0b);color:#fff;"><i class="bi bi-bag"></i> só extras — <?= htmlspecialchars($diaEspecial['RDE_MOTIVO']) ?></span>
+            <?php elseif ($apenasExtras): ?>
+            <span class="dia-encerrado-badge so-extras"><i class="bi bi-bag"></i> só extras<?= $diaEspecial && $diaEspecial['RDE_MOTIVO'] ? ' — ' . htmlspecialchars($diaEspecial['RDE_MOTIVO']) : '' ?></span>
             <?php elseif ($diaBloqueado): ?>
             <span class="dia-passado-badge">fora de prazo</span>
             <?php elseif ($jaComprado): ?>

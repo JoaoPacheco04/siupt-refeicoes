@@ -1,8 +1,25 @@
 <?php
+/**
+ * Endpoint: Gerar feriados móveis
+ *
+ * Gera automaticamente os feriados de um ano (fixos nacionais,
+ * feriado municipal do Porto e móveis dependentes da Páscoa).
+ * Não duplica datas já existentes. Requer papel admin_cantina.
+ *
+ * Parâmetros POST:
+ *  - ano  int  Ano a gerar (aceita ±2 anos do atual até +5)
+ *
+ * Resposta JSON:
+ *  { "status": "ok", "mensagem": string, "inseridos": int, "ja_existiam": int }
+ *  { "status": "erro", "mensagem": string }
+ *
+ * @package siupt_refeicoes
+ */
+
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 $utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
 
@@ -12,7 +29,7 @@ if ($ano < date('Y') - 2 || $ano > date('Y') + 5) {
     exit;
 }
 
-$resultado = Database::gerarTodosFeriadosDoAno($ano);
+$resultado  = Database::gerarTodosFeriadosDoAno($ano);
 $inseridos  = $resultado['inseridos'];
 $jaExistiam = $resultado['ja_existiam'];
 
@@ -25,8 +42,8 @@ if ($inseridos === 0) {
 }
 
 echo json_encode([
-    'status'     => 'ok',
-    'mensagem'   => $mensagem,
-    'inseridos'  => $inseridos,
+    'status'      => 'ok',
+    'mensagem'    => $mensagem,
+    'inseridos'   => $inseridos,
     'ja_existiam' => $jaExistiam,
-]);
+]);
