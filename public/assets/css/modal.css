@@ -4,12 +4,7 @@
 
 .tingle-modal-box {
     border-radius: 12px;
-    overflow: hidden;
     box-shadow: 0 16px 60px rgba(0, 0, 0, 0.2);
-}
-
-.tingle-modal-box__content {
-    padding: 1.75rem 1.75rem 0.5rem;
 }
 
 /* ======================================================================
@@ -21,6 +16,7 @@
     align-items: center;
     gap: 0.65rem;
     margin-bottom: 1rem;
+    flex-shrink: 0;
 }
 
 /* ── Ícones do cabeçalho ───────────────────────── */
@@ -107,6 +103,7 @@
     padding: 0.85rem 1.75rem;
     border-top: 1px solid #f3f4f6;
     background: #fafafa;
+    flex-shrink: 0;
 }
 
 .tingle-btn {
@@ -161,15 +158,19 @@
 }
 
 /* ======================================================================
-   Modal não deve ultrapassar a altura da janela
+   MODAL: NÃO ULTRAPASSAR A ALTURA DA JANELA, COM SCROLL INTERNO
    ====================================================================== */
 
 .tingle-modal {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
     padding: 1.5rem 0 !important;
-    overflow-y: auto !important;
 }
 
 .tingle-modal-box {
@@ -179,9 +180,20 @@
     max-height: calc(100vh - 3rem);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .tingle-modal-box__content {
     overflow-y: auto;
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 1.75rem 1.75rem 0.5rem;
+}
+
+/* ======================================================================
+   BLOQUEIO DE SCROLL DO BODY QUANDO UM MODAL TINGLE ESTÁ ABERTO
+   ====================================================================== */
+
+body.tingle-enabled {
+    overflow: hidden;
 }

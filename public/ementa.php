@@ -14,7 +14,6 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 // Garante que apenas utilizadores autenticados podem aceder.
 // IMPORTANTE: autenticar primeiro — a geração de feriados só deve
-// correr para utilizadores legítimos (evita queries desnecessárias).
 $utilizador = exigirLogin();
 
 // Verifica se os feriados do ano corrente já foram gerados e,

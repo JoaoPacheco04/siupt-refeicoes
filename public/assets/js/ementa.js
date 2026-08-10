@@ -75,8 +75,6 @@ document.querySelectorAll('.radio-prato-principal').forEach(radio => {
                 // Remove também todos os componentes adicionais
                 card.querySelectorAll('.checkbox-componente').forEach(c => c.checked = false);
 
-                // MELHORIA 4: atualiza a visibilidade do hint e dos componentes
-                // (sem esta chamada, o hint ficava oculto e os componentes visíveis
                 //  mesmo após desmarcar o prato)
                 syncComponentesVisibility(card);
             }
@@ -85,7 +83,6 @@ document.querySelectorAll('.radio-prato-principal').forEach(radio => {
         } else {
             ultimoSelecionado[grupo] = this;
 
-            // MELHORIA 4: garante que o hint desaparece e os componentes aparecem
             // quando um prato é selecionado pela primeira vez (ex: ao mudar de radio)
             const card = this.closest('.dia-card');
             if (card) syncComponentesVisibility(card);
@@ -362,7 +359,7 @@ btnComprar.addEventListener('click', () => {
    CRIAÇÃO DOS PEDIDOS
    ====================================================================== */
 
-// ── Overlay de loading (D3) ─────────────────────────────────────────────
+// ── Overlay de loading─────────────────────────────────────────────
 const loadingOverlay = document.createElement('div');
 loadingOverlay.id = 'loadingOverlay';
 loadingOverlay.innerHTML = `

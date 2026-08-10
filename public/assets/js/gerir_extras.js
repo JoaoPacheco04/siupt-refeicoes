@@ -198,7 +198,6 @@ document.querySelectorAll('.btn-apagar-extra').forEach(btn => {
         const rmId = item.dataset.rmId;
         const nome = item.querySelector('.extra-nome').textContent.trim();
 
-        // B9 FIX: modal tingle em vez de confirm() nativo
         const modalConfirm = new tingle.modal({
             footer: true,
             closeMethods: ['overlay', 'button', 'escape'],
