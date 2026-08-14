@@ -64,6 +64,10 @@ $extras = Database::listarDetalhesExtrasParaGestao();
         <i class="bi bi-calendar-x"></i>
     </a>
 
+    <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
+        <i class="bi bi-people"></i>
+    </a>
+
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>
@@ -259,7 +263,7 @@ window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 
 <!-- JavaScript específico da gestão de extras -->
-<script src="<?= assetUrl('assets/js/gerir_extras.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/gerir_extras.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/gerir_extras.js') ?>"></script>
 
 </body>
 </html>

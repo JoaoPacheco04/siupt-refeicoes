@@ -1,22 +1,86 @@
 /* ======================================================================
    gerir-atendentes.css — Estilos para a página de gestão de papéis
-   de cantina (atendente / administrador).
+   de cantina. Segue o padrão visual das outras páginas admin.
    ====================================================================== */
 
-/* ── Área de pesquisa ─────────────────────────────────────────────────── */
+/* ── Estrutura principal ────────────────────────────────────────────── */
+.gerir-atendentes-main {
+    background: transparent;
+    min-height: calc(100vh - 36px);
+    padding: 1.5rem 1.5rem 2rem;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.gerir-atendentes-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.25rem 0;
+}
+
+.gerir-atendentes-subtitulo {
+    font-size: 0.85rem;
+    color: #8a99ad;
+    margin: 0 0 1.5rem 0;
+}
+
+/* ── Painel de pesquisa ─────────────────────────────────────────────── */
+.painel-pesquisa {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 14px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 31, 56, 0.06);
+}
+
+.painel-pesquisa-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
 .pesquisa-wrapper {
     position: relative;
 }
 
+/* ── Input de pesquisa ──────────────────────────────────────────────── */
+.pesquisa-input {
+    width: 100%;
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.875rem;
+    color: #1e2a3b;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: #fff;
+    box-sizing: border-box;
+}
+
+.pesquisa-input:focus {
+    border-color: #73c5d8;
+    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
+}
+
+/* ── Dropdown de resultados ─────────────────────────────────────────── */
 .pesquisa-resultados {
     position: absolute;
     top: calc(100% + 4px);
     left: 0;
     right: 0;
     background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0,0,0,.12);
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    box-shadow: 0 6px 20px rgba(15, 31, 56, 0.12);
     z-index: 200;
     max-height: 320px;
     overflow-y: auto;
@@ -26,14 +90,14 @@
     display: none;
 }
 
-/* Cada linha de resultado de pesquisa */
+/* ── Cada resultado da pesquisa ─────────────────────────────────────── */
 .resultado-item {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 10px 14px;
     cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #f0f2f5;
     transition: background-color 0.12s ease;
 }
 
@@ -42,15 +106,15 @@
 }
 
 .resultado-item:hover {
-    background-color: #f5f7ff;
+    background-color: #f4f6f9;
 }
 
-/* Avatar com inicial do nome */
+/* ── Avatar nos resultados ──────────────────────────────────────────── */
 .resultado-avatar {
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: #4e73df;
+    background: linear-gradient(135deg, #5a6ac9, #7e8fe0);
     color: #fff;
     display: flex;
     align-items: center;
@@ -68,7 +132,7 @@
 .resultado-nome {
     font-weight: 600;
     font-size: 0.9rem;
-    color: #212529;
+    color: #1e2a3b;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -76,7 +140,7 @@
 
 .resultado-bicc {
     font-size: 0.78rem;
-    color: #6c757d;
+    color: #8a99ad;
 }
 
 .resultado-papeis-atuais {
@@ -85,18 +149,27 @@
     flex-wrap: wrap;
 }
 
-/* ── Tabela de utilizadores com papéis ───────────────────────────────── */
-.table-actions {
-    width: 1%;
-    white-space: nowrap;
+/* ── Painel de atribuição (após selecionar utilizador) ──────────────── */
+.painel-atribuicao {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #f0f2f5;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
 }
 
-/* Avatar na tabela */
+.painel-atribuicao-oculto {
+    display: none;
+}
+
+/* ── Avatar no painel de atribuição ────────────────────────────────── */
 .perfil-avatar-sm {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
-    background: #4e73df;
+    background: linear-gradient(135deg, #5a6ac9, #7e8fe0);
     color: #fff;
     display: inline-flex;
     align-items: center;
@@ -106,7 +179,7 @@
     flex-shrink: 0;
 }
 
-/* Linha de nome + avatar */
+/* ── Dados do utilizador selecionado ────────────────────────────────── */
 .user-cell {
     display: flex;
     align-items: center;
@@ -115,69 +188,261 @@
 
 .user-nome {
     font-weight: 600;
-    line-height: 1.2;
     font-size: 0.9rem;
+    color: #1e2a3b;
+    line-height: 1.2;
 }
 
 .user-bicc {
     font-size: 0.78rem;
-    color: #6c757d;
+    color: #8a99ad;
 }
 
-/* Badges de papel */
-.badge-atendente {
-    background-color: #0d6efd;
+/* ── Botões de atribuição ───────────────────────────────────────────── */
+.btn-atribuir-grupo {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+.btn-atribuir {
+    background: none;
+    border: 1.5px solid #1a3a63;
+    border-radius: 8px;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #1a3a63;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: background 0.15s, color 0.15s;
+}
+
+.btn-atribuir:hover:not(:disabled) {
+    background: #1a3a63;
     color: #fff;
+}
+
+.btn-atribuir--admin {
+    border-color: #27ae60;
+    color: #27ae60;
+}
+
+.btn-atribuir--admin:hover:not(:disabled) {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-atribuir:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Papéis atuais do utilizador ────────────────────────────────────── */
+.papeis-atuais-linha {
+    width: 100%;
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+    font-size: 0.78rem;
+    color: #8a99ad;
+}
+
+/* ── Título da tabela ───────────────────────────────────────────────── */
+.atendentes-lista-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.75rem 0;
+}
+
+/* ── Tabela de utilizadores com papéis ─────────────────────────────── */
+.atendentes-tabela {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.atendentes-tabela table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.atendentes-tabela thead tr {
+    background: #f4f6f9;
+}
+
+.atendentes-tabela th {
+    padding: 0.65rem 1.1rem;
     font-size: 0.72rem;
-    padding: 3px 8px;
+    font-weight: 700;
+    color: #6a7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    border-bottom: 1px solid #e5e9ef;
+}
+
+.atendentes-tabela td {
+    padding: 0.75rem 1.1rem;
+    border-bottom: 1px solid #f0f2f5;
+    color: #1e2a3b;
+    vertical-align: middle;
+}
+
+.atendentes-tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.atendentes-tabela tbody tr:hover {
+    background: #f9fafb;
+}
+
+.atendentes-tabela .col-acoes {
+    width: 1%;
+    white-space: nowrap;
+    text-align: right;
+}
+
+/* ── Mensagem sem utilizadores ──────────────────────────────────────── */
+.atendentes-vazio {
+    text-align: center;
+    color: #8a99ad;
+    font-size: 0.85rem;
+    padding: 2rem;
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+}
+
+/* ── Badges de papel ────────────────────────────────────────────────── */
+.badge-atendente {
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.72rem;
+    padding: 2px 8px;
     border-radius: 20px;
-    font-weight: 600;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
 }
 
 .badge-admin {
-    background-color: #198754;
-    color: #fff;
+    background: #dcfce7;
+    color: #166534;
     font-size: 0.72rem;
-    padding: 3px 8px;
+    padding: 2px 8px;
     border-radius: 20px;
-    font-weight: 600;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
 }
 
-/* Botões de ação inline */
+/* ── Botões inline da tabela ────────────────────────────────────────── */
 .btn-papel {
-    padding: 3px 9px;
+    padding: 4px 10px;
     font-size: 0.75rem;
-    border-radius: 4px;
-    border: 1px solid currentColor;
+    border-radius: 6px;
+    border: 1.5px solid currentColor;
     cursor: pointer;
     background: transparent;
     transition: background-color 0.15s ease, color 0.15s ease;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .btn-papel-add {
-    color: #0d6efd;
+    color: #1a3a63;
 }
 
-.btn-papel-add:hover {
-    background-color: #0d6efd;
+.btn-papel-add:hover:not(:disabled) {
+    background-color: #1a3a63;
     color: #fff;
 }
 
 .btn-papel-remove {
-    color: #dc3545;
+    color: #dc2626;
 }
 
-.btn-papel-remove:hover {
-    background-color: #dc3545;
+.btn-papel-remove:hover:not(:disabled) {
+    background-color: #dc2626;
     color: #fff;
 }
 
-/* ── Secção de pesquisa + atribuição ─────────────────────────────────── */
-.painel-pesquisa {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 24px;
+.btn-papel:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Toast de feedback ──────────────────────────────────────────────── */
+.atendentes-toast {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.1rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.atendentes-toast--success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.atendentes-toast--warning {
+    background: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #fde68a;
+}
+
+.atendentes-toast--danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.atendentes-toast-fechar {
+    background: none;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.7;
+    flex-shrink: 0;
+}
+
+.atendentes-toast-fechar:hover {
+    opacity: 1;
+}
+
+/* ── Responsivo ─────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .gerir-atendentes-main {
+        padding: 1rem 0.75rem;
+    }
+
+    .painel-atribuicao {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .btn-atribuir-grupo {
+        margin-left: 0;
+    }
 }

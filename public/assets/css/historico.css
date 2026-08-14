@@ -438,10 +438,27 @@
     border-radius: 6px;
     color: #1d4ed8;
     cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
 }
 
-.btn-transferir:hover {
+.btn-transferir:hover:not(:disabled) {
     background: #eff6ff;
+}
+
+.btn-transferir:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    border-color: #bfdbfe;
+}
+
+/* Spinner para o ícone de loading */
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+    display: inline-block;
+    animation: spin 0.7s linear infinite;
 }
 
 .avaliacao-motivo-wrap {

@@ -25,7 +25,7 @@ $motivos = Database::listarTodosMotivosReclamacao();
     <link href="assets/css/base.css" rel="stylesheet">
     <link href="assets/css/navbar.css" rel="stylesheet">
     <link href="assets/css/modal.css" rel="stylesheet">
-    <link href="<?= assetUrl('assets/css/gerir-extras.css') ?>" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/gerir-motivos.css') ?>" rel="stylesheet">
 </head>
 <body>
 
@@ -50,6 +50,10 @@ $motivos = Database::listarTodosMotivosReclamacao();
 
     <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados">
         <i class="bi bi-calendar-x"></i>
+    </a>
+
+    <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
+        <i class="bi bi-people"></i>
     </a>
 
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">

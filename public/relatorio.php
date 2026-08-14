@@ -137,6 +137,9 @@ foreach ($vendasDiarias as $d) {
     <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados e dias especiais">
         <i class="bi bi-calendar-x"></i>
     </a>
+    <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
+        <i class="bi bi-people"></i>
+    </a>
     <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>

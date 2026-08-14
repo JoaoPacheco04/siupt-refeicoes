@@ -348,7 +348,7 @@ window.MOTIVOS_RECLAMACAO = <?= json_encode($motivosDisponiveis) ?>;
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 <script src="assets/js/vendor/qrcode.min.js"></script>
 <script src="assets/js/utils.js"></script>
-<script src="<?= assetUrl('assets/js/historico.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/historico.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/historico.js') ?>"></script>
 
 </body>
 </html>

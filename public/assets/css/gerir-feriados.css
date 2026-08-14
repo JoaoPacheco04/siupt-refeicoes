@@ -1,34 +1,333 @@
 /* ======================================================================
-   gerir-feriados.css — Estilos para as páginas de gestão de feriados
-   e dias especiais.
+   gerir-feriados.css — Estilos para a página de gestão de feriados
+   e dias especiais. Segue o padrão visual das outras páginas admin.
    ====================================================================== */
 
-/* Coluna de ações nas tabelas — largura mínima para não ocupar espaço
-   desnecessário e alinhar os botões de apagar à direita. */
-.table-actions {
+/* ── Estrutura principal ────────────────────────────────────────────── */
+.gerir-feriados-main {
+    background: transparent;
+    min-height: calc(100vh - 36px);
+    padding: 1.5rem 1.5rem 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.gerir-feriados-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.25rem 0;
+}
+
+.gerir-feriados-subtitulo {
+    font-size: 0.85rem;
+    color: #8a99ad;
+    margin: 0 0 1.5rem 0;
+}
+
+/* ── Secção título ──────────────────────────────────────────────────── */
+.feriados-secao-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 1.75rem 0 0.75rem;
+}
+
+/* ── Cartão de formulário ───────────────────────────────────────────── */
+.feriados-card {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 31, 56, 0.06);
+    margin-bottom: 1.25rem;
+}
+
+.feriados-card-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.feriados-card p {
+    font-size: 0.84rem;
+    color: #6a7280;
+    margin-bottom: 1rem;
+}
+
+/* ── Formulários inline ─────────────────────────────────────────────── */
+.feriados-form-linha {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.feriados-form-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 120px;
+}
+
+.feriados-form-campo label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6a7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.feriados-form-campo input[type="text"],
+.feriados-form-campo input[type="date"],
+.feriados-form-campo input[type="number"] {
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.875rem;
+    color: #1e2a3b;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    background: #fff;
+}
+
+.feriados-form-campo input:focus {
+    border-color: #73c5d8;
+    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
+}
+
+/* ── Checkbox personalizada ─────────────────────────────────────────── */
+.feriados-check-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #1e2a3b;
+    cursor: pointer;
+    padding-top: 0.3rem;
+}
+
+.feriados-check-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #1a3a63;
+    cursor: pointer;
+}
+
+/* ── Botões de ação ─────────────────────────────────────────────────── */
+.btn-feriados-acao {
+    background: #1a3a63;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.15s, transform 0.1s;
+    align-self: flex-end;
+}
+
+.btn-feriados-acao:hover:not(:disabled) {
+    background: #142e52;
+    transform: translateY(-1px);
+}
+
+.btn-feriados-acao:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-feriados-acao--verde {
+    background: #27ae60;
+}
+
+.btn-feriados-acao--verde:hover:not(:disabled) {
+    background: #219a52;
+}
+
+/* ── Tabela de feriados ─────────────────────────────────────────────── */
+.feriados-tabela {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.feriados-tabela table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.feriados-tabela thead tr {
+    background: #f4f6f9;
+}
+
+.feriados-tabela th {
+    padding: 0.65rem 1.1rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #6a7280;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    border-bottom: 1px solid #e5e9ef;
+}
+
+.feriados-tabela td {
+    padding: 0.75rem 1.1rem;
+    border-bottom: 1px solid #f0f2f5;
+    color: #1e2a3b;
+    vertical-align: middle;
+}
+
+.feriados-tabela tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.feriados-tabela tbody tr:hover {
+    background: #f9fafb;
+}
+
+.feriados-tabela .col-acoes {
     width: 1%;
     white-space: nowrap;
+    text-align: right;
 }
 
-/* Botão de apagar nas tabelas de feriados e dias especiais. */
-.btn-apagar {
-    color: #dc3545;
+/* ── Mensagem vazia ─────────────────────────────────────────────────── */
+.feriados-vazio {
+    text-align: center;
+    color: #8a99ad;
+    font-size: 0.85rem;
+    padding: 1.5rem;
+}
+
+/* ── Botão apagar ───────────────────────────────────────────────────── */
+.btn-feriados-apagar {
+    background: none;
+    border: 1.5px solid #fca5a5;
+    border-radius: 6px;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-feriados-apagar:hover:not(:disabled) {
+    background: #fef2f2;
+    border-color: #dc2626;
+}
+
+.btn-feriados-apagar:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* ── Badge de estado dos extras ─────────────────────────────────────── */
+.badge-extras-sim {
+    background: #dcfce7;
+    color: #16a34a;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+.badge-extras-nao {
+    background: #f1f5f9;
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 20px;
+}
+
+/* ── Toast de feedback ──────────────────────────────────────────────── */
+.feriados-toast {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 1.1rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.feriados-toast--success {
+    background: #dcfce7;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+}
+
+.feriados-toast--warning {
+    background: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #fde68a;
+}
+
+.feriados-toast--danger {
+    background: #fee2e2;
+    color: #991b1b;
+    border: 1px solid #fca5a5;
+}
+
+.feriados-toast-fechar {
     background: none;
     border: none;
-    padding: 0.25rem 0.5rem;
+    font-size: 1.1rem;
     cursor: pointer;
-    border-radius: 4px;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    color: inherit;
+    opacity: 0.7;
+    flex-shrink: 0;
 }
 
-.btn-apagar:hover {
-    color: #fff;
-    background-color: #dc3545;
+.feriados-toast-fechar:hover {
+    opacity: 1;
 }
 
-/* Formulário de geração de feriados móveis — alinha em linha. */
-.form-gerar {
-    display: flex;
-    gap: 10px;
-    align-items: center;
+/* ── Divisor de secções ─────────────────────────────────────────────── */
+.feriados-divisor {
+    border: none;
+    border-top: 1px solid #e5e9ef;
+    margin: 2rem 0 1.5rem;
+}
+
+/* ── Responsivo ─────────────────────────────────────────────────────── */
+@media (max-width: 600px) {
+    .gerir-feriados-main {
+        padding: 1rem 0.75rem;
+    }
+
+    .feriados-form-linha {
+        flex-direction: column;
+    }
+
+    .btn-feriados-acao {
+        width: 100%;
+        justify-content: center;
+    }
 }

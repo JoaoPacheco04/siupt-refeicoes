@@ -1,0 +1,258 @@
+/* ======================================================================
+   gerir-motivos.css — Estilos para a página de gestão de motivos
+   de reclamação. Segue o mesmo padrão visual de gerir-extras.css.
+   ====================================================================== */
+
+/* ── Estrutura principal ────────────────────────────────────────────── */
+.gerir-extras-main {
+    background: transparent;
+    min-height: calc(100vh - 36px);
+    padding: 1.5rem 1.5rem 2rem;
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.gerir-extras-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.25rem 0;
+}
+
+.gerir-extras-subtitulo {
+    font-size: 0.85rem;
+    color: #8a99ad;
+    margin: 0 0 1.5rem 0;
+}
+
+/* ── Cartão de criação ──────────────────────────────────────────────── */
+.extras-card {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 31, 56, 0.06);
+    margin-bottom: 1.5rem;
+}
+
+.extras-card-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+/* ── Formulário ─────────────────────────────────────────────────────── */
+.form-novo-extra {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.form-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 140px;
+}
+
+.form-campo label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #6a7280;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.form-campo input,
+.form-campo select {
+    border: 1px solid #d1d8e0;
+    border-radius: 8px;
+    padding: 0.55rem 0.75rem;
+    font-size: 0.875rem;
+    color: #1e2a3b;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-campo input:focus,
+.form-campo select:focus {
+    border-color: #73c5d8;
+    box-shadow: 0 0 0 3px rgba(115, 197, 216, 0.18);
+}
+
+/* ── Botão criar ────────────────────────────────────────────────────── */
+.btn-criar-extra {
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    transition: background 0.15s, transform 0.1s;
+}
+
+.btn-criar-extra:hover:not(:disabled) {
+    background: #219a52;
+    transform: translateY(-1px);
+}
+
+.btn-criar-extra:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Lista de motivos existentes ────────────────────────────────────── */
+.extras-lista-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    margin: 0 0 0.75rem 0;
+}
+
+.extras-existentes {
+    background: #fff;
+    border: 1px solid #e5e9ef;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.extras-vazio {
+    text-align: center;
+    color: #8a99ad;
+    padding: 2.5rem 0;
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+/* ── Item individual ────────────────────────────────────────────────── */
+.extra-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.25rem;
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.extra-item:last-child {
+    border-bottom: none;
+}
+
+.extra-item.extra-inativo {
+    opacity: 0.55;
+}
+
+.extra-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.extra-nome {
+    font-weight: 600;
+    color: #1e2a3b;
+    font-size: 0.9rem;
+}
+
+.extra-tipo {
+    font-size: 0.74rem;
+    color: #8a99ad;
+}
+
+/* ── Botões de ação ─────────────────────────────────────────────────── */
+.btn-editar-extra {
+    background: none;
+    border: 1.5px solid #dee2e6;
+    border-radius: 6px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6a7280;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-editar-extra:hover {
+    border-color: #3a78b5;
+    color: #3a78b5;
+}
+
+.btn-apagar-extra {
+    background: none;
+    border: 1.5px solid #fca5a5;
+    border-radius: 6px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #dc2626;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-apagar-extra:hover {
+    background: #fef2f2;
+    border-color: #dc2626;
+}
+
+.btn-reativar-extra {
+    background: none;
+    border: 1.5px solid #86efac;
+    border-radius: 6px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #16a34a;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    flex-shrink: 0;
+}
+
+.btn-reativar-extra:hover {
+    background: #f0fdf4;
+    border-color: #16a34a;
+}
+
+.badge-inativo {
+    color: #dc2626;
+    font-weight: 600;
+}
+
+/* ── Responsivo ─────────────────────────────────────────────────────── */
+@media (max-width: 480px) {
+    .gerir-extras-main {
+        padding: 1rem 0.75rem;
+    }
+
+    .form-novo-extra {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-criar-extra {
+        justify-content: center;
+    }
+}

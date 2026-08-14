@@ -542,7 +542,16 @@ async function enviarAvaliacao(pedidoId, estrelas, motivo, modal) {
 
 document.querySelectorAll('.btn-transferir').forEach(btn => {
     btn.addEventListener('click', () => {
-        mostrarModalTransferir(btn.dataset.pedidoId);
+        // Feedback visual imediato ao clicar
+        btn.disabled = true;
+        const iconeOriginal = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat spin-icon"></i>';
+
+        mostrarModalTransferir(btn.dataset.pedidoId, () => {
+            // Callback ao fechar/destruir o modal — restaura o botão
+            btn.disabled = false;
+            btn.innerHTML = iconeOriginal;
+        });
     });
 });
 
@@ -552,12 +561,13 @@ document.querySelectorAll('.btn-transferir').forEach(btn => {
  * 2. App faz lookup e mostra o nome para confirmação
  * A transferência só é executada após confirmação explícita.
  */
-function mostrarModalTransferir(pedidoId) {
+function mostrarModalTransferir(pedidoId, onFechado) {
+    onFechado = onFechado || function () {};
     const modal = new tingle.modal({
         footer: true,
         closeMethods: ['overlay', 'button', 'escape'],
         cssClass: ['tingle-siupt'],
-        onClose: function () { modal.destroy(); }
+        onClose: function () { onFechado(); modal.destroy(); }
     });
 
     // ── Passo 1: introduzir o número ──────────────────────────────────────
@@ -635,7 +645,9 @@ function mostrarModalTransferir(pedidoId) {
 
         modal.setFooterContent('');
         modal.addFooterBtn('← Voltar', 'tingle-btn tingle-btn--default', () => mostrarPasso1(''));
-        modal.addFooterBtn('Confirmar transferência', 'tingle-btn tingle-btn--primary', async () => {
+        modal.addFooterBtn('Confirmar transferência', 'tingle-btn tingle-btn--primary', async function () {
+            const btnConfirmar = modal.modal.querySelector('.tingle-btn--primary');
+            if (btnConfirmar) { btnConfirmar.disabled = true; btnConfirmar.textContent = 'A transferir…'; }
             await transferirPedido(pedidoId, bicc, modal);
         });
     }
