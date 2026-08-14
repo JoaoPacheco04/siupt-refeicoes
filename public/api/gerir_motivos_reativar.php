@@ -6,13 +6,6 @@
  * tornando-o disponível novamente no dropdown de avaliação.
  * Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - id  int  Identificador do motivo
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

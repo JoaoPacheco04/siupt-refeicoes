@@ -7,15 +7,6 @@
  * à validação e à gestão sem precisar de aceder à base de dados.
  * Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - user_id  int     ID do utilizador a quem atribuir o papel
- *  - papel    string  'atendente' | 'admin_cantina'
- *
- * Resposta JSON:
- *  { "status": "ok", "mensagem": string }
- *  { "status": "aviso", "mensagem": string }   ← papel já atribuído
- *  { "status": "erro",  "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

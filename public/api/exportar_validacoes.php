@@ -3,7 +3,6 @@
  * Endpoint: Exportar validações em CSV
  *
  * Gera um ficheiro CSV com as validações de refeições de um dia específico.
- * Inclui BOM UTF-8 para compatibilidade com Excel.
  *
  * Parâmetros GET:
  *  - data  string  Data no formato YYYY-MM-DD (opcional; omitida = hoje)

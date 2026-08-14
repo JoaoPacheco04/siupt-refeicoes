@@ -5,10 +5,6 @@
  * Remove um feriado da tabela restaurante_feriado pelo seu ID.
  * Requer papel admin_cantina.
  *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

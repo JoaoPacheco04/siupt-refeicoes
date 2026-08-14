@@ -5,14 +5,6 @@
  * Regista um novo feriado na tabela restaurante_feriado.
  * Rejeita duplicados (mesma data). Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - data  string  Data no formato YYYY-MM-DD (obrigatório)
- *  - nome  string  Nome do feriado (obrigatório)
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

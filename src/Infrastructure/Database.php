@@ -1727,91 +1727,83 @@ class Database {
         return $stmt->rowCount() > 0;
     }
 
-/**
- * Gera automaticamente todos os feriados de um ano: fixos nacionais,
- * o municipal do Porto (São João), e os móveis (dependentes da Páscoa).
- * Não duplica datas já existentes.
- *
- * @return array{inseridos: int, ja_existiam: int, total: int}
- */
-public static function gerarTodosFeriadosDoAno(int $ano): array {
-    $inseridos = 0;
-    $jaExistiam = 0;
+    /**
+     * Gera automaticamente todos os feriados de um ano: fixos nacionais,
+     * o municipal do Porto (São João), e os móveis (dependentes da Páscoa).
+     * Não duplica datas já existentes.
+     *
+     * @return array{inseridos: int, ja_existiam: int, total: int}
+     */
+    public static function gerarTodosFeriadosDoAno(int $ano): array {
+        $inseridos  = 0;
+        $jaExistiam = 0;
 
-    $feriadosFixos = [
-        "{$ano}-01-01" => 'Ano Novo',
-        "{$ano}-04-25" => 'Dia da Liberdade',
-        "{$ano}-05-01" => 'Dia do Trabalhador',
-        "{$ano}-06-10" => 'Dia de Portugal',
-        "{$ano}-06-24" => 'São João (feriado municipal do Porto)',
-        "{$ano}-08-15" => 'Assunção de Nossa Senhora',
-        "{$ano}-10-05" => 'Implantação da República',
-        "{$ano}-11-01" => 'Dia de Todos os Santos',
-        "{$ano}-12-01" => 'Restauração da Independência',
-        "{$ano}-12-08" => 'Imaculada Conceição',
-        "{$ano}-12-25" => 'Natal',
-    ];
-    foreach ($feriadosFixos as $data => $nome) {
-        self::inserirFeriadoSeNaoExistir($data, $nome) ? $inseridos++ : $jaExistiam++;
+        $feriadosFixos = [
+            "{$ano}-01-01" => 'Ano Novo',
+            "{$ano}-04-25" => 'Dia da Liberdade',
+            "{$ano}-05-01" => 'Dia do Trabalhador',
+            "{$ano}-06-10" => 'Dia de Portugal',
+            "{$ano}-06-24" => 'São João (feriado municipal do Porto)',
+            "{$ano}-08-15" => 'Assunção de Nossa Senhora',
+            "{$ano}-10-05" => 'Implantação da República',
+            "{$ano}-11-01" => 'Dia de Todos os Santos',
+            "{$ano}-12-01" => 'Restauração da Independência',
+            "{$ano}-12-08" => 'Imaculada Conceição',
+            "{$ano}-12-25" => 'Natal',
+        ];
+        foreach ($feriadosFixos as $data => $nome) {
+            self::inserirFeriadoSeNaoExistir($data, $nome) ? $inseridos++ : $jaExistiam++;
+        }
+
+        $timestampPascoa = easter_date($ano);
+        $pascoa = new DateTime('@' . $timestampPascoa);
+        $pascoa->setTimezone(new DateTimeZone(date_default_timezone_get() ?: 'Europe/Lisbon'));
+
+        $feriadosMoveis = [
+            'Páscoa'            =>   0,
+            'Sexta-feira Santa' =>  -2,
+            'Carnaval'          => -47,
+            'Corpo de Deus'     =>  60,
+        ];
+        foreach ($feriadosMoveis as $nome => $offsetDias) {
+            $data = (clone $pascoa)->modify("{$offsetDias} days")->format('Y-m-d');
+            self::inserirFeriadoSeNaoExistir($data, $nome) ? $inseridos++ : $jaExistiam++;
+        }
+
+        return ['inseridos' => $inseridos, 'ja_existiam' => $jaExistiam, 'total' => $inseridos + $jaExistiam];
     }
 
-    $timestampPascoa = easter_date($ano);
-    $pascoa = new DateTime('@' . $timestampPascoa);
-    $pascoa->setTimezone(new DateTimeZone(date_default_timezone_get() ?: 'Europe/Lisbon'));
-
-    $feriadosMoveis = [
-        'Páscoa'            =>   0,
-        'Sexta-feira Santa' =>  -2,
-        'Carnaval'          => -47,
-        'Corpo de Deus'     =>  60,
-    ];
-    foreach ($feriadosMoveis as $nome => $offsetDias) {
-        $data = (clone $pascoa)->modify("{$offsetDias} days")->format('Y-m-d');
-        self::inserirFeriadoSeNaoExistir($data, $nome) ? $inseridos++ : $jaExistiam++;
+    /**
+     * Insere um feriado se a data ainda não existir.
+     * @return bool true se inseriu, false se já existia.
+     */
+    private static function inserirFeriadoSeNaoExistir(string $data, string $nome): bool {
+        $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_DATA = ?");
+        $stmt->execute([$data]);
+        if ($stmt->fetch()) {
+            return false;
+        }
+        self::conexao()->prepare("INSERT INTO restaurante_feriado (RF_DATA, RF_NOME) VALUES (?, ?)")
+            ->execute([$data, $nome]);
+        return true;
     }
 
-    return ['inseridos' => $inseridos, 'ja_existiam' => $jaExistiam, 'total' => $inseridos + $jaExistiam];
-}
-
-/**
- * Insere um feriado se a data ainda não existir.
- * @return bool true se inseriu, false se já existia.
- */
-private static function inserirFeriadoSeNaoExistir(string $data, string $nome): bool {
-    $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_feriado WHERE RF_DATA = ?");
-    $stmt->execute([$data]);
-    if ($stmt->fetch()) {
-        return false;
-    }
-    self::conexao()->prepare("INSERT INTO restaurante_feriado (RF_DATA, RF_NOME) VALUES (?, ?)")
-        ->execute([$data, $nome]);
-    return true;
-}
-
-/**
- * Verifica se os feriados de um ano já foram gerados.
- *
- * Usa contagem total em vez de verificar um feriado específico pelo nome,
- * para evitar que a remoção pontual de um feriado (ex: "Ano Novo") force
- * a regeneração completa a cada carregamento da ementa.
- * O limiar de 14 dá margem a até 1 remoção manual sem desencadear regeneração.
- */
     /**
      * Verifica se os feriados de um ano já foram gerados automaticamente,
      * para evitar a regeneração completa a cada carregamento da ementa.
      * O limiar de 14 dá margem a até 1 remoção manual sem desencadear regeneração.
      */
     public static function feriadosDoAnoJaExistem(int $ano): bool {
-    $stmt = self::conexao()->prepare("SELECT COUNT(*) FROM restaurante_feriado WHERE YEAR(RF_DATA) = ?");
-    $stmt->execute([$ano]);
-    return (int) $stmt->fetchColumn() >= 14;
-}
+        $stmt = self::conexao()->prepare("SELECT COUNT(*) FROM restaurante_feriado WHERE YEAR(RF_DATA) = ?");
+        $stmt->execute([$ano]);
+        return (int) $stmt->fetchColumn() >= 14;
+    }
 
-public static function pedidoJaPago(int $pedidoId): bool
-{
-    $pdo = self::conexao();
-    $stmt = $pdo->prepare('SELECT RP_PAGO FROM restaurante_pedido WHERE RP_ID = :id');
-    $stmt->execute(['id' => $pedidoId]);
-    return (bool) $stmt->fetchColumn();
-}
-}
+    public static function pedidoJaPago(int $pedidoId): bool
+    {
+        $pdo  = self::conexao();
+        $stmt = $pdo->prepare('SELECT RP_PAGO FROM restaurante_pedido WHERE RP_ID = :id');
+        $stmt->execute(['id' => $pedidoId]);
+        return (bool) $stmt->fetchColumn();
+    }
+}

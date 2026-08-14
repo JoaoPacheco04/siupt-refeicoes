@@ -48,6 +48,8 @@ $motivosIcones = [
     'qualidade_abaixo'  => 'bi-emoji-frown',
     'erro_pedido'       => 'bi-x-octagon',
     'demora_entrega'    => 'bi-clock-history',
+    // UI5: ícone de fallback para motivos criados dinamicamente sem mapeamento explícito
+    '_fallback'         => 'bi-chat-square-text',
 ];
 
 $mesesNomes = [

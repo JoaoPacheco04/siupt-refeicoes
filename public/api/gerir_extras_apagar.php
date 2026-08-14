@@ -25,10 +25,6 @@ if ($rmId <= 0) {
     exit;
 }
 
-/**
- * Mapeia os cÃ³digos devolvidos pela camada de negÃ³cio
- * para mensagens apresentadas ao utilizador.
- */
 $mensagens = [
     'nao_encontrado' => 'Extra nÃ£o encontrado',
     'erro_bd' => 'NÃ£o foi possÃ­vel processar â€” pode haver dados relacionados a impedir.',

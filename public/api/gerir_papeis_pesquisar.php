@@ -7,13 +7,6 @@
  * Devolve no máximo 10 resultados, incluindo os papéis de cantina atuais.
  * Requer papel admin_cantina.
  *
- * Parâmetros GET:
- *  - q  string  Texto a pesquisar (mínimo 2 caracteres)
- *
- * Resposta JSON:
- *  { "status": "ok", "utilizadores": [ { U_ID, U_NOME, U_BICC, U_PERFIL, papeis }, ... ] }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

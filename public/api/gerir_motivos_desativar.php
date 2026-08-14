@@ -7,13 +7,6 @@
  * dropdown de avaliação mas os registos antigos mantêm-se intactos.
  * Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - id  int  Identificador do motivo
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

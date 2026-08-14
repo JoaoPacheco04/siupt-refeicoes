@@ -2,7 +2,7 @@
 /**
  * Endpoint AJAX para listar as validaÃ§Ãµes de um funcionÃ¡rio numa data especÃ­fica.
  *
- * N2: Permite consultar validaÃ§Ãµes de dias anteriores a partir da pÃ¡gina validar.php.
+ *Permite consultar validaÃ§Ãµes de dias anteriores a partir da pÃ¡gina validar.php.
  * Usa Database::listarValidacoesPorData() jÃ¡ existente.
  */
 

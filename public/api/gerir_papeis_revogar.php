@@ -7,14 +7,6 @@
  * garantindo que nunca fica sem administrador.
  * Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - user_id  int     ID do utilizador a quem revogar o papel
- *  - papel    string  'atendente' | 'admin_cantina'
- *
- * Resposta JSON:
- *  { "status": "ok",   "mensagem": string }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

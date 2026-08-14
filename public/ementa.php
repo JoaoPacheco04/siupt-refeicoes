@@ -230,7 +230,7 @@ foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipoPrincipal) {
         $avisoPrazo = [
             'horas' => $horasRestantes,
             'minutos' => $minutosRestantes,
-            'hora_limite' => date('H:i', strtotime($limite['RDL_HORA'])),
+            'hora_limite' => substr($limite['RDL_HORA'], 0, 5),
         ];
         break; // já encontrámos o próximo prazo a expirar, não precisamos de continuar
     }
@@ -348,7 +348,11 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
         $componentesExtra = [];
         foreach (['Sopa', 'Sobremesa', 'Bebida'] as $tipoComponente) {
             if (!empty($tiposDoDia[$tipoComponente])) {
-                $componentesExtra[$tipoComponente] = $tiposDoDia[$tipoComponente][0];
+                $comp = $tiposDoDia[$tipoComponente][0];
+                // UI2: Ignora componentes sem preço configurado (evitaria NaN no JS)
+                if ($comp['preco'] !== null) {
+                    $componentesExtra[$tipoComponente] = $comp;
+                }
             }
         }
     ?>

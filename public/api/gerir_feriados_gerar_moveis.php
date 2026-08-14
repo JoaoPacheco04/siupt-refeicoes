@@ -6,13 +6,6 @@
  * feriado municipal do Porto e móveis dependentes da Páscoa).
  * Não duplica datas já existentes. Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - ano  int  Ano a gerar (aceita ±2 anos do atual até +5)
- *
- * Resposta JSON:
- *  { "status": "ok", "mensagem": string, "inseridos": int, "ja_existiam": int }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

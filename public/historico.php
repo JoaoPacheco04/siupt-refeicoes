@@ -8,7 +8,6 @@
  */
 
 // Inclui as funções de autenticação.
-// Nota: session_start() é gerido internamente por exigirLogin().
 
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
@@ -118,7 +117,7 @@ foreach ($pedidos as $p) {
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
 
-    <a href="historico.php" class="nav-icon-link" title="As minhas compras">
+    <a href="historico.php" class="nav-icon-link nav-icon-link--ativo" title="As minhas compras">
         <i class="bi bi-clock-history"></i>
     </a>
 

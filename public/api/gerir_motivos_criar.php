@@ -6,14 +6,6 @@
  * O código interno (RMR_CODIGO) deve ser único, em minúsculas, sem espaços.
  * Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - codigo  string  Código interno identificador (ex: comida_fria) — só letras minúsculas, números e underscore
- *  - label   string  Texto visível ao utilizador (ex: "Comida fria")
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

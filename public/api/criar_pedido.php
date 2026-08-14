@@ -5,10 +5,6 @@
  * Recebe a data da refeição e a lista de itens selecionados,
  * valida os dados e delega toda a lógica de negócio a Database::criarPedido().
  *
- * Resposta JSON:
- *  { "status": "ok",   "pedido_id": int }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 
@@ -17,7 +13,6 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json');
 
-// Qualquer utilizador autenticado (aluno ou funcionário) pode criar pedidos.
 $utilizador = exigirLogin('aluno', true);
 verificarCsrfToken(true);
 

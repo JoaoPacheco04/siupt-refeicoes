@@ -7,11 +7,6 @@
  *
  * Parâmetros POST:
  *  - id  int  Identificador do dia especial (obrigatório)
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

@@ -7,15 +7,6 @@
  * atualizando o respetivo valor e devolvendo uma resposta
  * em formato JSON.
  * Requer papel admin_cantina.
- *
- * Parâmetros POST:
- *  - tipo_id int    Identificador do tipo de refeição (Extra)
- *  - preco   float  Novo preço
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

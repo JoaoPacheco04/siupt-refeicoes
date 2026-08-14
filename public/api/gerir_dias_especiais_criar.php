@@ -7,15 +7,6 @@
  * pratos extra nesse dia. Rejeita datas duplicadas e datas já marcadas
  * como feriado. Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - data           string  Data no formato YYYY-MM-DD (obrigatório)
- *  - motivo         string  Descrição opcional (ex: "Férias de agosto")
- *  - permite_extras int     1 se os extras continuam disponíveis; ausente ou 0 caso contrário
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
- *
  * @package siupt_refeicoes
  */
 

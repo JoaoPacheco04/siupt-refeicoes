@@ -1,20 +1,9 @@
 <?php
-// Inicia a sessão para permitir o acesso aos dados do utilizador autenticado.
-session_start();
-
-// Importa as funções de autenticação.
 require_once __DIR__ . '/../src/Support/Auth.php';
-
-// Importa a função de versionamento dos ficheiros CSS/JS.
 require_once __DIR__ . '/../src/Support/Assets.php';
-
-// Importa a camada de acesso à base de dados.
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
-// Garante que apenas administradores da cantina podem aceder a esta página.
 $utilizador = exigirLogin('admin_cantina');
-
-// Obtém todos os pratos extras existentes para apresentação e gestão.
 $extras = Database::listarDetalhesExtrasParaGestao();
 
 ?>

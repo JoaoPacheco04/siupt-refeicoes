@@ -7,13 +7,6 @@
  * histórico de avaliações e alterá-lo quebraria registos anteriores.
  * Requer papel admin_cantina.
  *
- * Parâmetros POST:
- *  - id     int     Identificador do motivo
- *  - label  string  Novo texto visível
- *
- * Resposta JSON:
- *  { "status": "ok" }
- *  { "status": "erro", "mensagem": string }
  *
  * @package siupt_refeicoes
  */

@@ -48,47 +48,52 @@ $bloqueado = $_SESSION[$chaveRateKey]['total'] >= $maxTentativas;
  */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
 
-    $bicc     = $_POST['numero'] ?? '';
+    $bicc     = trim($_POST['numero'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    $utilizador = Database::autenticar($bicc, $password);
+    // S3: Valida comprimento máximo antes de enviar à base de dados
+    if (strlen($bicc) > 50 || strlen($password) > 256) {
+        $erro = 'Dados de acesso inválidos.';
+    } else {
+        $utilizador = Database::autenticar($bicc, $password);
 
-    if ($utilizador) {
-        // Sucesso — zera o contador de tentativas
-        $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
+        if ($utilizador) {
+            // Sucesso — zera o contador de tentativas
+            $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
 
-        $tipo = Database::perfilParaTipo((int) $utilizador['U_PERFIL']);
+            $tipo = Database::perfilParaTipo((int) $utilizador['U_PERFIL']);
 
-        session_regenerate_id(true);
+            session_regenerate_id(true);
 
-        $_SESSION['user_id']     = $utilizador['U_ID'];
-        $_SESSION['user_nome']   = $utilizador['U_NOME'];
-        $_SESSION['user_tipo']   = $tipo;
-        // Carrega os papéis de cantina (atendente / admin_cantina).
-        // Alunos e colaboradores sem papel ficam com array vazio.
-        $_SESSION['user_papeis'] = Database::obterPapeisUtilizador((int) $utilizador['U_ID']);
+            $_SESSION['user_id']     = $utilizador['U_ID'];
+            $_SESSION['user_nome']   = $utilizador['U_NOME'];
+            $_SESSION['user_tipo']   = $tipo;
+            // Carrega os papéis de cantina (atendente / admin_cantina).
+            // Alunos e colaboradores sem papel ficam com array vazio.
+            $_SESSION['user_papeis'] = Database::obterPapeisUtilizador((int) $utilizador['U_ID']);
 
-        // Redireciona para a página de origem (passada via ?next=) se for segura.
-        // Proteção contra open redirect: só aceita caminhos relativos (sem "://").
-        $destino = $_GET['next'] ?? '';
-        $destinoPadrao = !empty($_SESSION['user_papeis']) ? 'validar.php' : 'ementa.php';
-        if ($destino !== '' && !str_contains($destino, '://') && !str_starts_with($destino, '//')) {
-            $destino = ltrim(basename(parse_url($destino, PHP_URL_PATH)), '/');
-        } else {
-            $destino = $destinoPadrao;
+            // Redireciona para a página de origem (passada via ?next=) se for segura.
+            // Proteção contra open redirect: só aceita caminhos relativos (sem "://").
+            $destino = $_GET['next'] ?? '';
+            $destinoPadrao = !empty($_SESSION['user_papeis']) ? 'validar.php' : 'ementa.php';
+            if ($destino !== '' && !str_contains($destino, '://') && !str_starts_with($destino, '//')) {
+                $destino = ltrim(basename(parse_url($destino, PHP_URL_PATH)), '/');
+            } else {
+                $destino = $destinoPadrao;
+            }
+
+            header('Location: ' . ($destino ?: $destinoPadrao));
+            exit;
         }
 
-        header('Location: ' . ($destino ?: $destinoPadrao));
-        exit;
+        // Falha — incrementa o contador
+        $_SESSION[$chaveRateKey]['total']++;
+        $restantes = max(0, $maxTentativas - $_SESSION[$chaveRateKey]['total']);
+
+        $erro = $restantes > 0
+            ? "BI/CC ou password incorretos. Tentativas restantes: {$restantes}."
+            : 'Demasiadas tentativas. Por favor aguarda 15 minutos e tenta novamente.';
     }
-
-    // Falha — incrementa o contador
-    $_SESSION[$chaveRateKey]['total']++;
-    $restantes = max(0, $maxTentativas - $_SESSION[$chaveRateKey]['total']);
-
-    $erro = $restantes > 0
-        ? "BI/CC ou password incorretos. Tentativas restantes: {$restantes}."
-        : 'Demasiadas tentativas. Por favor aguarda 15 minutos e tenta novamente.';
 
 } elseif ($bloqueado) {
     $erro = 'Demasiadas tentativas. Por favor aguarda antes de tentar novamente.';
