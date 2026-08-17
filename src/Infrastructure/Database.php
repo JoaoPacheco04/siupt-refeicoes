@@ -279,7 +279,6 @@ class Database {
 
     /**
      * Lista todos os prazos configurados com o nome do tipo de refeição.
-     * Usada na página gerir_prazos.php.
      */
     public static function listarPrazos(): array {
         $stmt = self::conexao()->prepare("
@@ -645,9 +644,7 @@ class Database {
                 return 'dia_feriado';
             }
 
-            // CORRIGIDO: prazo de compra (14h30 do dia anterior) nunca era validado
-            // no servidor — só a interface escondia a opção. Um pedido direto via
-            // API conseguia contornar o prazo por completo.
+            // Valida o prazo de compra do prato principal (14h30 do dia anterior ou antecedência configurada)
             if ($temPratoPrincipal) {
                 $stmtTipos = $pdo->prepare("
                     SELECT DISTINCT RM_TP_ID FROM restaurante_menu
@@ -715,8 +712,7 @@ class Database {
                         return 'dia_encerrado';
                     }
 
-                    // CORRIGIDO: prazo dos extras (até às 10h do próprio dia) também
-                    // nunca era validado no servidor.
+                    // Valida o prazo dos extras (até às 10h do próprio dia da refeição)
                     if (self::extraForaDeHorarioHoje($dataRefeicao)) {
                         $pdo->rollBack();
                         return 'extra_fora_de_horario';
@@ -1258,8 +1254,7 @@ class Database {
         $inicio = $anoMes . '-01';
         $fim = date('Y-m-t', strtotime($inicio));
 
-        // MELHORIA 3: inclui RM_PRATO_DIA para que relatorio.php possa distinguir
-        // pratos da ementa de extras sem depender do prefixo "Extra: " no nome.
+        // Inclui RM_PRATO_DIA para distinguir pratos da ementa de extras
         $stmt = self::conexao()->prepare("
             SELECT rtp.RTP_NOME, rtp.RM_PRATO_DIA, COUNT(*) AS quantidade, SUM(rc.RC_PRECO) AS total
             FROM restaurante_compra rc

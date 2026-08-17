@@ -434,7 +434,7 @@ CREATE TABLE restaurante_transferencia_tentativa (
 GO
 
 -- =========================================================================
--- 15. MIGRAÇÃO — tabela restaurante_feriado_geracao (MELHORIA 2)
+-- 15. MIGRAÇÃO — tabela restaurante_feriado_geracao
 -- Controlo de geração automática de feriados por ano.
 -- Substitui o limiar de contagem (>= 14) que causava regeneração
 -- inesperada quando o admin apagava feriados manualmente.

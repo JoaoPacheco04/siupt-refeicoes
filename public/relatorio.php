@@ -32,10 +32,10 @@ $vendasPorTipo     = Database::obterVendasPorTipoMensal($anoMes);
 $vendasDiarias     = Database::obterVendasDiariasMensal($anoMes);
 $mediaAvaliacoes   = Database::obterMediaAvaliacoesMensal($anoMes);
 $avaliacoesPorPrato = Database::obterMediaAvaliacoesPorPrato(1, $anoMes);
-// N5: motivos de reclamação das avaliações com 1-2 estrelas
+// Motivos de reclamação das avaliações com 1-2 estrelas
 $motivosProblemas  = Database::obterMotivosProblemasMensal($anoMes);
 
-// Labels vêm agora da BD (editáveis via gerir_motivos.php)
+// Labels vêm da BD (editáveis via gerir_motivos.php)
 $motivosLabels = [];
 foreach (Database::listarTodosMotivosReclamacao() as $m) {
     $motivosLabels[$m['RMR_CODIGO']] = $m['RMR_LABEL'];
@@ -48,7 +48,7 @@ $motivosIcones = [
     'qualidade_abaixo'  => 'bi-emoji-frown',
     'erro_pedido'       => 'bi-x-octagon',
     'demora_entrega'    => 'bi-clock-history',
-    // UI5: ícone de fallback para motivos criados dinamicamente sem mapeamento explícito
+    // Ícone por omissão para novos motivos criados dinamicamente
     '_fallback'         => 'bi-chat-square-text',
 ];
 
@@ -69,17 +69,8 @@ $percentagemMes = $resumo['total_vendido_mes_anterior'] > 0
     : null;
 
 /**
- * Separa as vendas entre pratos da ementa e pratos extra.
- *
- * LIMITAÇÃO CONHECIDA: este filtro assume que todo o extra tem RTP_NOME
- * a começar por "Extra: " (prefixo gerado por criarTipoRefeicaoExtra()).
- * Se existirem vendas ligadas ao tipo genérico antigo 'Prato extra' dos
- * dados de teste iniciais (antes da migração para tipos dedicados por
- * extra), essas vendas aparecem incorretamente na secção "ementa".
- * A confirmar se ainda há dados de teste nessa situação.
+ * Separa as vendas entre pratos da ementa e pratos extra utilizando RM_PRATO_DIA.
  */
-// MELHORIA 3: usa RM_PRATO_DIA=0 para identificar extras em vez do prefixo
-// frágil 'Extra: ' — resistente a dados legados ou renomeações futuras.
 $pratosEmenta = array_values(array_filter($vendasPorTipo, fn($t) => (int) $t['RM_PRATO_DIA'] !== 0 || $t['RTP_NOME'] === 'Menu Completo'));
 $extrasVendas = array_values(array_filter($vendasPorTipo, fn($t) => (int) $t['RM_PRATO_DIA'] === 0 && $t['RTP_NOME'] !== 'Menu Completo'));
 $totalExtras  = array_sum(array_column($extrasVendas, 'total'));
@@ -358,7 +349,7 @@ foreach ($vendasDiarias as $d) {
 
     <?php endif; ?>
 
-    <!-- N5: Motivos de reclamação das avaliações negativas -->
+    <!-- Motivos de reclamação das avaliações negativas -->
     <?php
     $totalMotivos = array_sum(array_column($motivosProblemas, 'total'));
     $maxMotivo    = !empty($motivosProblemas) ? max(array_column($motivosProblemas, 'total')) : 1;
