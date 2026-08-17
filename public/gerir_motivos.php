@@ -81,13 +81,8 @@ $motivos = Database::listarTodosMotivosReclamacao();
         </h2>
 
         <form id="formNovoMotivo" class="form-novo-extra">
-            <div class="form-campo">
-                <label for="novoCodigo">Código (interno, sem espaços)</label>
-                <input type="text" id="novoCodigo" required placeholder="Ex: embalagem_danificada" pattern="[a-z0-9_]+">
-            </div>
-
-            <div class="form-campo">
-                <label for="novoLabel">Texto a mostrar ao aluno</label>
+            <div class="form-campo" style="flex: 1;">
+                <label for="novoLabel">Motivo de reclamação</label>
                 <input type="text" id="novoLabel" required placeholder="Ex: Embalagem danificada">
             </div>
 
@@ -110,16 +105,15 @@ $motivos = Database::listarTodosMotivosReclamacao();
             <?php foreach ($motivos as $m): ?>
             <div class="extra-item<?= !$m['RMR_ATIVO'] ? ' extra-inativo' : '' ?>" data-id="<?= $m['RMR_ID'] ?>" data-label="<?= htmlspecialchars($m['RMR_LABEL']) ?>">
                 <div class="extra-info">
-                    <span class="extra-nome"><?= htmlspecialchars($m['RMR_LABEL']) ?></span>
-                    <span class="extra-tipo">
-                        <?= htmlspecialchars($m['RMR_CODIGO']) ?>
+                    <span class="extra-nome">
+                        <?= htmlspecialchars($m['RMR_LABEL']) ?>
                         <?php if (!$m['RMR_ATIVO']): ?>
-                            · <span class="badge-inativo">Desativado</span>
+                            <span class="badge-inativo" style="margin-left: 0.5rem;">Desativado</span>
                         <?php endif; ?>
                     </span>
                 </div>
 
-                <button class="btn-editar-extra" title="Editar texto" data-editar="1">
+                <button class="btn-editar-extra" title="Editar motivo" data-editar="1">
                     <i class="bi bi-pencil"></i>
                 </button>
 

@@ -24,9 +24,8 @@ function mostrarErro(mensagem) {
 document.getElementById('formNovoMotivo').addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const codigo = document.getElementById('novoCodigo').value.trim();
     const label = document.getElementById('novoLabel').value.trim();
-    if (!codigo || !label) return;
+    if (!label) return;
 
     const btnSubmit = e.target.querySelector('button[type="submit"]');
     btnSubmit.disabled = true;
@@ -35,7 +34,7 @@ document.getElementById('formNovoMotivo').addEventListener('submit', async (e) =
         const resposta = await fetch('api/gerir_motivos_criar.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ codigo, label, csrf_token: CSRF_TOKEN })
+            body: new URLSearchParams({ label, csrf_token: CSRF_TOKEN })
         });
         const dados = await resposta.json();
 
@@ -101,7 +100,7 @@ document.querySelectorAll('[data-editar]').forEach(btn => {
                 <h4>Editar motivo</h4>
             </div>
             <div class="form-campo">
-                <label for="editLabel">Texto a mostrar ao aluno</label>
+                <label for="editLabel">Motivo de reclamação</label>
                 <input type="text" id="editLabel" value="${escHtml(labelAtual)}">
             </div>
         `);

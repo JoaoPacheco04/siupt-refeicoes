@@ -1687,9 +1687,45 @@ class Database {
     }
 
     /**
-     * Cria um novo motivo de reclamação.
+     * Gera um slug único em snake_case a partir do texto do motivo (ex: "Comida fria" -> "comida_fria").
      */
-    public static function criarMotivoReclamacao(string $codigo, string $label): string {
+    public static function gerarSlugMotivo(string $label): string {
+        $slug = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $label);
+        if ($slug === false || $slug === '') {
+            $slug = $label;
+        }
+        $slug = strtolower(preg_replace('/[^a-z0-9_]+/i', '_', trim($slug)));
+        $slug = trim($slug, '_');
+        if ($slug === '') {
+            $slug = 'motivo_' . time();
+        }
+        $base = substr($slug, 0, 40);
+        $codigo = $base;
+        $i = 2;
+        while (true) {
+            $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE RMR_CODIGO = ?");
+            $stmt->execute([$codigo]);
+            if (!$stmt->fetch()) {
+                break;
+            }
+            $codigo = $base . '_' . $i;
+            $i++;
+        }
+        return $codigo;
+    }
+
+    /**
+     * Cria um novo motivo de reclamação. Se o código não for fornecido, é gerado automaticamente.
+     */
+    public static function criarMotivoReclamacao(string $codigoOuLabel, ?string $label = null): string {
+        if ($label === null) {
+            $labelTexto = trim($codigoOuLabel);
+            $codigo = self::gerarSlugMotivo($labelTexto);
+        } else {
+            $codigo = trim($codigoOuLabel);
+            $labelTexto = trim($label);
+        }
+
         $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE RMR_CODIGO = ?");
         $stmt->execute([$codigo]);
         if ($stmt->fetch()) {
@@ -1698,7 +1734,7 @@ class Database {
 
         self::conexao()->prepare("
             INSERT INTO restaurante_motivo_reclamacao (RMR_CODIGO, RMR_LABEL) VALUES (?, ?)
-        ")->execute([$codigo, $label]);
+        ")->execute([$codigo, $labelTexto]);
 
         return 'ok';
     }

@@ -16,15 +16,23 @@ header('Content-Type: application/json; charset=utf-8');
 $utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
 
-$codigo = trim($_POST['codigo'] ?? '');
 $label  = trim($_POST['label']  ?? '');
+$codigo = trim($_POST['codigo'] ?? '');
 
-if ($codigo === '' || $label === '' || !preg_match('/^[a-z0-9_]+$/', $codigo)) {
-    echo json_encode(['status' => 'erro', 'mensagem' => 'Dados inválidos — código só pode ter letras minúsculas, números e underscore.']);
+if ($label === '') {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'O texto do motivo é obrigatório.']);
     exit;
 }
 
-$resultado = Database::criarMotivoReclamacao($codigo, $label);
+if ($codigo !== '' && !preg_match('/^[a-z0-9_]+$/', $codigo)) {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Código inválido.']);
+    exit;
+}
+
+$resultado = $codigo !== ''
+    ? Database::criarMotivoReclamacao($codigo, $label)
+    : Database::criarMotivoReclamacao($label);
+
 echo json_encode($resultado === 'ok'
     ? ['status' => 'ok']
     : ['status' => 'erro', 'mensagem' => 'Já existe um motivo com esse código.']);

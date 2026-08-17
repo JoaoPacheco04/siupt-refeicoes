@@ -103,7 +103,7 @@ $csrfToken            = gerarCsrfToken();
                 type="text"
                 id="inputPesquisa"
                 class="pesquisa-input"
-                placeholder="Nome ou número BICC (ex: 12345678 ou João...)"
+                placeholder="Pesquisar por nome ou número (ex: João Silva ou 12345678...)"
                 autocomplete="off"
             >
             <div class="pesquisa-resultados" id="pesquisaResultados"></div>
