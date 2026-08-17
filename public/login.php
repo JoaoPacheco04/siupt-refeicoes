@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
         $restantes = max(0, $maxTentativas - $_SESSION[$chaveRateKey]['total']);
 
         $erro = $restantes > 0
-            ? "BI/CC ou password incorretos. Tentativas restantes: {$restantes}."
+            ? "Número ou palavra-passe incorretos. Tentativas restantes: {$restantes}."
             : 'Demasiadas tentativas. Por favor aguarda 15 minutos e tenta novamente.';
     }
 

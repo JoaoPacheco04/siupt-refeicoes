@@ -39,8 +39,10 @@ $csrfToken     = gerarCsrfToken();
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.css" rel="stylesheet">
     <link href="<?= assetUrl('assets/css/base.css') ?>" rel="stylesheet">
     <link href="<?= assetUrl('assets/css/navbar.css') ?>" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/modal.css') ?>" rel="stylesheet">
     <link href="<?= assetUrl('assets/css/gerir-feriados.css') ?>" rel="stylesheet">
 </head>
 <body>
@@ -91,13 +93,13 @@ $csrfToken     = gerarCsrfToken();
             Configura os feriados nacionais e dias de encerramento especial da cantina.
         </p>
 
-        <!-- ── Gerar feriados móveis ──────────────────────────────────── -->
+        <!-- ── Gerar feriados nacionais ───────────────────────────────── -->
         <div class="feriados-card">
             <h2 class="feriados-card-titulo">
                 <i class="bi bi-magic"></i>
-                Gerar feriados móveis
+                Gerar feriados nacionais
             </h2>
-            <p>Gera automaticamente os feriados que dependem da Páscoa (Carnaval, Sexta-feira Santa, Corpo de Deus) para um ano específico.</p>
+            <p>Gera automaticamente todos os feriados fixos e móveis para o ano selecionado.</p>
             <form id="form-gerar-feriados" class="feriados-form-linha">
                 <div class="feriados-form-campo">
                     <label for="ano-gerar">Ano</label>
@@ -247,6 +249,7 @@ $csrfToken     = gerarCsrfToken();
 <script>
 window.CSRF_TOKEN = '<?= $csrfToken ?>';
 </script>
+<script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 <script src="<?= assetUrl('assets/js/utils.js') ?>"></script>
 <script src="<?= assetUrl('assets/js/gerir_feriados.js') ?>"></script>
 

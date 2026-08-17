@@ -85,33 +85,66 @@ document.addEventListener('DOMContentLoaded', function () {
             });
     });
 
+    // ── Helper: modal de confirmação elegante (Tingle) ─────────────────────
+    function confirmarAcao(titulo, mensagem, onConfirm) {
+        if (typeof tingle === 'undefined') {
+            if (confirm(mensagem)) onConfirm();
+            return;
+        }
+
+        const modal = new tingle.modal({
+            footer: true,
+            closeMethods: ['overlay', 'button', 'escape'],
+            cssClass: ['tingle-siupt'],
+            onClose: function () { modal.destroy(); }
+        });
+
+        modal.setContent(`
+            <div class="modal-siupt-header erro">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <h4>${escHtml(titulo)}</h4>
+            </div>
+            <p class="text-muted small">${escHtml(mensagem)}</p>
+        `);
+
+        modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
+        modal.addFooterBtn('Apagar', 'tingle-btn tingle-btn--danger', () => {
+            modal.close();
+            onConfirm();
+        });
+
+        modal.open();
+    }
+
     // ── Apagar feriado (delegação de eventos) ─────────────────────────────
     document.getElementById('lista-feriados').addEventListener('click', function (e) {
         var target = e.target.closest('.btn-feriados-apagar');
         if (!target || target.classList.contains('btn-apagar-especial')) return;
-        if (!confirm('Tem a certeza que quer apagar este feriado?')) return;
 
-        target.disabled = true;
-        var id = target.dataset.id;
-        var formData = new FormData();
-        formData.append('id', id);
-        formData.append('csrf_token', csrfToken);
+        confirmarAcao('Apagar feriado', 'Tens a certeza de que pretendes apagar este feriado?', function () {
+            target.disabled = true;
+            var id = target.dataset.id;
+            var formData = new FormData();
+            formData.append('id', id);
+            formData.append('csrf_token', csrfToken);
 
-        fetch('api/gerir_feriados_apagar.php', { method: 'POST', body: formData })
-            .then(function (res) { return res.json(); })
-            .then(function (data) {
-                if (data.status === 'ok') {
-                    var row = document.getElementById('feriado-' + id);
-                    if (row) row.remove();
-                } else {
-                    mostrarToast(data.mensagem || 'Erro ao apagar feriado.', 'danger');
+            fetch('api/gerir_feriados_apagar.php', { method: 'POST', body: formData })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.status === 'ok') {
+                        var row = document.getElementById('feriado-' + id);
+                        if (row) row.remove();
+                        mostrarToast('Feriado apagado com sucesso.', 'success');
+                    } else {
+                        mostrarToast(data.mensagem || 'Erro ao apagar feriado.', 'danger');
+                        target.disabled = false;
+                    }
+                })
+                .catch(function () {
+                    mostrarToast('Erro de ligação. Tenta novamente.', 'danger');
                     target.disabled = false;
-                }
-            })
-            .catch(function () {
-                mostrarToast('Erro de ligação. Tenta novamente.', 'danger');
-                target.disabled = false;
-            });
+                });
+        });
     });
 
     // ── Criar dia especial ─────────────────────────────────────────────────
@@ -143,28 +176,30 @@ document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('lista-dias-especiais').addEventListener('click', function (e) {
         var target = e.target.closest('.btn-apagar-especial');
         if (!target) return;
-        if (!confirm('Tem a certeza que quer apagar este dia especial?')) return;
 
-        target.disabled = true;
-        var id = target.dataset.id;
-        var formData = new FormData();
-        formData.append('id', id);
-        formData.append('csrf_token', csrfToken);
+        confirmarAcao('Apagar dia especial', 'Tens a certeza de que pretendes apagar este dia especial?', function () {
+            target.disabled = true;
+            var id = target.dataset.id;
+            var formData = new FormData();
+            formData.append('id', id);
+            formData.append('csrf_token', csrfToken);
 
-        fetch('api/gerir_dias_especiais_apagar.php', { method: 'POST', body: formData })
-            .then(function (res) { return res.json(); })
-            .then(function (data) {
-                if (data.status === 'ok') {
-                    var row = document.getElementById('dia-especial-' + id);
-                    if (row) row.remove();
-                } else {
-                    mostrarToast(data.mensagem || 'Erro ao apagar dia especial.', 'danger');
+            fetch('api/gerir_dias_especiais_apagar.php', { method: 'POST', body: formData })
+                .then(function (res) { return res.json(); })
+                .then(function (data) {
+                    if (data.status === 'ok') {
+                        var row = document.getElementById('dia-especial-' + id);
+                        if (row) row.remove();
+                        mostrarToast('Dia especial apagado com sucesso.', 'success');
+                    } else {
+                        mostrarToast(data.mensagem || 'Erro ao apagar dia especial.', 'danger');
+                        target.disabled = false;
+                    }
+                })
+                .catch(function () {
+                    mostrarToast('Erro de ligação. Tenta novamente.', 'danger');
                     target.disabled = false;
-                }
-            })
-            .catch(function () {
-                mostrarToast('Erro de ligação. Tenta novamente.', 'danger');
-                target.disabled = false;
-            });
+                });
+        });
     });
 });

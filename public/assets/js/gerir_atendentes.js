@@ -129,10 +129,15 @@
 
     // ── Botões de atribuição no painel de pesquisa ─────────────────────
     ['btnAtribuirAtendente', 'btnAtribuirAdmin'].forEach(function (id) {
-        document.getElementById(id).addEventListener('click', async function () {
+        const btn = document.getElementById(id);
+        if (!btn) return;
+        btn.addEventListener('click', async function () {
             if (!utilizadorSelecionado) return;
             const papel = this.dataset.papel;
-            await chamarApi('api/gerir_papeis_atribuir.php', { user_id: utilizadorSelecionado.id, papel });
+            const textoOriginal = this.innerHTML;
+            this.disabled = true;
+            this.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status"></span> A processar…';
+            await chamarApi('api/gerir_papeis_atribuir.php', { user_id: utilizadorSelecionado.id, papel }, this, textoOriginal);
         });
     });
 
@@ -154,9 +159,12 @@
                 : null;
 
             if (confirmMsg && !confirm(confirmMsg)) return;
-            btn.disabled = true;
 
-            await chamarApi(acao, { user_id: userId, papel }, btn);
+            const textoOriginal = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status"></span>';
+
+            await chamarApi(acao, { user_id: userId, papel }, btn, textoOriginal);
         });
     }
 
@@ -168,7 +176,7 @@
     });
 
     // ── Chamada genérica à API ─────────────────────────────────────────
-    async function chamarApi(url, params, btnOrigem) {
+    async function chamarApi(url, params, btnOrigem, textoOriginal) {
         btnOrigem = btnOrigem || null;
         const formData = new FormData();
         formData.append('csrf_token', CSRF);
@@ -185,13 +193,17 @@
             mostrarToast(data.mensagem, tipo);
 
             if (data.status === 'ok') {
-                setTimeout(function () { window.location.reload(); }, 1200);
+                setTimeout(function () { window.location.reload(); }, 1000);
             } else if (btnOrigem) {
                 btnOrigem.disabled = false;
+                if (textoOriginal) btnOrigem.innerHTML = textoOriginal;
             }
         } catch {
             mostrarToast('Erro de ligação. Tenta novamente.', 'danger');
-            if (btnOrigem) btnOrigem.disabled = false;
+            if (btnOrigem) {
+                btnOrigem.disabled = false;
+                if (textoOriginal) btnOrigem.innerHTML = textoOriginal;
+            }
         }
     }
 })();

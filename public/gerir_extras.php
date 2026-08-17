@@ -183,9 +183,7 @@ $extras = Database::listarDetalhesExtrasParaGestao();
 
                     <!-- Tipo -->
                     <span class="extra-tipo">
-
-                        <?= htmlspecialchars($e['RTP_NOME']) ?>
-
+                        Prato Extra
                         <!-- Caso esteja descontinuado -->
                         <?php if (!$e['RM_ATIVO']): ?>
                             ·
@@ -193,7 +191,6 @@ $extras = Database::listarDetalhesExtrasParaGestao();
                                 Descontinuado
                             </span>
                         <?php endif; ?>
-
                     </span>
 
                 </div>
