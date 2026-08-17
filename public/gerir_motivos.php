@@ -1,6 +1,4 @@
 <?php
-session_start();
-
 require_once __DIR__ . '/../src/Support/Auth.php';
 require_once __DIR__ . '/../src/Support/Assets.php';
 require_once __DIR__ . '/../src/Infrastructure/Database.php';
@@ -147,6 +145,6 @@ window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
-<script src="<?= assetUrl('assets/js/gerir_motivos.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/gerir_motivos.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/gerir_motivos.js') ?>"></script>
 </body>
 </html>

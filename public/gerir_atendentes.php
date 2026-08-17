@@ -243,7 +243,7 @@ $csrfToken            = gerarCsrfToken();
 <script>
 window.CSRF_TOKEN = <?= json_encode($csrfToken) ?>;
 </script>
-<script src="<?= assetUrl('assets/js/gerir_atendentes.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/gerir_atendentes.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/gerir_atendentes.js') ?>"></script>
 
 </body>
 </html>

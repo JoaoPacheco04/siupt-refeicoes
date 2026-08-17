@@ -263,7 +263,7 @@ window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 
 <!-- JavaScript específico da gestão de extras -->
-<script src="<?= assetUrl('assets/js/gerir_extras.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/gerir_extras.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/gerir_extras.js') ?>"></script>
 
 </body>
 </html>

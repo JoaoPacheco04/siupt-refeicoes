@@ -1,16 +1,16 @@
-﻿<?php
+<?php
 /**
- * Endpoint AJAX para atualizaÃ§Ã£o do nome de um prato extra.
+ * Endpoint AJAX para atualização do nome de um prato extra.
  *
  * Recebe o identificador e o novo nome do prato,
- * atualizando a informaÃ§Ã£o e devolvendo uma resposta
+ * atualizando a informação e devolvendo uma resposta
  * em formato JSON.
  */
 
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
 $utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
@@ -21,7 +21,7 @@ $novoNome = trim($_POST['nome'] ?? '');
 if ($rmId <= 0 || $novoNome === '') {
     echo json_encode([
         'status' => 'erro',
-        'mensagem' => 'Dados invÃ¡lidos'
+        'mensagem' => 'Dados inválidos'
     ]);
     exit;
 }
@@ -33,6 +33,6 @@ echo json_encode(
         ? ['status' => 'ok']
         : [
             'status' => 'erro',
-            'mensagem' => 'Extra nÃ£o encontrado ou nÃ£o Ã© um prato extra'
+            'mensagem' => 'Extra não encontrado ou não é um prato extra'
         ]
 );

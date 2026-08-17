@@ -695,11 +695,11 @@ class Database {
             $linhasValidadas = [];
 
             foreach ($itens as $item) {
-                $stmt = $pdo->prepare("SELECT RM_ID, RM_TP_ID, RM_DATA FROM restaurante_menu WHERE RM_ID = ?");
+                $stmt = $pdo->prepare("SELECT RM_ID, RM_TP_ID, RM_DATA, RM_ATIVO FROM restaurante_menu WHERE RM_ID = ?");
                 $stmt->execute([$item['rm_id']]);
                 $prato = $stmt->fetch();
 
-                if (!$prato) {
+                if (!$prato || (isset($prato['RM_ATIVO']) && (int) $prato['RM_ATIVO'] === 0)) {
                     $pdo->rollBack();
                     return 'prato_invalido';
                 }
@@ -1554,8 +1554,18 @@ class Database {
         }
         $pdo->beginTransaction();
         try {
-            $pdo->prepare("UPDATE restaurante_pedido SET RP_U_ID = ? WHERE RP_ID = ?")
-                ->execute([$destino['U_ID'], $pedidoId]);
+            $stmtUpdate = $pdo->prepare("
+                UPDATE restaurante_pedido
+                SET RP_U_ID = ?
+                WHERE RP_ID = ? AND RP_U_ID = ? AND RP_PAGO = 1 AND RP_UTILIZADO = 0
+            ");
+            $stmtUpdate->execute([$destino['U_ID'], $pedidoId, $deUtilizadorId]);
+
+            if ($stmtUpdate->rowCount() !== 1) {
+                $pdo->rollBack();
+                self::registarTentativaTransferenciaFalhada($pedidoId, $deUtilizadorId, $biccDestino, 'nao_transferivel');
+                return 'nao_transferivel';
+            }
 
             $pdo->prepare("
                 INSERT INTO restaurante_transferencia (RT_RP_ID, RT_DE_U_ID, RT_PARA_U_ID)

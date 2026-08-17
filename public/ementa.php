@@ -534,6 +534,6 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEn
 </script>
 <script src="https://cdn.jsdelivr.net/npm/tingle.js@0.16.0/dist/tingle.min.js"></script>
 <script src="assets/js/vendor/qrcode.min.js"></script>
-<script src="<?= assetUrl('assets/js/ementa.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/ementa.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/ementa.js') ?>"></script>
 </body>
 </html>

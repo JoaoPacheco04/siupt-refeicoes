@@ -1,16 +1,16 @@
-﻿<?php
+<?php
 /**
- * Endpoint AJAX para remoÃ§Ã£o de um prato extra.
+ * Endpoint AJAX para remoção de um prato extra.
  *
- * Remove o prato extra caso nÃ£o existam compras associadas.
- * Caso contrÃ¡rio, o prato Ã© apenas descontinuado,
- * preservando o histÃ³rico de pedidos.
+ * Remove o prato extra caso não existam compras associadas.
+ * Caso contrário, o prato é apenas descontinuado,
+ * preservando o histórico de pedidos.
  */
 
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 
 $utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
@@ -20,14 +20,14 @@ $rmId = (int) ($_POST['rm_id'] ?? 0);
 if ($rmId <= 0) {
     echo json_encode([
         'status' => 'erro',
-        'mensagem' => 'Dados invÃ¡lidos'
+        'mensagem' => 'Dados inválidos'
     ]);
     exit;
 }
 
 $mensagens = [
-    'nao_encontrado' => 'Extra nÃ£o encontrado',
-    'erro_bd' => 'NÃ£o foi possÃ­vel processar â€” pode haver dados relacionados a impedir.',
+    'nao_encontrado' => 'Extra não encontrado',
+    'erro_bd' => 'Não foi possível processar — pode haver dados relacionados a impedir.',
 ];
 
 $resultado = Database::apagarExtra($rmId);
@@ -37,7 +37,7 @@ if ($resultado === 'ok') {
 } elseif ($resultado === 'desativado') {
     echo json_encode([
         'status' => 'ok',
-        'mensagem' => 'JÃ¡ foi comprado por alunos, por isso foi apenas descontinuado (deixa de aparecer para compra, mas o histÃ³rico mantÃ©m-se).',
+        'mensagem' => 'Já foi comprado por alunos, por isso foi apenas descontinuado (deixa de aparecer para compra, mas o histórico mantém-se).',
     ]);
 } else {
     echo json_encode([

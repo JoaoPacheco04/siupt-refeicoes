@@ -41,7 +41,8 @@ CREATE TABLE restaurante_menu (
     RM_ID INT IDENTITY(1,1) PRIMARY KEY,
     RM_NOME VARCHAR(150) NOT NULL,
     RM_DATA DATE NULL,  -- NULL = prato extra, sem data
-    RM_TP_ID INT NOT NULL REFERENCES restaurante_tipo_refeicao(RTP_ID)
+    RM_TP_ID INT NOT NULL REFERENCES restaurante_tipo_refeicao(RTP_ID),
+    RM_ATIVO BIT NOT NULL DEFAULT 1
 );
 GO
 

@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // ── Apagar feriado (delegação de eventos) ─────────────────────────────
     document.getElementById('lista-feriados').addEventListener('click', function (e) {
-        var target = e.target.closest('.btn-apagar');
+        var target = e.target.closest('.btn-feriados-apagar');
         if (!target || target.classList.contains('btn-apagar-especial')) return;
         if (!confirm('Tem a certeza que quer apagar este feriado?')) return;
 

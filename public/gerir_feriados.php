@@ -247,8 +247,8 @@ $csrfToken     = gerarCsrfToken();
 <script>
 window.CSRF_TOKEN = '<?= $csrfToken ?>';
 </script>
-<script src="assets/js/utils.js?v=<?= filemtime(__DIR__ . '/assets/js/utils.js') ?>"></script>
-<script src="<?= assetUrl('assets/js/gerir_feriados.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/gerir_feriados.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/utils.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/gerir_feriados.js') ?>"></script>
 
 </body>
 </html>

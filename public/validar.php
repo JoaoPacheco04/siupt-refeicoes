@@ -224,7 +224,7 @@ $listaValidacoes = $vejoTudo
     window.CSRF_TOKEN = '<?= gerarCsrfToken() ?>';
 </script>
 
-<script src="<?= assetUrl('assets/js/validar.js') ?>?v=<?= filemtime(__DIR__ . '/assets/js/validar.js') ?>"></script>
+<script src="<?= assetUrl('assets/js/validar.js') ?>"></script>
 
 </body>
 </html>
