@@ -120,6 +120,11 @@ foreach ($pedidos as $p) {
     <a href="historico.php" class="nav-icon-link nav-icon-link--ativo" title="As minhas compras">
         <i class="bi bi-clock-history"></i>
     </a>
+    <?php if (temPapelSessao('atendente') || temPapelSessao('admin_cantina')): ?>
+    <a href="validar.php" class="nav-icon-link" title="Área de gestão / Validação">
+        <i class="bi bi-shield-lock"></i>
+    </a>
+    <?php endif; ?>
 
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>

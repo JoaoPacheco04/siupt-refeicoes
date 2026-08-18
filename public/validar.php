@@ -48,6 +48,10 @@ $listaValidacoes = $vejoTudo
         <i class="bi bi-qr-code-scan"></i>
     </a>
 
+    <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
+        <i class="bi bi-journal-text"></i>
+    </a>
+
     <?php if (temPapelSessao('admin_cantina')): ?>
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>

@@ -40,9 +40,29 @@
         if (tipo === 'success') setTimeout(function () { t.remove(); }, 4000);
     }
 
+    const btnLimpar = document.getElementById('btnLimparPesquisa');
+
+    function alternarBotaoLimpar() {
+        if (btnLimpar) {
+            btnLimpar.style.display = inputPesq.value.trim().length > 0 ? 'flex' : 'none';
+        }
+    }
+
+    if (btnLimpar) {
+        btnLimpar.addEventListener('click', function () {
+            inputPesq.value = '';
+            btnLimpar.style.display = 'none';
+            divResult.innerHTML = '';
+            painelAt.classList.add('painel-atribuicao-oculto');
+            utilizadorSelecionado = null;
+            inputPesq.focus();
+        });
+    }
+
     // ── Pesquisa de utilizadores com debounce ──────────────────────────
     let debounceTimer;
     inputPesq.addEventListener('input', function () {
+        alternarBotaoLimpar();
         clearTimeout(debounceTimer);
         const query = inputPesq.value.trim();
         if (query.length < 2) {
@@ -111,6 +131,7 @@
         document.getElementById('atribuicaoBicc').textContent   = 'Nº ' + d.bicc;
         atualizarLabelPapeis(utilizadorSelecionado.papeis);
 
+        alternarBotaoLimpar();
         painelAt.classList.remove('painel-atribuicao-oculto');
     }
 

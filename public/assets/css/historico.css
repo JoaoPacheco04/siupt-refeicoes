@@ -540,3 +540,113 @@
     opacity: 0.75;
     margin-top: 0.1rem;
 }
+
+/* ======================================================================
+   MODO ECRÃ CHEIO PARA QR CODE (ALTO CONTRASTE NA CANTINA)
+   ====================================================================== */
+
+.qr-fullscreen-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ffffff;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    animation: fadeInQr 0.2s ease-out;
+}
+
+@keyframes fadeInQr {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+.qr-fullscreen-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 380px;
+    width: 100%;
+    position: relative;
+}
+
+.qr-fullscreen-fechar {
+    position: absolute;
+    top: -1.2rem;
+    right: 0;
+    background: #f1f5f9;
+    border: none;
+    font-size: 1.6rem;
+    color: #334155;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    transition: background 0.15s;
+}
+
+.qr-fullscreen-fechar:hover {
+    background: #e2e8f0;
+}
+
+.qr-fullscreen-tag {
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #1a3a63;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 0.25rem;
+}
+
+.qr-fullscreen-data {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 0.2rem;
+}
+
+.qr-fullscreen-prato {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-bottom: 1.25rem;
+    max-width: 90%;
+}
+
+.qr-fullscreen-box {
+    background: #ffffff;
+    padding: 1rem;
+    border: 3px solid #0f172a;
+    border-radius: 16px;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.qr-fullscreen-codigo {
+    margin-top: 0.75rem;
+    font-family: monospace;
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: 2px;
+    color: #0f172a;
+}
+
+.qr-fullscreen-dica {
+    margin-top: 1.25rem;
+    font-size: 0.82rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}

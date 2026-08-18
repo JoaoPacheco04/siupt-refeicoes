@@ -115,9 +115,11 @@ foreach ($vendasDiarias as $d) {
     <a id="home" href="validar.php" title="Voltar ao início">
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
-    <!-- DESIGN: ícone ativo conforme a página atual -->
     <a href="validar.php" class="nav-icon-link" title="Validar QR code">
         <i class="bi bi-qr-code-scan"></i>
+    </a>
+    <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
+        <i class="bi bi-journal-text"></i>
     </a>
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>

@@ -107,7 +107,6 @@ document.querySelectorAll('[data-editar]').forEach(btn => {
 
         modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
 
-        
         const btnGuardar = modal.addFooterBtn('Guardar', 'tingle-btn tingle-btn--primary', async () => {
             const novoLabel = document.getElementById('editLabel').value.trim();
             if (!novoLabel) return;
@@ -135,5 +134,19 @@ document.querySelectorAll('[data-editar]').forEach(btn => {
         });
 
         modal.open();
+
+        setTimeout(() => {
+            const input = document.getElementById('editLabel');
+            if (input) {
+                input.focus();
+                input.select();
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        btnGuardar.click();
+                    }
+                });
+            }
+        }, 50);
     });
 });

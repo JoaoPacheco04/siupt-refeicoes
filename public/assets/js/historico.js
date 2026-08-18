@@ -166,8 +166,18 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
         </p>
     `);
 
-    // N4: Botão de fechar + botão de download
+    // Botão de fechar + botão de download + botão de ecrã cheio
     modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--default', () => modal.close());
+    
+    const btnFullscreen = modal.addFooterBtn(
+        '<i class="bi bi-arrows-fullscreen"></i> Ecrã Cheio',
+        'tingle-btn tingle-btn--default',
+        () => {
+            abrirQrFullscreen(qrcode, data, descricao, codigoCurto);
+        }
+    );
+    btnFullscreen.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Ecrã Cheio';
+
     const btnDownload = modal.addFooterBtn(
         '<i class="bi bi-download"></i> Guardar QR',
         'tingle-btn tingle-btn--primary',
@@ -204,6 +214,56 @@ function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
     } else {
         console.warn('Elemento do QR não encontrado.');
     }
+}
+
+/**
+ * Abre o QR Code em modo de ecrã cheio e alto contraste (ideal para telemóvel na cantina).
+ */
+function abrirQrFullscreen(qrcode, data, descricao, codigoCurto) {
+    const idFs = `qr-fs-${++qrModalCounter}`;
+    const overlay = document.createElement('div');
+    overlay.className = 'qr-fullscreen-overlay';
+    overlay.innerHTML = `
+        <div class="qr-fullscreen-container">
+            <button class="qr-fullscreen-fechar" title="Fechar">&times;</button>
+            <div class="qr-fullscreen-tag">SIUPT Refeições</div>
+            <div class="qr-fullscreen-data">${escHtml(data)}</div>
+            <div class="qr-fullscreen-prato">${escHtml(descricao)}</div>
+            <div class="qr-fullscreen-box">
+                <div id="${idFs}"></div>
+                <div class="qr-fullscreen-codigo">${escHtml(codigoCurto ?? '')}</div>
+            </div>
+            <div class="qr-fullscreen-dica">
+                <i class="bi bi-brightness-high"></i> Apresenta no leitor ótico da cantina
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    const el = document.getElementById(idFs);
+    const tamanho = Math.min(window.innerWidth - 70, 300);
+    new QRCode(el, {
+        text: qrcode,
+        width: tamanho,
+        height: tamanho,
+        colorDark: '#000000',
+        colorLight: '#ffffff'
+    });
+
+    function fechar() {
+        overlay.remove();
+        document.removeEventListener('keydown', onKey);
+    }
+    function onKey(e) {
+        if (e.key === 'Escape') fechar();
+    }
+
+    overlay.querySelector('.qr-fullscreen-fechar').addEventListener('click', fechar);
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) fechar();
+    });
+    document.addEventListener('keydown', onKey);
 }
 
 /* ======================================================================

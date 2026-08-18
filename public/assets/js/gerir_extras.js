@@ -124,8 +124,7 @@ function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual) {
         </p>
     `);
 
-    modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
-    modal.addFooterBtn('Guardar', 'tingle-btn tingle-btn--primary', async () => {
+    const btnGuardar = modal.addFooterBtn('Guardar', 'tingle-btn tingle-btn--primary', async () => {
         const novoNome = document.getElementById('editNome').value.trim();
         const novoPreco = document.getElementById('editPreco').value;
 
@@ -134,6 +133,25 @@ function abrirModalEdicao(rmId, tipoId, nomeAtual, precoAtual) {
     });
 
     modal.open();
+
+    setTimeout(() => {
+        const inputNome = document.getElementById('editNome');
+        const inputPreco = document.getElementById('editPreco');
+        if (inputNome) {
+            inputNome.focus();
+            inputNome.select();
+        }
+        [inputNome, inputPreco].forEach(input => {
+            if (input) {
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        btnGuardar.click();
+                    }
+                });
+            }
+        });
+    }, 50);
 }
 
 /**

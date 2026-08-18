@@ -57,6 +57,10 @@ $csrfToken            = gerarCsrfToken();
         <i class="bi bi-qr-code-scan"></i>
     </a>
 
+    <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
+        <i class="bi bi-journal-text"></i>
+    </a>
+
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>
@@ -106,6 +110,9 @@ $csrfToken            = gerarCsrfToken();
                 placeholder="Pesquisar por nome ou número (ex: João Silva ou 12345678...)"
                 autocomplete="off"
             >
+            <button type="button" id="btnLimparPesquisa" class="btn-limpar-pesquisa" title="Limpar pesquisa" style="display:none;">
+                <i class="bi bi-x-circle-fill"></i>
+            </button>
             <div class="pesquisa-resultados" id="pesquisaResultados"></div>
         </div>
 
