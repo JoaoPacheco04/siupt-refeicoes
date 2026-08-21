@@ -63,7 +63,11 @@ $motivos = Database::listarTodosMotivosReclamacao();
     </a>
 
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
-        <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
+        <form method="POST" action="login.php" style="display:inline">
+            <input type="hidden" name="logout" value="1">
+            <input type="hidden" name="csrf_token" value="<?= gerarCsrfToken() ?>">
+            <button type="submit" id="quit" title="Terminar sessão">&nbsp;</button>
+        </form>
         <div id="profile-photo" class="profile-avatar">
             <?= htmlspecialchars(strtoupper(substr($utilizador['nome'], 0, 1))) ?>
         </div>

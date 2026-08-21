@@ -17,6 +17,8 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json');
 
+exigirPost();
+
 // Qualquer comprador (aluno ou funcionário) pode avaliar as suas próprias refeições.
 $utilizador = exigirLogin('aluno', true);
 verificarCsrfToken(true);

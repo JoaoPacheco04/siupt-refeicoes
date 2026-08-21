@@ -18,8 +18,10 @@ $erro = '';
 
 /**
  * Termina a sessão do utilizador.
+ * Requer método POST para prevenir CSRF (ex: <img src="login.php?logout=1">).
  */
-if (isset($_GET['logout'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
+    verificarCsrfToken();
     session_unset();
     session_destroy();
     header('Location: login.php');

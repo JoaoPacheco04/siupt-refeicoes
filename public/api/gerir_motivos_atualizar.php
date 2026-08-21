@@ -15,6 +15,9 @@ require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json; charset=utf-8');
+
+exigirPost();
+
 $utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
 

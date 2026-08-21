@@ -107,6 +107,7 @@ document.querySelectorAll('[data-editar]').forEach(btn => {
 
         modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
 
+
         const btnGuardar = modal.addFooterBtn('Guardar', 'tingle-btn tingle-btn--primary', async () => {
             const novoLabel = document.getElementById('editLabel').value.trim();
             if (!novoLabel) return;

@@ -11,6 +11,8 @@ require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
+exigirPost();
+
 $utilizador = exigirLogin('atendente', true);
 verificarCsrfToken(true);
 

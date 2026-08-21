@@ -1,6 +1,21 @@
 <?php
 
 /**
+ * Garante que o pedido HTTP utiliza o método POST.
+ * Devolve 405 Method Not Allowed caso contrário.
+ */
+function exigirPost(): void
+{
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        http_response_code(405);
+        header('Allow: POST');
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['status' => 'erro', 'mensagem' => 'Método não permitido.']);
+        exit;
+    }
+}
+
+/**
  * Garante que existe um utilizador autenticado e, opcionalmente,
  * que possui o perfil indicado.
  *

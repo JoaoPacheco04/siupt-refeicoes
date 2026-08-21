@@ -14,7 +14,7 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('atendente');
 $validacoesHoje = Database::contarValidacoesHoje((int) $utilizador['id']);
-$refeicoesPorLevantar = Database::contarRefeicoesAtivasHoje(); // NOVO — item 2
+$refeicoesPorLevantar = Database::contarRefeicoesAtivasHoje(); 
 $vejoTudo = temPapelSessao('admin_cantina');
 $listaValidacoes = $vejoTudo
     ? Database::listarValidacoesHojeTodos()
@@ -75,7 +75,11 @@ $listaValidacoes = $vejoTudo
     <?php endif; ?>
 
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
-        <a id="quit" href="login.php?logout=1" title="Terminar sessão">&nbsp;</a>
+        <form method="POST" action="login.php" style="display:inline">
+            <input type="hidden" name="logout" value="1">
+            <input type="hidden" name="csrf_token" value="<?= gerarCsrfToken() ?>">
+            <button type="submit" id="quit" title="Terminar sessão">&nbsp;</button>
+        </form>
 
         <div id="profile-photo" class="profile-avatar">
             <?= htmlspecialchars(strtoupper(substr($utilizador['nome'], 0, 1))) ?>
@@ -99,7 +103,7 @@ $listaValidacoes = $vejoTudo
         validações hoje
     </div>
 
-    <!-- NOVO — item 2: refeições pagas por levantar hoje -->
+    <!-- Refeições pagas por levantar hoje -->
     <?php if ($refeicoesPorLevantar > 0): ?>
     <div class="validacoes-contador validacoes-contador--aviso">
         <i class="bi bi-hourglass-split"></i>
