@@ -23,11 +23,19 @@ if (!Database::feriadosDoAnoJaExistem($anoAtual)) {
     Database::gerarTodosFeriadosDoAno($anoAtual);
 }
 
-// Calcula as datas de início e fim da semana corrente.
+// Calcula as datas de início e fim da semana a apresentar.
 $hoje = new DateTime();
-$diaSemanaHoje = (int) $hoje->format('N');
-$segunda = (clone $hoje)->modify('-' . ($diaSemanaHoje - 1) . ' days');
-$sexta   = (clone $segunda)->modify('+4 days');
+$diaSemanaHoje = (int) $hoje->format('N'); // 1 = Seg ... 7 = Dom
+
+// Ao fim de semana (Sábado/Domingo), a semana natural a planear é a próxima segunda-feira
+$semanaAvancada = false;
+if ($diaSemanaHoje >= 6) {
+    $segunda = (clone $hoje)->modify('next monday');
+    $sexta   = (clone $segunda)->modify('+4 days');
+} else {
+    $segunda = (clone $hoje)->modify('-' . ($diaSemanaHoje - 1) . ' days');
+    $sexta   = (clone $segunda)->modify('+4 days');
+}
 
 // Obtém os pratos da ementa para a semana calculada.
 $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
@@ -43,7 +51,7 @@ $diasEspeciaisNaSemana = Database::listarDiasEspeciaisNoPeriodo($segunda->format
  * Verifica se todos os pratos de uma lista já estão fora do prazo de compra.
  */
 function todosPratosForaDePrazo(array $pratos, array $limitesBatch): bool {
-    if (empty($pratos)) return true;
+    if (empty($pratos)) return false;
     foreach ($pratos as $p) {
         if (!Database::foraDePrazoBatch((int) $p['RM_TP_ID'], $p['RM_DATA'], $limitesBatch)) {
             return false;
@@ -53,11 +61,10 @@ function todosPratosForaDePrazo(array $pratos, array $limitesBatch): bool {
 }
 
 /**
- * Se a semana atual não tem pratos disponíveis ou todos estão fora de prazo,
+ * Durante a semana útil, se todos os pratos já estiverem fora de prazo (ex: sexta à tarde),
  * avança automaticamente para a semana seguinte.
  */
-$semanaAvancada = false;
-if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
+if ($diaSemanaHoje < 6 && todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $semanaAvancada = true;
     $segunda->modify('+7 days');
     $sexta->modify('+7 days');
@@ -67,7 +74,7 @@ if (todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $diasEspeciaisNaSemana = Database::listarDiasEspeciaisNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
     $feriadosNaSemana = Database::listarFeriadosNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
     
-    // Recarregar limites para a nova semana (tipos podem ser diferentes)
+    // Recarregar limites para a nova semana
     $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
     $dataLimitesBatch = Database::obterDataLimitesBatch($tipoIdsParaLimites);
 }
@@ -307,10 +314,10 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     </div>
     <?php endif; ?>
 
-    <?php if ($semanaAvancada): ?>
+    <?php if ($semanaAvancada && !empty($pratos)): ?>
     <div class="banner-semana-avancada" role="alert">
-        <i class="bi bi-info-circle-fill"></i>
-        A semana atual já está fora de prazo. A mostrar a ementa da <strong>próxima semana</strong>.
+        <i class="bi bi-calendar-check"></i>
+        A apresentar a ementa da <strong>próxima semana</strong> (de <?= $segunda->format('d') ?> a <?= $sexta->format('d') ?> de <?= $nomeMes ?>).
     </div>
     <?php endif; ?>
 
@@ -327,10 +334,20 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
 
     <h2 class="ementa-semana">semana de <?= $segunda->format('d') ?> a <?= $sexta->format('d') ?> de <?= $nomeMes ?></h2>
 
-    <?php if (empty($diasEmenta)): ?>
-        <p class="text-muted">Não há ementa disponível para esta semana.</p>
+    <?php if (empty($pratos)): ?>
+    <div class="ementa-vazia-card">
+        <i class="bi bi-calendar-x"></i>
+        <p class="ementa-vazia-titulo">Sem ementa disponível</p>
+        <p class="ementa-vazia-desc">
+            A ementa para a semana de <?= $segunda->format('d') ?> a <?= $sexta->format('d') ?> de <?= $nomeMes ?> ainda não se encontra publicada.
+            <?php if (!empty($extrasComPreco)): ?>
+            <br><span class="text-muted">Podes encomendar os <strong>pratos extras</strong> disponíveis em baixo.</span>
+            <?php endif; ?>
+        </p>
+    </div>
     <?php endif; ?>
 
+    <?php if (!empty($pratos)): ?>
     <?php foreach ($diasEmenta as $data => $tiposDoDia):
         $numDia = $numerosDia[(int) date('N', strtotime($data))];
 
@@ -376,7 +393,7 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
         // SÓ EXTRAS: Sem Ementa MAS com Autorização Explícita
         $apenasExtras = !$ehFeriado && !$temEmenta && $diaEspecial && (bool) $diaEspecial['RDE_PERMITE_EXTRAS'];
     ?>
-    <div class="dia-card<?= $diaBloqueado ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?><?= $ehFeriado ? ' dia-feriado' : '' ?><?= $ehEncerradoExplicito ? ' dia-encerrado' : '' ?><?= $apenasExtras ? ' dia-apenas-extras' : '' ?>" data-data="<?= $data ?>">
+    <div class="dia-card<?= ($diaBloqueado && !$jaComprado) ? ' dia-passado' : ($data === $hojeStr ? ' dia-hoje' : '') ?><?= $jaComprado ? ' dia-ja-comprado' : '' ?><?= $ehFeriado ? ' dia-feriado' : '' ?><?= $ehEncerradoExplicito ? ' dia-encerrado' : '' ?><?= $apenasExtras ? ' dia-apenas-extras' : '' ?>" data-data="<?= $data ?>">
         <div class="dia-card-header">
             <span class="dia-abrev"><?= $numDia ?></span>
             <span class="dia-data"><?= date('d/m', strtotime($data)) ?></span>
@@ -386,10 +403,10 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
             <span class="dia-encerrado-badge"><i class="bi bi-door-closed"></i> encerrado<?= $diaEspecial && $diaEspecial['RDE_MOTIVO'] ? ' — ' . htmlspecialchars($diaEspecial['RDE_MOTIVO']) : '' ?></span>
             <?php elseif ($apenasExtras): ?>
             <span class="dia-encerrado-badge so-extras"><i class="bi bi-bag"></i> só extras<?= $diaEspecial && $diaEspecial['RDE_MOTIVO'] ? ' — ' . htmlspecialchars($diaEspecial['RDE_MOTIVO']) : '' ?></span>
-            <?php elseif ($diaBloqueado): ?>
-            <span class="dia-passado-badge">fora de prazo</span>
             <?php elseif ($jaComprado): ?>
             <span class="dia-comprado-badge"><i class="bi bi-check-circle-fill"></i> já comprado</span>
+            <?php elseif ($diaBloqueado): ?>
+            <span class="dia-passado-badge">fora de prazo</span>
             <?php elseif ($data === $hojeStr): ?>
             <span class="dia-hoje-badge">hoje</span>
             <?php endif; ?>
@@ -473,6 +490,7 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEn
         <?php endif; ?>
     </div>
     <?php endforeach; ?>
+    <?php endif; ?>
 
     <?php if (!empty($extrasComPreco)): ?>
     <div class="extras-secao">

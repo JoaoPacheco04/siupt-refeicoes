@@ -59,6 +59,37 @@
     animation: slideDown 0.3s ease;
 }
 
+/* ── Card de ementa vazia ────────────────────────── */
+.ementa-vazia-card {
+    background: #ffffff;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 2rem 1.5rem;
+    text-align: center;
+    margin-bottom: 1.25rem;
+}
+
+.ementa-vazia-card i {
+    font-size: 2.2rem;
+    color: #94a3b8;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.ementa-vazia-titulo {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #334155;
+    margin: 0.25rem 0 0.4rem 0;
+}
+
+.ementa-vazia-desc {
+    font-size: 0.84rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}
+
 .banner-prazo-proximo {
     display: flex;
     align-items: center;

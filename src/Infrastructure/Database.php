@@ -153,17 +153,21 @@ class Database {
     }
 
     /**
-     * Devolve as datas (de uma lista) para as quais o utilizador já tem pedido ativo.
+     * Devolve as datas (de uma lista) para as quais o utilizador já tem prato principal (ementa) ativo.
+     * Não inclui pedidos que contenham apenas pratos extras.
      */
     public static function listarDatasComPedidoAtivo(int $utilizadorId, array $datas): array {
         if (empty($datas)) return [];
         $ph = implode(',', array_fill(0, count($datas), '?'));
         $hoje = date('Y-m-d');
         $stmt = self::conexao()->prepare("
-            SELECT DISTINCT RP_DATA_REFEICAO
-            FROM restaurante_pedido
-            WHERE RP_U_ID = ? AND RP_DATA_REFEICAO IN ($ph)
-              AND RP_PAGO = 1 AND RP_DATA_REFEICAO >= ?
+            SELECT DISTINCT rp.RP_DATA_REFEICAO
+            FROM restaurante_pedido rp
+            JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+            JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+            WHERE rp.RP_U_ID = ? AND rp.RP_DATA_REFEICAO IN ($ph)
+              AND rp.RP_PAGO = 1 AND rp.RP_DATA_REFEICAO >= ?
+              AND rm.RM_DATA IS NOT NULL
         ");
         $stmt->execute(array_merge([$utilizadorId], $datas, [$hoje]));
         return $stmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
@@ -675,11 +679,14 @@ class Database {
                 $extrasPermitidos = $diaEspecial && (bool) $diaEspecial['RDE_PERMITE_EXTRAS'] && !$ehFeriado;
             }
 
-            // Só bloqueia duplicado se o pedido novo incluir um prato principal.
+            // Só bloqueia duplicado se o pedido novo incluir um prato principal E o utilizador já tiver um prato principal pago para essa data.
             if ($temPratoPrincipal) {
                 $stmtDup = $pdo->prepare("
-                    SELECT COUNT(*) FROM restaurante_pedido WITH (UPDLOCK, HOLDLOCK)
-                    WHERE RP_U_ID = ? AND RP_DATA_REFEICAO = ? AND RP_PAGO = 1
+                    SELECT COUNT(*) FROM restaurante_pedido rp WITH (UPDLOCK, HOLDLOCK)
+                    JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
+                    JOIN restaurante_menu rm ON rc.RC_RM_ID = rm.RM_ID
+                    WHERE rp.RP_U_ID = ? AND rp.RP_DATA_REFEICAO = ? AND rp.RP_PAGO = 1
+                      AND rm.RM_DATA IS NOT NULL
                 ");
                 $stmtDup->execute([$utilizadorId, $dataRefeicao]);
                 if ((int) $stmtDup->fetchColumn() > 0) {
@@ -827,11 +834,39 @@ class Database {
     }
 
     /**
+    /**
+     * Remove automaticamente pedidos não pagos cuja data de refeição já passou.
+     */
+    public static function limparPedidosNaoPagosPassados(int $utilizadorId): void {
+        try {
+            $hoje = date('Y-m-d');
+            $pdo = self::conexao();
+            $stmt = $pdo->prepare("
+                SELECT RP_ID FROM restaurante_pedido
+                WHERE RP_U_ID = ? AND RP_PAGO = 0 AND RP_DATA_REFEICAO < ?
+            ");
+            $stmt->execute([$utilizadorId, $hoje]);
+            $ids = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            foreach ($ids as $id) {
+                $pdo->prepare("DELETE FROM restaurante_pagamento WHERE RPG_RP_ID = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM restaurante_compra WHERE RC_RP_ID = ?")->execute([$id]);
+                $pdo->prepare("DELETE FROM restaurante_pedido WHERE RP_ID = ? AND RP_PAGO = 0")->execute([$id]);
+            }
+        } catch (Throwable $e) {
+            // Silencioso para não interromper fluxo
+        }
+    }
+
+    /**
      * Lista todos os pedidos de um utilizador, com estado calculado.
      * Aceita um filtro de mês opcional (formato 'YYYY-MM') para paginação
      * por período — funcionalidade 2 (filtro de data no histórico).
      */
     public static function listarPedidosDoUtilizador(int $utilizadorId, ?string $anoMes = null): array {
+        // Auto-limpa pedidos não pagos cuja data já passou
+        self::limparPedidosNaoPagosPassados($utilizadorId);
+
         $params = [$utilizadorId];
         $filtroMes = '';
         if ($anoMes !== null && preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
@@ -915,13 +950,20 @@ class Database {
 
     // "Expirado" não é guardado — é sempre calculado no momento da leitura.
     public static function calcularEstadoPedido(array $pedido): string {
+        $dataRefeicao = $pedido['RP_DATA_REFEICAO'] instanceof DateTime
+            ? $pedido['RP_DATA_REFEICAO']->format('Y-m-d')
+            : (string) $pedido['RP_DATA_REFEICAO'];
+
         if (!$pedido['RP_PAGO']) {
+            if ($dataRefeicao < date('Y-m-d')) {
+                return 'expirado';
+            }
             return 'nao_pago';
         }
         if ($pedido['RP_UTILIZADO']) {
             return 'utilizado';
         }
-        if ($pedido['RP_DATA_REFEICAO'] < date('Y-m-d')) {
+        if ($dataRefeicao < date('Y-m-d')) {
             return 'expirado';
         }
         return 'ativo';
@@ -1418,6 +1460,12 @@ class Database {
                 $pdo->rollBack();
                 return false;
             }
+
+            $pdo->prepare("DELETE FROM restaurante_transferencia_tentativa WHERE RTT_RP_ID = ?")
+                ->execute([$pedidoId]);
+
+            $pdo->prepare("DELETE FROM restaurante_transferencia WHERE RT_RP_ID = ?")
+                ->execute([$pedidoId]);
 
             $pdo->prepare("DELETE FROM restaurante_pagamento WHERE RPG_RP_ID = ?")
                 ->execute([$pedidoId]);
