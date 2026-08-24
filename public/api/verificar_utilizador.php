@@ -18,44 +18,12 @@ exigirPost();
 $utilizador = exigirLogin('aluno', true);
 verificarCsrfToken(true);
 
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-// ── Rate limiting: máx 10 tentativas por IP em 15 minutos ────────────────
-$ipCliente     = $_SERVER['REMOTE_ADDR'] ?? 'desconhecido';
-$chaveRateKey  = 'verificar_utilizador_tentativas_' . md5($ipCliente);
-$janelaTempo   = 900;  // 15 minutos em segundos
-$maxTentativas = 10;
-
-if (!isset($_SESSION[$chaveRateKey])) {
-    $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
-}
-
-// Reinicia a janela se já passou o tempo limite
-if (time() - $_SESSION[$chaveRateKey]['desde'] > $janelaTempo) {
-    $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
-}
-
-if ($_SESSION[$chaveRateKey]['total'] >= $maxTentativas) {
-    http_response_code(429);
-    echo json_encode([
-        'status' => 'erro',
-        'mensagem' => 'Demasiadas tentativas. Aguarda 15 minutos e tenta novamente.',
-    ]);
-    exit;
-}
-
 $bicc = trim($_POST['bicc'] ?? '');
 
 if ($bicc === '') {
     echo json_encode(['status' => 'erro', 'mensagem' => 'Número em falta.']);
     exit;
 }
-
-// Regista a tentativa ANTES de consultar a BD — mesmo que o número exista,
-// conta para o limite (impede também enumeração bem-sucedida repetida)
-$_SESSION[$chaveRateKey]['total']++;
 
 $destino = Database::obterUtilizadorPorBICC($bicc);
 

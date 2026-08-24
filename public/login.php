@@ -28,27 +28,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['logout'])) {
     exit;
 }
 
-// ── Rate limiting simples: máx 10 tentativas por IP em 15 minutos ────────
-$ipCliente  = $_SERVER['REMOTE_ADDR'] ?? 'desconhecido';
-$chaveRateKey = 'login_tentativas_' . md5($ipCliente);
-$janelaTempo  = 900;  // 15 minutos em segundos
-$maxTentativas = 10;
-
-if (!isset($_SESSION[$chaveRateKey])) {
-    $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
-}
-
-// Reinicia a janela se já passou o tempo limite
-if (time() - $_SESSION[$chaveRateKey]['desde'] > $janelaTempo) {
-    $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
-}
-
-$bloqueado = $_SESSION[$chaveRateKey]['total'] >= $maxTentativas;
-
 /**
  * Processa o pedido de autenticação.
  */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $bicc     = trim($_POST['numero'] ?? '');
     $password = $_POST['password'] ?? '';
@@ -60,9 +43,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
         $utilizador = Database::autenticar($bicc, $password);
 
         if ($utilizador) {
-            // Sucesso — zera o contador de tentativas
-            $_SESSION[$chaveRateKey] = ['total' => 0, 'desde' => time()];
-
             $tipo = Database::perfilParaTipo((int) $utilizador['U_PERFIL']);
 
             session_regenerate_id(true);
@@ -88,17 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
             exit;
         }
 
-        // Falha — incrementa o contador
-        $_SESSION[$chaveRateKey]['total']++;
-        $restantes = max(0, $maxTentativas - $_SESSION[$chaveRateKey]['total']);
-
-        $erro = $restantes > 0
-            ? "Número ou palavra-passe incorretos. Tentativas restantes: {$restantes}."
-            : 'Demasiadas tentativas. Por favor aguarda 15 minutos e tenta novamente.';
+        $erro = 'Número ou palavra-passe incorretos.';
     }
-
-} elseif ($bloqueado) {
-    $erro = 'Demasiadas tentativas. Por favor aguarda antes de tentar novamente.';
 }
 ?>
 <!DOCTYPE html>
@@ -171,6 +142,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$bloqueado) {
 
         <!-- Formulário de autenticação -->
         <form method="POST">
+
+            <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(gerarCsrfToken()) ?>">
 
             <input
                 type="hidden"
