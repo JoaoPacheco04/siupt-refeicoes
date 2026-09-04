@@ -386,19 +386,45 @@ foreach ($vendasDiarias as $d) {
                         $label = $motivosLabels[$m['RAV_MOTIVO']] ?? $m['RAV_MOTIVO'];
                         $icone = 'bi-chat-square-text';
                         $largura = round(($m['total'] / $maxMotivo) * 100);
+                        $pratosContagens = [];
+                        if (!empty($m['pratos_associados'])) {
+                            $rawPratos = array_filter(array_map('trim', explode(',', $m['pratos_associados'])));
+                            $pratosContagens = array_count_values($rawPratos);
+                            arsort($pratosContagens);
+                        }
+                        $temPratos = !empty($pratosContagens);
                         ?>
-                        <div class="relatorio-tabela-linha motivo-linha">
-                            <span class="relatorio-tabela-nome motivo-nome">
-                                <i class="bi <?= $icone ?> motivo-icone"></i>
-                                <?= htmlspecialchars($label) ?>
-                                <?php if (!empty($m['pratos_associados'])): ?>
-                                    <span class="motivo-pratos-associados"><?= htmlspecialchars($m['pratos_associados']) ?></span>
-                                <?php endif; ?>
-                            </span>
-                            <span class="motivo-barra-wrap">
-                                <span class="motivo-barra" style="width:<?= $largura ?>%"></span>
-                            </span>
-                            <span class="relatorio-tabela-qtd motivo-contagem"><?= $m['total'] ?>×</span>
+                        <div class="motivo-item <?= $temPratos ? 'motivo-expansivel' : '' ?>">
+                            <div class="relatorio-tabela-linha motivo-linha" <?= $temPratos ? 'role="button" tabindex="0" title="Clique para ver os pratos"' : '' ?>>
+                                <span class="relatorio-tabela-nome motivo-nome">
+                                    <i class="bi <?= $icone ?> motivo-icone"></i>
+                                    <?= htmlspecialchars($label) ?>
+                                </span>
+                                <span class="motivo-barra-wrap">
+                                    <span class="motivo-barra" style="width:<?= $largura ?>%"></span>
+                                </span>
+                                <span class="relatorio-tabela-qtd motivo-contagem">
+                                    <?= $m['total'] ?>×
+                                    <?php if ($temPratos): ?>
+                                        <i class="bi bi-chevron-down motivo-chevron" aria-hidden="true"></i>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                            <?php if ($temPratos): ?>
+                                <div class="motivo-detalhes" style="display: none;">
+                                    <div class="motivo-detalhes-conteudo">
+                                        <span class="motivo-detalhes-label">Pratos reportados nesta categoria:</span>
+                                        <div class="motivo-pratos-chips">
+                                            <?php foreach ($pratosContagens as $nomePrato => $qtdPrato): ?>
+                                                <span class="motivo-prato-chip">
+                                                    <?= htmlspecialchars($nomePrato) ?>
+                                                    <span class="motivo-chip-qtd"><?= $qtdPrato ?>×</span>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -488,6 +514,36 @@ foreach ($vendasDiarias as $d) {
             })();
         </script>
     <?php endif; ?>
+
+    <script>
+        // Interação de expansão dos motivos de reclamação
+        document.querySelectorAll('.motivo-expansivel .motivo-linha').forEach(function(linha) {
+            function alternarDetalhes() {
+                const item = linha.closest('.motivo-item');
+                if (!item) return;
+                const detalhes = item.querySelector('.motivo-detalhes');
+                if (!detalhes) return;
+
+                const expandido = item.classList.toggle('is-expanded');
+                detalhes.style.display = expandido ? 'block' : 'none';
+                linha.setAttribute('aria-expanded', expandido ? 'true' : 'false');
+
+                const chevron = item.querySelector('.motivo-chevron');
+                if (chevron) {
+                    chevron.classList.toggle('bi-chevron-down', !expandido);
+                    chevron.classList.toggle('bi-chevron-up', expandido);
+                }
+            }
+
+            linha.addEventListener('click', alternarDetalhes);
+            linha.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    alternarDetalhes();
+                }
+            });
+        });
+    </script>
 
 </body>
 

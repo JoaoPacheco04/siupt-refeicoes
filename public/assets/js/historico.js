@@ -109,8 +109,10 @@ document.querySelectorAll('.btn-filtro').forEach(btn => {
 btnAnterior?.addEventListener('click', () => { paginaAtual--; renderizarPagina(); });
 btnSeguinte?.addEventListener('click', () => { paginaAtual++; renderizarPagina(); });
 
-// Inicialização — renderiza a primeira página com todos os cartões
-aplicarFiltro('todos');
+// Inicialização — renderiza a primeira página conforme o filtro inicialmente ativo
+const btnInicial = document.querySelector('.btn-filtro.ativo-filtro');
+const filtroInicial = btnInicial ? btnInicial.dataset.filtro : 'todos';
+aplicarFiltro(filtroInicial);
 
 
 /* ======================================================================

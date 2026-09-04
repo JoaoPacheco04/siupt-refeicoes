@@ -416,6 +416,10 @@
     .relatorio-seletor-mes {
         flex-wrap: wrap;
     }
+
+    .motivo-detalhes {
+        padding-left: 1rem;
+    }
 }
 
 /* ======================================================================
@@ -470,66 +474,143 @@
    ====================================================================== */
 
 .motivos-tabela {
-    gap: 0.5rem;
+    margin-top: 0.25rem;
 }
 
-.motivo-linha {
-    display: grid;
-    grid-template-columns: 1.5fr 1fr auto; /* mais espaço para o nome/motivo */
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.6rem 0.85rem;
-    background: #fff;
-    border-radius: 10px;
-    border: 1px solid #e8ecf0;
+.motivo-item {
+    border-bottom: 1px solid #f0f2f5;
+}
+
+.motivo-item:last-child {
+    border-bottom: none;
+}
+
+.motivo-item .motivo-linha {
+    border-bottom: none;
+}
+
+.motivo-expansivel .motivo-linha {
+    cursor: pointer;
+    user-select: none;
+}
+
+.motivo-expansivel .motivo-linha:hover {
+    background: #f8fafc;
+}
+
+.motivo-item.is-expanded .motivo-linha {
+    background: #f8fafc;
 }
 
 .motivo-nome {
+    flex: 1.4;
     font-size: 0.88rem;
-    font-weight: 500;
-    color: #2d3748;
+    font-weight: 600;
+    color: #1e2a3b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+.motivo-icone {
+    color: #dc2626;
+    font-size: 0.92rem;
+    flex-shrink: 0;
+}
+
 .motivo-barra-wrap {
-    background: #f3f4f6;
+    flex: 1.2;
+    background: #fee2e2;
     border-radius: 999px;
     height: 8px;
     overflow: hidden;
-    width: 100%;
+    min-width: 100px;
 }
 
 .motivo-barra {
     display: block;
     height: 100%;
     border-radius: 999px;
-    background: linear-gradient(90deg, #dc2626, #f87171);
+    background: linear-gradient(90deg, #ef4444, #dc2626);
     transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 4px;
 }
 
 .motivo-contagem {
-    font-size: 0.82rem;
+    font-family: 'Manrope', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 800;
+    color: #dc2626;
+    min-width: 3.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.motivo-chevron {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    transition: transform 0.2s ease, color 0.15s ease;
+}
+
+.motivo-expansivel:hover .motivo-chevron {
+    color: #475569;
+}
+
+/* ── Bloco de detalhes com os pratos (expandido) ── */
+.motivo-detalhes {
+    background: #f8fafc;
+    padding: 0.75rem 1.1rem 1rem 2.8rem;
+    border-top: 1px dashed #e2e8f0;
+    animation: motivoFadeIn 0.2s ease-out;
+}
+
+@keyframes motivoFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.motivo-detalhes-label {
+    display: block;
+    font-size: 0.72rem;
     font-weight: 700;
-    color: #dc2626;
-    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #64748b;
+    margin-bottom: 0.5rem;
 }
 
-.motivo-icone {
-    color: #dc2626;
-    font-size: 0.82rem;
-    margin-right: 0.4rem;
-    vertical-align: -1px;
+.motivo-pratos-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
 }
 
-.motivo-pratos-associados {
-    display: inline-block;
-    font-size: 0.68rem;
-    font-weight: 400;
-    color: #8a99ad;
-    margin-left: 0.5rem; /* NOVO — separa do nome do motivo */
-    white-space: normal;
-    overflow-wrap: break-word;
+.motivo-prato-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #334155;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+
+.motivo-chip-qtd {
+    background: #fee2e2;
+    color: #dc2626;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 0.05rem 0.3rem;
 }

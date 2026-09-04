@@ -149,7 +149,8 @@ $datasComPedido = array_flip(
  * Se o horário de corte para o dia de hoje já passou, começa a contar
  * a partir de amanhã.
  */
-$hojeBloqueadoExtras = date('H:i:s') > '10:00:00';
+$horaLimiteExtras = defined('EXTRA_HORA_LIMITE_HOJE') ? EXTRA_HORA_LIMITE_HOJE : '10:00:00';
+$hojeBloqueadoExtras = date('H:i:s') > $horaLimiteExtras;
 $diasUteisExtras = [];
 $cursor = new DateTime();
 if ($hojeBloqueadoExtras) {
@@ -549,7 +550,7 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEn
     <?php if (!empty($extrasComPreco)): ?>
     <div class="extras-secao">
         <h2 class="ementa-semana">pratos extras</h2>
-        <p class="text-muted small">Disponíveis todos os dias, sem prazo de compra.</p>
+        <p class="text-muted small">Disponíveis nos dias úteis (pedidos para o próprio dia até às <?= substr($horaLimiteExtras, 0, 2) ?>h<?= substr($horaLimiteExtras, 3, 2) ?>).</p>
 
         <div class="extras-data-escolha">
             <label for="dataExtras">Para quando?</label>

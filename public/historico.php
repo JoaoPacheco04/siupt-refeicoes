@@ -88,6 +88,9 @@ foreach ($pedidos as $p) {
         $contagens[$p['estado']]++;
     }
 }
+
+// Se o utilizador tiver refeições ativas, foca diretamente nos 'Ativos' ao entrar
+$filtroInicial = ($contagens['ativo'] > 0) ? 'ativo' : 'todos';
 ?>
 <!DOCTYPE html>
 <html lang="pt">
@@ -183,9 +186,16 @@ foreach ($pedidos as $p) {
     <?php if (!empty($pedidos)): ?>
     <div class="historico-filtros" role="group" aria-label="Filtrar pedidos">
 
-        <button class="btn-filtro ativo-filtro" data-filtro="todos" id="filtro-todos">
+        <button class="btn-filtro<?= $filtroInicial === 'todos' ? ' ativo-filtro' : '' ?>" data-filtro="todos" id="filtro-todos">
             Todos
             <span class="filtro-conta"><?= $contagens['todos'] ?></span>
+        </button>
+
+        <button class="btn-filtro<?= $contagens['ativo'] === 0 ? ' filtro-vazio' : '' ?><?= $filtroInicial === 'ativo' ? ' ativo-filtro' : '' ?>"
+                data-filtro="ativo"
+                id="filtro-ativo">
+            Ativos
+            <span class="filtro-conta"><?= $contagens['ativo'] ?></span>
         </button>
 
         <button class="btn-filtro<?= $contagens['nao_pago'] === 0 ? ' filtro-vazio' : '' ?>"
@@ -193,13 +203,6 @@ foreach ($pedidos as $p) {
                 id="filtro-nao_pago">
             Pendentes
             <span class="filtro-conta"><?= $contagens['nao_pago'] ?></span>
-        </button>
-
-        <button class="btn-filtro<?= $contagens['ativo'] === 0 ? ' filtro-vazio' : '' ?>"
-                data-filtro="ativo"
-                id="filtro-ativo">
-            Ativos
-            <span class="filtro-conta"><?= $contagens['ativo'] ?></span>
         </button>
 
         <button class="btn-filtro<?= $contagens['utilizado'] === 0 ? ' filtro-vazio' : '' ?>"
