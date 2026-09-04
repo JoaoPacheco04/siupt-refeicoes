@@ -56,6 +56,10 @@ $extras = Database::listarDetalhesExtrasParaGestao();
         <i class="bi bi-journal-text"></i>
     </a>
 
+    <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
+        <i class="bi bi-calendar-week"></i>
+    </a>
+
     <a href="gerir_extras.php" class="nav-icon-link nav-icon-link--ativo" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>

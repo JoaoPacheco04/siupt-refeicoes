@@ -20,9 +20,10 @@ exigirPost();
 $utilizador = exigirLogin('admin_cantina', true);
 verificarCsrfToken(true);
 
-$data          = trim($_POST['data']          ?? '');
-$motivo        = trim($_POST['motivo']        ?? '');
-$permiteExtras = !empty($_POST['permite_extras']);
+$data          = trim($_POST['data']   ?? '');
+$motivo        = trim($_POST['motivo'] ?? '');
+$permiteExtras = false; // opção removida da interface — dias especiais nunca permitem extras
+
 
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
     echo json_encode(['status' => 'erro', 'mensagem' => 'Data inválida.']);

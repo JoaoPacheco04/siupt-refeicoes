@@ -37,8 +37,8 @@ if ($diaSemanaHoje >= 6) {
     $sexta   = (clone $segunda)->modify('+4 days');
 }
 
-// Obtém os pratos da ementa para a semana calculada.
-$pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+// Obtém os pratos da ementa para a semana calculada (apenas publicados — visíveis aos alunos).
+$pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'), true);
 
 // Carrega em lote os limites de compra para os tipos de prato da semana.
 $tipoIdsParaLimites = array_unique(array_column($pratos, 'RM_TP_ID'));
@@ -68,7 +68,7 @@ if ($diaSemanaHoje < 6 && todosPratosForaDePrazo($pratos, $dataLimitesBatch)) {
     $semanaAvancada = true;
     $segunda->modify('+7 days');
     $sexta->modify('+7 days');
-    $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
+    $pratos = Database::listarPratosEmentaSemana($segunda->format('Y-m-d'), $sexta->format('Y-m-d'), true);
     // Recarregar variáveis que dependem do período da semana
     $datasComEmenta = Database::listarDatasComEmentaConfigurada($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));
     $diasEspeciaisNaSemana = Database::listarDiasEspeciaisNoPeriodo($segunda->format('Y-m-d'), $sexta->format('Y-m-d'));

@@ -53,6 +53,10 @@ $listaValidacoes = $vejoTudo
     </a>
 
     <?php if (temPapelSessao('admin_cantina')): ?>
+    <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
+        <i class="bi bi-calendar-week"></i>
+    </a>
+
     <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
         <i class="bi bi-egg-fried"></i>
     </a>

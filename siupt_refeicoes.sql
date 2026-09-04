@@ -122,6 +122,16 @@ GO
 ALTER TABLE restaurante_pedido ADD RP_CODIGO_CURTO VARCHAR(10) NULL;
 GO
 
+-- Controlo de publicação da ementa diária.
+-- 0 = rascunho (só visível ao admin), 1 = publicado (visível aos alunos).
+-- Aplica-se apenas a pratos de ementa (RM_DATA IS NOT NULL).
+IF NOT EXISTS (
+    SELECT 1 FROM sys.columns
+    WHERE object_id = OBJECT_ID('restaurante_menu') AND name = 'RM_PUBLICADO'
+)
+    ALTER TABLE restaurante_menu ADD RM_PUBLICADO BIT NOT NULL DEFAULT 0;
+GO
+
 -- Versão segura para correr múltiplas vezes sem dar erro se a coluna já existir:
 -- IF NOT EXISTS (
 --     SELECT 1 FROM sys.columns

@@ -42,17 +42,25 @@ class Database {
     // ============================================
     // Menu e preços
     // ============================================
-    public static function listarPratosEmentaSemana(string $inicio, string $fim): array {
-        $stmt = self::conexao()->prepare("
-            SELECT rm.RM_ID, rm.RM_NOME, rm.RM_DATA, rm.RM_TP_ID, rtp.RTP_NOME, rtp.RM_PRATO_DIA
-            FROM restaurante_menu rm
-            JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
-            WHERE rm.RM_DATA BETWEEN ? AND ?
-            ORDER BY rm.RM_DATA, rtp.RTP_NOME
-        ");
-        $stmt->execute([$inicio, $fim]);
-        return $stmt->fetchAll();
+    public static function listarPratosEmentaSemana(string $inicio, string $fim, bool $apenasPublicados = false): array {
+    $filtro = '';
+    if ($apenasPublicados) {
+        if (!self::semanaJaVisivelParaAlunos($inicio, $fim)) {
+            return [];
+        }
+        $filtro = 'AND rm.RM_PUBLICADO = 1';
     }
+    $stmt = self::conexao()->prepare("
+        SELECT rm.RM_ID, rm.RM_NOME, rm.RM_DATA, rm.RM_TP_ID, rm.RM_PUBLICADO,
+               rtp.RTP_NOME, rtp.RM_PRATO_DIA
+        FROM restaurante_menu rm
+        JOIN restaurante_tipo_refeicao rtp ON rm.RM_TP_ID = rtp.RTP_ID
+        WHERE rm.RM_DATA BETWEEN ? AND ? $filtro
+        ORDER BY rm.RM_DATA, rtp.RTP_NOME
+    ");
+    $stmt->execute([$inicio, $fim]);
+    return $stmt->fetchAll();
+}
 
     public static function listarPratosExtras(): array {
         $stmt = self::conexao()->prepare("
@@ -834,7 +842,6 @@ class Database {
     }
 
     /**
-    /**
      * Remove automaticamente pedidos não pagos cuja data de refeição já passou.
      */
     public static function limparPedidosNaoPagosPassados(int $utilizadorId): void {
@@ -920,9 +927,10 @@ class Database {
         $params2 = [$utilizadorId];
         $filtroMes2 = '';
         if ($anoMes !== null && preg_match('/^\d{4}-\d{2}$/', $anoMes)) {
+            // Reutiliza $inicio e $fim já calculados no bloco anterior
             $filtroMes2 = 'AND rp.RP_DATA_REFEICAO BETWEEN ? AND ?';
-            $params2[] = $inicio;
-            $params2[] = $fim;
+            $params2[] = $inicio ?? ($anoMes . '-01');
+            $params2[] = $fim ?? date('Y-m-t', strtotime($anoMes . '-01'));
         }
         $stmtFav = self::conexao()->prepare("
             SELECT TOP 1 rtp.RTP_NOME AS tipo, COUNT(*) AS total
@@ -1199,11 +1207,188 @@ class Database {
         }
     }
 
+    /**
+ * Publica todos os pratos de ementa de uma semana.
+ * $modoAbertura: 'padrao' (sexta 14h30 da semana anterior) ou 'imediato'.
+ */
+public static function publicarSemanaEmenta(string $inicio, string $fim, string $modoAbertura = 'padrao'): int {
+    if ($modoAbertura === 'imediato') {
+        $stmt = self::conexao()->prepare("
+            UPDATE restaurante_menu
+            SET RM_PUBLICADO = 1, RM_DATA_ABERTURA = GETDATE()
+            WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
+        ");
+    } else {
+        $stmt = self::conexao()->prepare("
+            UPDATE restaurante_menu
+            SET RM_PUBLICADO = 1, RM_DATA_ABERTURA = NULL
+            WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
+        ");
+    }
+    $stmt->execute([$inicio, $fim]);
+    return $stmt->rowCount();
+}
+
+    /**
+     * Despublica todos os pratos de ementa de uma semana.
+     * Retorna o número de pratos atualizados.
+     */
+    public static function despublicarSemanaEmenta(string $inicio, string $fim): int {
+    $stmt = self::conexao()->prepare("
+        UPDATE restaurante_menu
+        SET RM_PUBLICADO = 0, RM_DATA_ABERTURA = NULL
+        WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
+    ");
+    $stmt->execute([$inicio, $fim]);
+    return $stmt->rowCount();
+}
+
+    /**
+     * Verifica se uma semana está publicada (todos os pratos com RM_PUBLICADO=1)
+     * e devolve também quantos pratos há no total e quantos publicados.
+     *
+     * @return array{total: int, publicados: int, publicada: bool}
+     */
+    public static function semanaPublicada(string $inicio, string $fim): array {
+        $stmt = self::conexao()->prepare("
+            SELECT
+                COUNT(*)                                           AS total,
+                SUM(CASE WHEN RM_PUBLICADO = 1 THEN 1 ELSE 0 END) AS publicados
+            FROM restaurante_menu
+            WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
+        ");
+        $stmt->execute([$inicio, $fim]);
+        $row = $stmt->fetch();
+        $total     = (int) ($row['total']     ?? 0);
+        $publicados = (int) ($row['publicados'] ?? 0);
+        return [
+            'total'     => $total,
+            'publicados'=> $publicados,
+            'publicada' => $total > 0 && $publicados === $total,
+        ];
+    }
+
+    /**
+ * Determina se a ementa da semana já está automaticamente visível para
+ * os alunos, com base na hora de abertura explícita (RM_DATA_ABERTURA)
+ * ou, na sua ausência, na regra padrão (sexta 14h30 da semana anterior).
+ * Calculado dinamicamente — sem processo agendado, mesmo princípio do
+ * estado "expirado".
+ */
+public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): bool {
+    $stmt = self::conexao()->prepare("
+        SELECT TOP 1 RM_DATA_ABERTURA FROM restaurante_menu
+        WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA_ABERTURA IS NOT NULL
+    ");
+    $stmt->execute([$inicio, $fim]);
+    $aberturaExplicita = $stmt->fetchColumn();
+
+    if ($aberturaExplicita) {
+        return new DateTime() >= new DateTime($aberturaExplicita);
+    }
+
+    $segunda = new DateTime($inicio);
+    $segunda->modify('monday this week');
+    $abertura = (clone $segunda)->modify('-3 days')->setTime(14, 30, 0);
+    return new DateTime() >= $abertura;
+}
+
     public static function listarTiposRefeicao(): array {
         $stmt = self::conexao()->prepare("SELECT RTP_ID, RTP_NOME FROM restaurante_tipo_refeicao ORDER BY RTP_NOME");
         $stmt->execute();
         return $stmt->fetchAll();
     }
+
+
+    // ============================================
+    // Gestão da Ementa Diária (admin_cantina)
+    // ============================================
+
+    /**
+     * Tipos de refeição marcados como prato do dia (RM_PRATO_DIA = 1),
+     * para popular o select ao adicionar um prato à ementa.
+     * Inclui também tipos auxiliares (Sopa, Sobremesa, etc.) marcados com 0.
+     * Retorna todos, ordenados: pratos do dia primeiro, depois auxiliares.
+     */
+    public static function listarTiposRefeicaoPratoDia(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT RTP_ID, RTP_NOME, RM_PRATO_DIA
+            FROM restaurante_tipo_refeicao
+            WHERE RTP_NOME NOT LIKE 'Extra:%'
+            ORDER BY RM_PRATO_DIA DESC, RTP_NOME
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Cria um novo prato na ementa para uma data específica.
+     * Retorna o RM_ID em caso de sucesso, ou uma string de erro.
+     *
+     * @return int|string RM_ID | 'tipo_invalido' | 'data_invalida' | 'nome_vazio'
+     */
+    public static function criarPratoEmenta(string $nome, int $tipoId, string $data): int|string {
+        $nome = trim($nome);
+        if ($nome === '') return 'nome_vazio';
+
+        $dt = DateTime::createFromFormat('Y-m-d', $data);
+        if (!$dt || $dt->format('Y-m-d') !== $data) return 'data_invalida';
+
+        if(self::ehFeriado($data)) return 'dia_feriado';
+
+        $stmt = self::conexao()->prepare("
+            SELECT RTP_ID FROM restaurante_tipo_refeicao
+            WHERE RTP_ID = ? AND RTP_NOME NOT LIKE 'Extra:%'
+        ");
+        $stmt->execute([$tipoId]);
+        if (!$stmt->fetch()) return 'tipo_invalido';
+
+        $stmt = self::conexao()->prepare("
+            INSERT INTO restaurante_menu (RM_NOME, RM_TP_ID, RM_DATA) VALUES (?, ?, ?)
+        ");
+        $stmt->execute([$nome, $tipoId, $data]);
+        return (int) self::conexao()->lastInsertId();
+    }
+
+    /**
+     * Atualiza o nome de um prato de ementa (RM_DATA IS NOT NULL).
+     */
+    public static function atualizarNomePratoEmenta(int $rmId, string $novoNome): bool {
+        $novoNome = trim($novoNome);
+        if ($novoNome === '') return false;
+        $stmt = self::conexao()->prepare("
+            UPDATE restaurante_menu SET RM_NOME = ?
+            WHERE RM_ID = ? AND RM_DATA IS NOT NULL
+        ");
+        $stmt->execute([$novoNome, $rmId]);
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Apaga um prato de ementa se não tiver pedidos associados.
+     *
+     * @return string 'ok' | 'nao_encontrado' | 'tem_pedidos'
+     */
+    public static function apagarPratoEmenta(int $rmId): string {
+        // Confirma que existe e é prato de ementa (não extra)
+        $stmt = self::conexao()->prepare("
+            SELECT RM_ID FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NOT NULL
+        ");
+        $stmt->execute([$rmId]);
+        if (!$stmt->fetch()) return 'nao_encontrado';
+
+        // Verifica pedidos associados
+        $stmt = self::conexao()->prepare("
+            SELECT COUNT(*) FROM restaurante_compra WHERE RC_RM_ID = ?
+        ");
+        $stmt->execute([$rmId]);
+        if ((int) $stmt->fetchColumn() > 0) return 'tem_pedidos';
+
+        self::conexao()->prepare("DELETE FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NOT NULL")
+            ->execute([$rmId]);
+        return 'ok';
+    }
+
 
     public static function atualizarNomeExtra(int $rmId, string $novoNome): bool {
         $stmt = self::conexao()->prepare("UPDATE restaurante_menu SET RM_NOME = ? WHERE RM_ID = ? AND RM_DATA IS NULL");
@@ -1520,7 +1705,8 @@ class Database {
 
         $stmt = self::conexao()->prepare("
             SELECT rav.RAV_MOTIVO, COUNT(*) AS total,
-                   STRING_AGG(rm.RM_NOME, ', ') WITHIN GROUP (ORDER BY rm.RM_NOME) AS pratos_associados
+                   STRING_AGG(rm.RM_NOME + '|' + CONVERT(VARCHAR(10), rp.RP_DATA_REFEICAO, 120), ';;')
+                       WITHIN GROUP (ORDER BY rp.RP_DATA_REFEICAO DESC, rm.RM_NOME) AS pratos_associados
             FROM restaurante_avaliacao rav
             JOIN restaurante_pedido rp ON rav.RAV_RP_ID = rp.RP_ID
             LEFT JOIN restaurante_compra rc ON rc.RC_RP_ID = rp.RP_ID
@@ -1935,4 +2121,4 @@ class Database {
         $stmt->execute(['id' => $pedidoId]);
         return (bool) $stmt->fetchColumn();
     }
-}
+}

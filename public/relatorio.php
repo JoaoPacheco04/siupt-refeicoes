@@ -124,6 +124,9 @@ foreach ($vendasDiarias as $d) {
             <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
                 <i class="bi bi-journal-text"></i>
             </a>
+            <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
+                <i class="bi bi-calendar-week"></i>
+            </a>
             <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
                 <i class="bi bi-egg-fried"></i>
             </a>
@@ -386,13 +389,21 @@ foreach ($vendasDiarias as $d) {
                         $label = $motivosLabels[$m['RAV_MOTIVO']] ?? $m['RAV_MOTIVO'];
                         $icone = 'bi-chat-square-text';
                         $largura = round(($m['total'] / $maxMotivo) * 100);
-                        $pratosContagens = [];
+                        $pratosComData = [];
                         if (!empty($m['pratos_associados'])) {
-                            $rawPratos = array_filter(array_map('trim', explode(',', $m['pratos_associados'])));
-                            $pratosContagens = array_count_values($rawPratos);
-                            arsort($pratosContagens);
+                            $entradas = array_filter(array_map('trim', explode(';;', $m['pratos_associados'])));
+                            foreach ($entradas as $entrada) {
+                                $partes = explode('|', $entrada, 2);
+                                $nomePrato = trim($partes[0]);
+                                $dataPrato = isset($partes[1]) ? trim($partes[1]) : '';
+                                if ($nomePrato !== '') {
+                                    $chave = $nomePrato . '|' . $dataPrato;
+                                    $pratosComData[$chave] = ($pratosComData[$chave] ?? 0) + 1;
+                                }
+                            }
+                            arsort($pratosComData);
                         }
-                        $temPratos = !empty($pratosContagens);
+                        $temPratos = !empty($pratosComData);
                         ?>
                         <div class="motivo-item <?= $temPratos ? 'motivo-expansivel' : '' ?>">
                             <div class="relatorio-tabela-linha motivo-linha" <?= $temPratos ? 'role="button" tabindex="0" title="Clique para ver os pratos"' : '' ?>>
@@ -415,9 +426,20 @@ foreach ($vendasDiarias as $d) {
                                     <div class="motivo-detalhes-conteudo">
                                         <span class="motivo-detalhes-label">Pratos reportados nesta categoria:</span>
                                         <div class="motivo-pratos-chips">
-                                            <?php foreach ($pratosContagens as $nomePrato => $qtdPrato): ?>
+                                            <?php foreach ($pratosComData as $chave => $qtdPrato):
+                                                [$nomePrato, $dataPrato] = explode('|', $chave, 2);
+                                                // Formata data YYYY-MM-DD → dd/mm
+                                                $dataFormatada = '';
+                                                if ($dataPrato) {
+                                                    $ts = strtotime($dataPrato);
+                                                    $dataFormatada = $ts ? date('d/m', $ts) : $dataPrato;
+                                                }
+                                                ?>
                                                 <span class="motivo-prato-chip">
                                                     <?= htmlspecialchars($nomePrato) ?>
+                                                    <?php if ($dataFormatada): ?>
+                                                        <span class="motivo-chip-data"><?= htmlspecialchars($dataFormatada) ?></span>
+                                                    <?php endif; ?>
                                                     <span class="motivo-chip-qtd"><?= $qtdPrato ?>×</span>
                                                 </span>
                                             <?php endforeach; ?>
@@ -517,7 +539,7 @@ foreach ($vendasDiarias as $d) {
 
     <script>
         // Interação de expansão dos motivos de reclamação
-        document.querySelectorAll('.motivo-expansivel .motivo-linha').forEach(function(linha) {
+        document.querySelectorAll('.motivo-expansivel .motivo-linha').forEach(function (linha) {
             function alternarDetalhes() {
                 const item = linha.closest('.motivo-item');
                 if (!item) return;
@@ -536,7 +558,7 @@ foreach ($vendasDiarias as $d) {
             }
 
             linha.addEventListener('click', alternarDetalhes);
-            linha.addEventListener('keydown', function(e) {
+            linha.addEventListener('keydown', function (e) {
                 if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     alternarDetalhes();

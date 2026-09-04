@@ -62,6 +62,10 @@ $csrfToken     = gerarCsrfToken();
             <i class="bi bi-journal-text"></i>
         </a>
 
+        <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
+            <i class="bi bi-calendar-week"></i>
+        </a>
+
         <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
             <i class="bi bi-egg-fried"></i>
         </a>
@@ -179,7 +183,7 @@ $csrfToken     = gerarCsrfToken();
         <!-- ── Dias especiais ─────────────────────────────────────────── -->
         <h2 class="gerir-feriados-titulo" style="font-size:1.3rem;">dias especiais</h2>
         <p class="gerir-feriados-subtitulo">
-            Dias em que a cantina encerra por razões não feriado (férias, greve, evento). Podes indicar se os pratos extra continuam disponíveis.
+            Dias em que a cantina encerra por razões não feriado (férias, greve, evento).
         </p>
 
         <div class="feriados-card">
@@ -196,13 +200,6 @@ $csrfToken     = gerarCsrfToken();
                     <label for="motivo-especial">Motivo <span style="font-weight:400;">(opcional)</span></label>
                     <input type="text" id="motivo-especial" name="motivo" placeholder="Ex: Férias de agosto">
                 </div>
-                <div class="feriados-form-campo" style="flex:0; min-width:auto; justify-content:flex-end;">
-                    <label>&nbsp;</label>
-                    <label class="feriados-check-label">
-                        <input type="checkbox" id="permite-extras" name="permite_extras" value="1">
-                        Permitir extras
-                    </label>
-                </div>
                 <button type="submit" class="btn-feriados-acao btn-feriados-acao--verde">
                     <i class="bi bi-check-lg"></i> Adicionar
                 </button>
@@ -217,7 +214,6 @@ $csrfToken     = gerarCsrfToken();
                     <tr>
                         <th>Data</th>
                         <th>Motivo</th>
-                        <th>Extras</th>
                         <th class="col-acoes"></th>
                     </tr>
                 </thead>
@@ -227,13 +223,6 @@ $csrfToken     = gerarCsrfToken();
                             <td><?= (new DateTime($de['RDE_DATA']))->format('d/m/Y') ?></td>
                             <td><?= $de['RDE_MOTIVO'] ? htmlspecialchars($de['RDE_MOTIVO']) : '<span style="color:#8a99ad;">—</span>' ?></td>
                             <td>
-                                <?php if ($de['RDE_PERMITE_EXTRAS']): ?>
-                                    <span class="badge-extras-sim"><i class="bi bi-check"></i> Permitidos</span>
-                                <?php else: ?>
-                                    <span class="badge-extras-nao"><i class="bi bi-x"></i> Bloqueados</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
                                 <button class="btn-feriados-apagar btn-apagar-especial" data-id="<?= $de['RDE_ID'] ?>" title="Apagar dia especial">
                                     <i class="bi bi-trash"></i>
                                 </button>
@@ -242,7 +231,7 @@ $csrfToken     = gerarCsrfToken();
                     <?php endforeach; ?>
                     <?php if (empty($diasEspeciais)): ?>
                         <tr id="sem-dias-especiais">
-                            <td colspan="4" class="feriados-vazio">
+                            <td colspan="3" class="feriados-vazio">
                                 <i class="bi bi-inbox"></i> Nenhum dia especial registado.
                             </td>
                         </tr>
