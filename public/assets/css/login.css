@@ -74,16 +74,7 @@
     max-width: 640px;
 }
 
-.login-right-top {
-    position: absolute;
-    top: 2rem;
-    right: 3rem;
-    display: flex;
-    gap: 1rem;
-    align-items: center;
-    color: #6c757d;
-    font-size: 0.9rem;
-}
+
 
 .login-welcome {
     font-size: 1.6rem;
@@ -172,10 +163,4 @@
         padding: 2rem;
         max-width: none;
     }
-
-    .login-right-top {
-        position: static;
-        justify-content: flex-end;
-        margin-bottom: 1rem;
-    }
-}
+}

@@ -42,14 +42,7 @@ foreach (Database::listarTodosMotivosReclamacao() as $m) {
 }
 
 
-$motivosIcones = [
-    'comida_fria' => 'bi-thermometer-snow',
-    'porcao_pequena' => 'bi-arrows-angle-contract',
-    'qualidade_abaixo' => 'bi-emoji-frown',
-    'erro_pedido' => 'bi-x-octagon',
-    'demora_entrega' => 'bi-clock-history',
-    '_fallback' => 'bi-chat-square-text',
-];
+
 
 $mesesNomes = [
     '01' => 'Janeiro',
@@ -391,7 +384,7 @@ foreach ($vendasDiarias as $d) {
                 <div class="relatorio-tabela motivos-tabela">
                     <?php foreach ($motivosProblemas as $m):
                         $label = $motivosLabels[$m['RAV_MOTIVO']] ?? $m['RAV_MOTIVO'];
-                        $icone = $motivosIcones[$m['RAV_MOTIVO']] ?? 'bi-exclamation-circle';
+                        $icone = 'bi-chat-square-text';
                         $largura = round(($m['total'] / $maxMotivo) * 100);
                         ?>
                         <div class="relatorio-tabela-linha motivo-linha">

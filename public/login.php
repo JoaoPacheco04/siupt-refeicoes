@@ -108,10 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <div class="login-right position-relative">
 
-        <div class="login-right-top">
-            <i class="bi bi-globe"></i> Português
-            <i class="bi bi-question-circle"></i>
-        </div>
 
         <div class="login-welcome">Bem-vindo</div>
         <div class="login-subtext">
