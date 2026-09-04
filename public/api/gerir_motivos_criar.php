@@ -36,6 +36,12 @@ $resultado = $codigo !== ''
     ? Database::criarMotivoReclamacao($codigo, $label)
     : Database::criarMotivoReclamacao($label);
 
+$mensagemErro = match ($resultado) {
+    'label_duplicado'  => 'Já existe um motivo com esse texto (verifica maiúsculas/minúsculas).',
+    'codigo_duplicado' => 'Já existe um motivo com esse código interno.',
+    default            => 'Não foi possível criar o motivo.',
+};
+
 echo json_encode($resultado === 'ok'
     ? ['status' => 'ok']
-    : ['status' => 'erro', 'mensagem' => 'Já existe um motivo com esse código.']);
+    : ['status' => 'erro', 'mensagem' => $mensagemErro]);

@@ -151,3 +151,55 @@ document.querySelectorAll('[data-editar]').forEach(btn => {
         }, 50);
     });
 });
+
+// Botão APAGAR PERMANENTEMENTE — usa data-apagar, pede confirmação
+document.querySelectorAll('[data-apagar]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const item = btn.closest('.extra-item');
+        const id = item.dataset.id;
+        const label = item.dataset.label;
+
+        const modal = new tingle.modal({
+            footer: true,
+            closeMethods: ['overlay', 'button', 'escape'],
+            cssClass: ['tingle-siupt'],
+            onClose: function () { modal.destroy(); }
+        });
+
+        modal.setContent(`
+            <div class="modal-siupt-header erro">
+                <i class="bi bi-trash3-fill"></i>
+                <h4>Apagar permanentemente</h4>
+            </div>
+            <p>Tens a certeza que queres apagar o motivo <strong>${escHtml(label)}</strong>?</p>
+            <p class="text-muted small">Esta ação não pode ser desfeita. As avaliações antigas que usaram este motivo não são afetadas.</p>
+        `);
+
+        modal.addFooterBtn('Cancelar', 'tingle-btn tingle-btn--default', () => modal.close());
+
+        const btnConfirmar = modal.addFooterBtn('Apagar', 'tingle-btn tingle-btn--danger', async () => {
+            btnConfirmar.disabled = true;
+
+            try {
+                const resposta = await fetch('api/gerir_motivos_apagar.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: new URLSearchParams({ id, csrf_token: CSRF_TOKEN })
+                });
+                const dados = await resposta.json();
+                modal.close();
+
+                if (dados.status === 'ok') {
+                    location.reload();
+                } else {
+                    mostrarErro(dados.mensagem || 'Não foi possível apagar o motivo.');
+                }
+            } catch (err) {
+                modal.close();
+                mostrarErro('Erro de rede ao apagar o motivo.');
+            }
+        });
+
+        modal.open();
+    });
+});

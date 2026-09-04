@@ -57,10 +57,10 @@ usort($pedidos, function ($a, $b) {
 
 // Configuração visual dos estados dos pedidos.
 $estados = [
-    'nao_pago'  => ['label' => 'Pagamento pendente', 'class' => 'estado-nao-pago'],
-    'ativo'     => ['label' => 'Ativo',              'class' => 'estado-ativo'],
-    'utilizado' => ['label' => 'Levantado',          'class' => 'estado-utilizado'],
-    'expirado'  => ['label' => 'Expirado',           'class' => 'estado-vencido'],
+    'nao_pago'  => ['label' => 'Pagamento pendente', 'class' => 'estado-nao-pago',  'icon' => 'bi-exclamation-circle-fill'],
+    'ativo'     => ['label' => 'Ativo',              'class' => 'estado-ativo',     'icon' => 'bi-check-circle-fill'],
+    'utilizado' => ['label' => 'Levantado',          'class' => 'estado-utilizado', 'icon' => 'bi-check2-all'],
+    'expirado'  => ['label' => 'Expirado',           'class' => 'estado-vencido',   'icon' => 'bi-x-circle-fill'],
 ];
 
 // Abreviaturas dos dias da semana.
@@ -113,17 +113,52 @@ foreach ($pedidos as $p) {
 
 <!-- Barra de navegação principal -->
 <header>
-    <a id="home" href="ementa.php" title="Voltar à ementa">
+    <a id="home" href="<?= (temPapelSessao('atendente') || temPapelSessao('admin_cantina')) ? 'validar.php' : 'ementa.php' ?>" title="Voltar ao início">
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
 
-    <a href="historico.php" class="nav-icon-link nav-icon-link--ativo" title="As minhas compras">
-        <i class="bi bi-clock-history"></i>
-    </a>
     <?php if (temPapelSessao('atendente') || temPapelSessao('admin_cantina')): ?>
-    <a href="validar.php" class="nav-icon-link" title="Área de gestão / Validação">
-        <i class="bi bi-shield-lock"></i>
-    </a>
+        <a href="validar.php" class="nav-icon-link" title="Validar QR code">
+            <i class="bi bi-qr-code-scan"></i>
+        </a>
+
+        <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
+            <i class="bi bi-journal-text"></i>
+        </a>
+
+        <a href="historico.php" class="nav-icon-link nav-icon-link--ativo" title="As minhas compras">
+            <i class="bi bi-clock-history"></i>
+        </a>
+
+        <?php if (temPapelSessao('admin_cantina')): ?>
+        <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
+            <i class="bi bi-egg-fried"></i>
+        </a>
+
+        <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
+            <i class="bi bi-chat-square-text"></i>
+        </a>
+
+        <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados e dias especiais">
+            <i class="bi bi-calendar-x"></i>
+        </a>
+
+        <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
+            <i class="bi bi-people"></i>
+        </a>
+
+        <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
+            <i class="bi bi-bar-chart-line"></i>
+        </a>
+        <?php endif; ?>
+    <?php else: ?>
+        <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
+            <i class="bi bi-journal-text"></i>
+        </a>
+
+        <a href="historico.php" class="nav-icon-link nav-icon-link--ativo" title="As minhas compras">
+            <i class="bi bi-clock-history"></i>
+        </a>
     <?php endif; ?>
 
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
@@ -318,6 +353,7 @@ foreach ($pedidos as $p) {
                 <?php endif; ?>
 
                 <span class="estado-badge <?= $info['class'] ?>">
+                    <i class="bi <?= $info['icon'] ?>"></i>
                     <?= $info['label'] ?>
                 </span>
 

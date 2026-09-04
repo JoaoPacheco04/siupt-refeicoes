@@ -273,17 +273,53 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
 
 <div id="bodycontainer">
 <header>
-    <a id="home" href="ementa.php" title="Voltar à página principal">
+    <a id="home" href="<?= temPapelSessao('atendente') || temPapelSessao('admin_cantina') ? 'validar.php' : 'ementa.php' ?>" title="Voltar ao início">
         <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
     </a>
-    <a href="historico.php" class="nav-icon-link" title="As minhas compras">
-        <i class="bi bi-clock-history"></i>
-    </a>
+
     <?php if (temPapelSessao('atendente') || temPapelSessao('admin_cantina')): ?>
-    <a href="validar.php" class="nav-icon-link" title="Área de gestão / Validação">
-        <i class="bi bi-shield-lock"></i>
-    </a>
+        <a href="validar.php" class="nav-icon-link" title="Validar QR code">
+            <i class="bi bi-qr-code-scan"></i>
+        </a>
+
+        <a href="ementa.php" class="nav-icon-link nav-icon-link--ativo" title="Ver ementa / Reservar refeição">
+            <i class="bi bi-journal-text"></i>
+        </a>
+
+        <a href="historico.php" class="nav-icon-link" title="As minhas compras">
+            <i class="bi bi-clock-history"></i>
+        </a>
+
+        <?php if (temPapelSessao('admin_cantina')): ?>
+        <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
+            <i class="bi bi-egg-fried"></i>
+        </a>
+
+        <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
+            <i class="bi bi-chat-square-text"></i>
+        </a>
+
+        <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados e dias especiais">
+            <i class="bi bi-calendar-x"></i>
+        </a>
+
+        <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
+            <i class="bi bi-people"></i>
+        </a>
+
+        <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
+            <i class="bi bi-bar-chart-line"></i>
+        </a>
+        <?php endif; ?>
+    <?php else: ?>
+        <a href="historico.php" class="nav-icon-link<?= $pedidosPorAvaliar > 0 ? ' nav-icon-com-badge' : '' ?>" title="As minhas compras<?= $pedidosPorAvaliar > 0 ? ' (' . $pedidosPorAvaliar . ' por avaliar)' : '' ?>">
+            <i class="bi bi-clock-history"></i>
+            <?php if ($pedidosPorAvaliar > 0): ?>
+                <span class="nav-badge"><?= $pedidosPorAvaliar ?></span>
+            <?php endif; ?>
+        </a>
     <?php endif; ?>
+
     <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
         <form method="POST" action="login.php" style="display:inline">
             <input type="hidden" name="logout" value="1">
@@ -348,6 +384,24 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     <?php endif; ?>
 
     <?php if (!empty($pratos)): ?>
+    <?php
+        // Conta quantos dias passados existem (bloqueados e não comprados)
+        $numDiasPassados = 0;
+        foreach ($diasEmenta as $dataCheck => $tiposCheck) {
+            if ($dataCheck < $hojeStr && !isset($datasComPedido[$dataCheck])) {
+                $numDiasPassados++;
+            }
+        }
+    ?>
+    <?php if ($numDiasPassados > 0): ?>
+    <div class="dias-passados-toggle-wrap">
+        <button type="button" class="btn-toggle-dias-passados" id="btnToggleDiasPassados"
+                aria-expanded="false">
+            <i class="bi bi-chevron-down"></i>
+            Mostrar <?= $numDiasPassados ?> dia<?= $numDiasPassados > 1 ? 's' : '' ?> anterior<?= $numDiasPassados > 1 ? 'es' : '' ?>
+        </button>
+    </div>
+    <?php endif; ?>
     <?php foreach ($diasEmenta as $data => $tiposDoDia):
         $numDia = $numerosDia[(int) date('N', strtotime($data))];
 

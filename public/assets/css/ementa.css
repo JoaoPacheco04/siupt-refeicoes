@@ -152,6 +152,33 @@
     letter-spacing: 0;
 }
 
+/* ── Botão para mostrar/ocultar dias passados ─── */
+.dias-passados-toggle-wrap {
+    margin-bottom: 0.5rem;
+}
+
+.btn-toggle-dias-passados {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: none;
+    border: 1.5px dashed #cbd5e1;
+    border-radius: 8px;
+    padding: 0.4rem 0.9rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    font-family: inherit;
+}
+
+.btn-toggle-dias-passados:hover {
+    border-color: #94a3b8;
+    color: #334155;
+    background: rgba(100, 116, 139, 0.05);
+}
+
 /* ======================================================================
    CARTÃO DO DIA (EMENTA SEMANAL)
    ====================================================================== */

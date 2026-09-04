@@ -22,6 +22,39 @@ if (bannerAvaliar) {
     });
 }
 
+// ── Colapsar dias passados por defeito ────────────────────────────────────
+(function () {
+    const diasPassados = document.querySelectorAll('.dia-card.dia-passado');
+    const btnToggle = document.getElementById('btnToggleDiasPassados');
+    if (!btnToggle || diasPassados.length === 0) return;
+
+    let visiveis = false;
+
+    // Oculta inicialmente
+    diasPassados.forEach(d => { d.style.display = 'none'; });
+
+    btnToggle.addEventListener('click', () => {
+        visiveis = !visiveis;
+        diasPassados.forEach(d => { d.style.display = visiveis ? '' : 'none'; });
+
+        const icone = btnToggle.querySelector('i');
+        if (visiveis) {
+            icone.className = 'bi bi-chevron-up';
+            btnToggle.setAttribute('aria-expanded', 'true');
+            // Atualiza o texto do botão dinamicamente
+            const n = diasPassados.length;
+            btnToggle.childNodes[btnToggle.childNodes.length - 1].textContent =
+                ` Ocultar dia${n > 1 ? 's' : ''} anterior${n > 1 ? 'es' : ''}`;
+        } else {
+            icone.className = 'bi bi-chevron-down';
+            btnToggle.setAttribute('aria-expanded', 'false');
+            const n = diasPassados.length;
+            btnToggle.childNodes[btnToggle.childNodes.length - 1].textContent =
+                ` Mostrar ${n} dia${n > 1 ? 's' : ''} anterior${n > 1 ? 'es' : ''}`;
+        }
+    });
+})();
+
 // Elementos principais da interface
 const btnComprar = document.getElementById('btnComprar');
 const totalSelecionadasEl = document.getElementById('totalSelecionadas');

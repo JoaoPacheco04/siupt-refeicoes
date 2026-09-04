@@ -133,6 +133,9 @@ $motivos = Database::listarTodosMotivosReclamacao();
                     <button class="btn-reativar-extra" title="Reativar" data-acao="reativar">
                         <i class="bi bi-arrow-counterclockwise"></i>
                     </button>
+                    <button class="btn-apagar-permanente" title="Apagar permanentemente" data-apagar="1">
+                        <i class="bi bi-trash3"></i>
+                    </button>
                 <?php endif; ?>
             </div>
             <?php endforeach; ?>

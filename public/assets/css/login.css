@@ -108,38 +108,6 @@
     margin-bottom: 0.4rem;
 }
 
-/* ── Seletor de tipo de utilizador (aluno/funcionário) ── */
-.user-type-toggle {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1.5rem;
-}
-
-.user-type-option {
-    flex: 1;
-    border: 1.5px solid #dee2e6;
-    border-radius: 8px;
-    padding: 0.75rem;
-    text-align: center;
-    cursor: pointer;
-    color: #495057;
-    font-size: 0.9rem;
-    transition: all 0.15s ease;
-}
-
-.user-type-option i {
-    display: block;
-    font-size: 1.3rem;
-    margin-bottom: 0.25rem;
-}
-
-.user-type-option.active {
-    border-color: #1a73b5;
-    background: #eaf3fb;
-    color: #1a73b5;
-    font-weight: 600;
-}
-
 /* ── Campos de input com ícone ───────────────────────── */
 .input-icon-group {
     position: relative;

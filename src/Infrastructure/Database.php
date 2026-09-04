@@ -1774,10 +1774,18 @@ class Database {
             $labelTexto = trim($label);
         }
 
+        // Verifica duplicado por código
         $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE RMR_CODIGO = ?");
         $stmt->execute([$codigo]);
         if ($stmt->fetch()) {
             return 'codigo_duplicado';
+        }
+
+        // Verifica duplicado por label (case-insensitive)
+        $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE LOWER(RMR_LABEL) = LOWER(?)");
+        $stmt->execute([$labelTexto]);
+        if ($stmt->fetch()) {
+            return 'label_duplicado';
         }
 
         self::conexao()->prepare("
@@ -1810,10 +1818,42 @@ class Database {
      * O código interno (RMR_CODIGO) nunca muda — é a chave usada
      * em avaliações já registadas, alterá-lo quebraria o histórico.
      */
-    public static function atualizarLabelMotivoReclamacao(int $id, string $novoLabel): bool {
+    public static function atualizarLabelMotivoReclamacao(int $id, string $novoLabel): bool|string {
+        // Verifica duplicado por label noutro motivo (case-insensitive)
+        $stmt = self::conexao()->prepare("SELECT 1 FROM restaurante_motivo_reclamacao WHERE LOWER(RMR_LABEL) = LOWER(?) AND RMR_ID != ?");
+        $stmt->execute([$novoLabel, $id]);
+        if ($stmt->fetch()) {
+            return 'label_duplicado';
+        }
+
         $stmt = self::conexao()->prepare("UPDATE restaurante_motivo_reclamacao SET RMR_LABEL = ? WHERE RMR_ID = ?");
         $stmt->execute([$novoLabel, $id]);
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Apaga permanentemente um motivo de reclamação.
+     * Só é permitido se o motivo já estiver desativado (RMR_ATIVO = 0),
+     * garantindo que o administrador confirmou a intenção antes de apagar.
+     * As avaliações antigas que referenciavam este motivo não são afetadas
+     * porque o campo RAV_MOTIVO é texto livre (não é FK).
+     *
+     * @return string 'ok' | 'nao_encontrado' | 'ainda_ativo'
+     */
+    public static function apagarMotivoReclamacao(int $id): string {
+        $stmt = self::conexao()->prepare("SELECT RMR_ATIVO FROM restaurante_motivo_reclamacao WHERE RMR_ID = ?");
+        $stmt->execute([$id]);
+        $row = $stmt->fetch();
+
+        if (!$row) {
+            return 'nao_encontrado';
+        }
+        if ($row['RMR_ATIVO']) {
+            return 'ainda_ativo';
+        }
+
+        self::conexao()->prepare("DELETE FROM restaurante_motivo_reclamacao WHERE RMR_ID = ?")->execute([$id]);
+        return 'ok';
     }
 
     /**

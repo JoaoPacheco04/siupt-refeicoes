@@ -124,36 +124,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
 
-        <!-- Seleção do tipo de utilizador -->
-        <div class="login-field-label">Tipo de utilizador</div>
-
-        <div class="user-type-toggle" id="tipoToggle">
-            <div class="user-type-option active" data-tipo="estudante">
-                <i class="bi bi-mortarboard"></i> Estudante
-            </div>
-
-            <div class="user-type-option" data-tipo="colaborador">
-                <i class="bi bi-briefcase"></i> Colaborador
-            </div>
-        </div>
-        <p class="text-muted small mt-1" style="font-size:0.78rem; text-align:center;">
-            O sistema deteta automaticamente o teu perfil de acesso.
-        </p>
-
         <!-- Formulário de autenticação -->
         <form method="POST">
 
             <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(gerarCsrfToken()) ?>">
 
-            <input
-                type="hidden"
-                name="tipo_selecionado"
-                id="tipoSelecionado"
-                value="estudante"
-            >
-
-            <div class="login-field-label" id="labelNumero">
-                Número de estudante
+            <div class="login-field-label">
+                Número de estudante / colaborador
             </div>
 
             <div class="input-icon-group">
@@ -196,32 +173,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 </div>
 
-<script>
-/**
- * Atualiza a interface de acordo com o tipo
- * de utilizador selecionado.
- */
-document.querySelectorAll('.user-type-option').forEach(opt => {
-
-    opt.addEventListener('click', () => {
-
-        document.querySelectorAll('.user-type-option')
-            .forEach(o => o.classList.remove('active'));
-
-        opt.classList.add('active');
-
-        const tipo = opt.dataset.tipo;
-
-        document.getElementById('labelNumero').textContent =
-            tipo === 'estudante'
-                ? 'Número de estudante'
-                : 'Número de colaborador';
-
-        document.getElementById('tipoSelecionado').value = tipo;
-    });
-
-});
-</script>
 
 </body>
 </html>

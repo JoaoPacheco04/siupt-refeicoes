@@ -29,7 +29,12 @@ if ($id <= 0 || $label === '') {
     exit;
 }
 
-$ok = Database::atualizarLabelMotivoReclamacao($id, $label);
-echo json_encode($ok
-    ? ['status' => 'ok']
-    : ['status' => 'erro', 'mensagem' => 'Motivo não encontrado']);
+$resultado = Database::atualizarLabelMotivoReclamacao($id, $label);
+
+if ($resultado === 'label_duplicado') {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Já existe outro motivo com esse texto.']);
+} elseif ($resultado) {
+    echo json_encode(['status' => 'ok']);
+} else {
+    echo json_encode(['status' => 'erro', 'mensagem' => 'Motivo não encontrado']);
+}
