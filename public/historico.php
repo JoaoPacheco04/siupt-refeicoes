@@ -134,6 +134,10 @@ $filtroInicial = ($contagens['ativo'] > 0) ? 'ativo' : 'todos';
         </a>
 
         <?php if (temPapelSessao('admin_cantina')): ?>
+        <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
+            <i class="bi bi-calendar-week"></i>
+        </a>
+
         <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
             <i class="bi bi-egg-fried"></i>
         </a>
@@ -284,6 +288,8 @@ $filtroInicial = ($contagens['ativo'] > 0) ? 'ativo' : 'todos';
                         <?= htmlspecialchars($descricao ?: 'Sem itens registados') ?>
                     </div>
 
+
+
                     <?php if (isset($transferencias[(int) $p['RP_ID']])): ?>
                     <div class="compra-recebida-de">
                         <i class="bi bi-send"></i>
@@ -308,6 +314,7 @@ $filtroInicial = ($contagens['ativo'] > 0) ? 'ativo' : 'todos';
                             data-qrcode="<?= htmlspecialchars($p['RP_QRCODE']) ?>"
                             data-codigo-curto="<?= htmlspecialchars($p['RP_CODIGO_CURTO'] ?? '') ?>" 
                             data-data="<?= date('d/m/Y', strtotime($p['RP_DATA_REFEICAO'])) ?>"
+                            data-data-iso="<?= $p['RP_DATA_REFEICAO'] ?>"
                             data-descricao="<?= htmlspecialchars($descricao) ?>"
                             title="Ver QR code">
 

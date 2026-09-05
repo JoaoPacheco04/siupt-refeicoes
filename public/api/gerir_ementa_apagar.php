@@ -26,6 +26,7 @@ try {
     $mensagens = [
         'ok'            => null,
         'nao_encontrado'=> 'Prato não encontrado.',
+        'data_passada'  => 'Não é possível apagar pratos de dias anteriores.',
         'tem_pedidos'   => 'Não é possível apagar: já existem reservas para este prato.',
     ];
 
@@ -33,7 +34,7 @@ try {
         echo json_encode(['status' => 'ok']);
     } else {
         echo json_encode([
-            'status'   => $resultado === 'tem_pedidos' ? 'tem_pedidos' : 'erro',
+            'status'   => in_array($resultado, ['tem_pedidos', 'data_passada']) ? $resultado : 'erro',
             'mensagem' => $mensagens[$resultado] ?? 'Erro desconhecido.',
         ]);
     }

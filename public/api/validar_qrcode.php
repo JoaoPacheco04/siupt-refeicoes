@@ -33,10 +33,11 @@ $resultado = Database::validarPorQrCode($qrcode, (int) $utilizador['id']);
  * Enriquece a resposta com o detalhe do pedido
  * e o número de validações efetuadas pelo funcionário.
  */
-if ($resultado['status'] === 'valido' && isset($resultado['pedido_id'])) {
+if (isset($resultado['pedido_id'])) {
     $resultado['linhas'] = Database::listarLinhasDoPedido((int) $resultado['pedido_id']);
 }
 
-$resultado['validacoes_hoje'] = Database::contarValidacoesHoje((int) $utilizador['id']);
+$resultado['validacoes_hoje']       = Database::contarValidacoesHoje((int) $utilizador['id']);
+$resultado['refeicoes_por_levantar'] = Database::contarRefeicoesAtivasHoje();
 
 echo json_encode($resultado);

@@ -100,21 +100,27 @@ $listaValidacoes = $vejoTudo
         Aponte a câmara para o QR code do utilizador ou introduza o código manualmente.
     </p>
 
-    <!-- Contador de validações -->
-    <div class="validacoes-contador">
-        <i class="bi bi-check2-circle"></i>
-        <span class="num" id="contadorValidacoes"><?= $validacoesHoje ?></span>
-        validações hoje
-    </div>
+    <!-- Barra de contadores e controlos de som -->
+    <div class="validacoes-top-bar">
+        <div class="validacoes-contador">
+            <i class="bi bi-check2-circle"></i>
+            <span class="num" id="contadorValidacoes"><?= $validacoesHoje ?></span>
+            validações hoje
+        </div>
 
-    <!-- Refeições pagas por levantar hoje -->
-    <?php if ($refeicoesPorLevantar > 0): ?>
-    <div class="validacoes-contador validacoes-contador--aviso">
-        <i class="bi bi-hourglass-split"></i>
-        <span class="num" id="contadorPorLevantar"><?= $refeicoesPorLevantar ?></span>
-        por levantar hoje
+        <?php if ($refeicoesPorLevantar > 0): ?>
+        <div class="validacoes-contador validacoes-contador--aviso">
+            <i class="bi bi-hourglass-split"></i>
+            <span class="num" id="contadorPorLevantar"><?= $refeicoesPorLevantar ?></span>
+            por levantar hoje
+        </div>
+        <?php endif; ?>
+
+        <button type="button" id="btnToggleSom" class="btn-toggle-som" title="Alternar som de confirmação">
+            <i class="bi bi-volume-up-fill" id="iconeSom"></i>
+            <span id="textoSom">Som ativo</span>
+        </button>
     </div>
-    <?php endif; ?>
 
 
     <!-- Área de validação -->

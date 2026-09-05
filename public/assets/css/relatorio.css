@@ -624,3 +624,99 @@
     padding: 0.05rem 0.3rem;
     letter-spacing: 0.01em;
 }
+
+/* ======================================================================
+   DISTRIBUIÇÃO VISUAL DE REFEIÇÕES
+   ====================================================================== */
+
+.relatorio-distribuicao-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 1px 3px rgba(15, 31, 56, 0.05);
+}
+
+.distribuicao-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.85rem;
+}
+
+.distribuicao-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.distribuicao-titulo i {
+    color: #0284c7;
+}
+
+.distribuicao-subtitulo {
+    font-size: 0.8rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.distribuicao-barra-segmentada {
+    display: flex;
+    width: 100%;
+    height: 16px;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #e2e8f0;
+    margin-bottom: 1rem;
+}
+
+.segmento-barra {
+    height: 100%;
+    transition: width 0.3s ease, opacity 0.2s;
+}
+
+.segmento-barra:hover {
+    opacity: 0.85;
+    filter: brightness(1.05);
+}
+
+.distribuicao-legendas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+}
+
+.distribuicao-legenda-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: #334155;
+}
+
+.legenda-ponto {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.legenda-nome {
+    font-weight: 500;
+}
+
+.legenda-pct {
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.legenda-qtd {
+    color: #94a3b8;
+    font-size: 0.75rem;
+}

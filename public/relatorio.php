@@ -82,6 +82,40 @@ $pratosEmentaMostrar = array_slice($pratosEmenta, 0, $LIMITE_LINHAS);
 $extrasMostrar = array_slice($extrasVendas, 0, $LIMITE_LINHAS);
 
 /**
+ * Calcula distribuição percentual por tipo de refeição.
+ */
+$totalQtdGeral = array_sum(array_column($vendasPorTipo, 'quantidade'));
+$distribuicaoTipos = [];
+if ($totalQtdGeral > 0) {
+    foreach ($vendasPorTipo as $vt) {
+        $nome = trim($vt['RTP_NOME']);
+        $nomeLower = mb_strtolower($nome);
+        $cor = '#64748b';
+        if (str_contains($nomeLower, 'carne')) {
+            $cor = '#ef4444';
+        } elseif (str_contains($nomeLower, 'peixe')) {
+            $cor = '#0284c7';
+        } elseif (str_contains($nomeLower, 'veg')) {
+            $cor = '#16a34a';
+        } elseif (str_contains($nomeLower, 'dieta')) {
+            $cor = '#f59e0b';
+        } elseif (str_contains($nomeLower, 'menu')) {
+            $cor = '#8b5cf6';
+        } elseif (str_contains($nomeLower, 'extra')) {
+            $cor = '#ec4899';
+        }
+        $qtd = (int) $vt['quantidade'];
+        $pct = round(($qtd / $totalQtdGeral) * 100, 1);
+        $distribuicaoTipos[] = [
+            'nome' => $nome,
+            'quantidade' => $qtd,
+            'percentagem' => $pct,
+            'cor' => $cor,
+        ];
+    }
+}
+
+/**
  * Prepara os dados do gráfico de vendas diárias para Chart.js.
  */
 $graficoLabels = [];
@@ -113,35 +147,45 @@ foreach ($vendasDiarias as $d) {
 <body>
 
     <div id="bodycontainer">
-        <!-- Cabeçalho da aplicação -->
         <header>
-            <a id="home" href="validar.php" title="Voltar ao início">
+            <a id="home" href="<?= temPapelSessao('atendente') || temPapelSessao('admin_cantina') ? 'validar.php' : 'ementa.php' ?>" title="Voltar ao início">
                 <img src="https://siupt.upt.pt/styles/images/siupt.png" alt="SIUPT" id="siupt-logo">
             </a>
-            <a href="validar.php" class="nav-icon-link" title="Validar QR code">
-                <i class="bi bi-qr-code-scan"></i>
-            </a>
-            <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
-                <i class="bi bi-journal-text"></i>
-            </a>
-            <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
-                <i class="bi bi-calendar-week"></i>
-            </a>
-            <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
-                <i class="bi bi-egg-fried"></i>
-            </a>
-            <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
-                <i class="bi bi-chat-square-text"></i>
-            </a>
-            <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados e dias especiais">
-                <i class="bi bi-calendar-x"></i>
-            </a>
-            <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
-                <i class="bi bi-people"></i>
-            </a>
-            <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
-                <i class="bi bi-bar-chart-line"></i>
-            </a>
+
+            <?php if (temPapelSessao('atendente') || temPapelSessao('admin_cantina')): ?>
+                <a href="validar.php" class="nav-icon-link" title="Validar QR code">
+                    <i class="bi bi-qr-code-scan"></i>
+                </a>
+
+                <a href="ementa.php" class="nav-icon-link" title="Ver ementa / Reservar refeição">
+                    <i class="bi bi-journal-text"></i>
+                </a>
+
+                <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
+                    <i class="bi bi-calendar-week"></i>
+                </a>
+
+                <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
+                    <i class="bi bi-egg-fried"></i>
+                </a>
+
+                <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
+                    <i class="bi bi-chat-square-text"></i>
+                </a>
+
+                <a href="gerir_feriados.php" class="nav-icon-link" title="Gerir feriados">
+                    <i class="bi bi-calendar-x"></i>
+                </a>
+
+                <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
+                    <i class="bi bi-people"></i>
+                </a>
+
+                <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
+                    <i class="bi bi-bar-chart-line"></i>
+                </a>
+            <?php endif; ?>
+
             <div id="profile" title="<?= htmlspecialchars($utilizador['nome']) ?>">
                 <form method="POST" action="login.php" style="display:inline">
                     <input type="hidden" name="logout" value="1">
@@ -158,8 +202,11 @@ foreach ($vendasDiarias as $d) {
             <div class="relatorio-header-acoes">
                 <h1 class="relatorio-titulo">relatório mensal</h1>
                 <div class="relatorio-acoes-grupo">
-                    <a href="api/exportar_relatorio.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv">
-                        <i class="bi bi-filetype-csv"></i> CSV
+                    <a href="api/exportar_relatorio_mensal.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv" title="Exportar lista detalhada de refeições em CSV">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> CSV Detalhado
+                    </a>
+                    <a href="api/exportar_relatorio.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv" title="Exportar resumo de vendas em CSV">
+                        <i class="bi bi-filetype-csv"></i> CSV Resumo
                     </a>
                     <a href="api/exportar_relatorio_pdf.php?mes=<?= htmlspecialchars($anoMes) ?>"
                         class="btn-exportar-pdf">
@@ -231,6 +278,35 @@ foreach ($vendasDiarias as $d) {
                     <div class="cartao-label">preço médio/pedido</div>
                 </div>
             </div>
+
+            <?php if (!empty($distribuicaoTipos)): ?>
+                <div class="relatorio-distribuicao-card">
+                    <div class="distribuicao-header">
+                        <h3 class="distribuicao-titulo"><i class="bi bi-pie-chart-fill"></i> Distribuição das Escolhas</h3>
+                        <span class="distribuicao-subtitulo"><?= $totalQtdGeral ?> refeições consumidas</span>
+                    </div>
+                    <div class="distribuicao-barra-segmentada" role="progressbar" aria-label="Distribuição de escolhas">
+                        <?php foreach ($distribuicaoTipos as $seg): ?>
+                            <?php if ($seg['percentagem'] > 0): ?>
+                                <div class="segmento-barra" 
+                                     style="width: <?= $seg['percentagem'] ?>%; background-color: <?= $seg['cor'] ?>;" 
+                                     title="<?= htmlspecialchars($seg['nome']) ?>: <?= $seg['quantidade'] ?>x (<?= $seg['percentagem'] ?>%)">
+                                </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                    <div class="distribuicao-legendas">
+                        <?php foreach ($distribuicaoTipos as $seg): ?>
+                            <div class="distribuicao-legenda-item">
+                                <span class="legenda-ponto" style="background-color: <?= $seg['cor'] ?>;"></span>
+                                <span class="legenda-nome"><?= htmlspecialchars($seg['nome']) ?></span>
+                                <strong class="legenda-pct"><?= $seg['percentagem'] ?>%</strong>
+                                <span class="legenda-qtd">(<?= $seg['quantidade'] ?>x)</span>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
 
             <?php if (!empty($vendasDiarias)): ?>
                 <h2 class="relatorio-secao-titulo">evolução de vendas diárias</h2>

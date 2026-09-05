@@ -111,10 +111,27 @@ $tiposRefeicao = Database::listarTiposRefeicaoPratoDia();
             <i class="bi bi-chevron-right"></i>
         </button>
 
-        <button id="btnSemanaHoje" class="semana-nav-hoje" title="Ir para a semana atual">
-            Esta semana
+        <button id="btnSemanaHoje" class="semana-nav-hoje" title="Voltar à semana atual" style="display:none;">
+            <i class="bi bi-arrow-return-left"></i> Voltar à semana atual
         </button>
     </nav>
+
+    <!-- Barra de estado de publicação -->
+    <div class="publicacao-barra publicacao-barra--vazia" id="publicacaoBarra" style="display:none;"></div>
+    <div class="publicacao-acoes">
+        <button class="btn-publicar-semana" id="btnPublicarSemana" style="display:none;">
+            <i class="bi bi-send-check-fill"></i> Publicar semana
+        </button>
+        <button class="btn-despublicar-semana" id="btnDespublicarSemana" style="display:none;">
+            <i class="bi bi-arrow-counterclockwise"></i> Despublicar
+        </button>
+        <button class="btn-copiar-semana" id="btnCopiarSemana" title="Copiar os pratos da semana anterior para esta semana">
+            <i class="bi bi-copy"></i> Copiar semana anterior
+        </button>
+        <button class="btn-limpar-semana" id="btnLimparSemana" style="display:none;" title="Remover todos os pratos configurados para esta semana">
+            <i class="bi bi-trash3"></i> Limpar semana
+        </button>
+    </div>
 
     <!-- Grelha de dias — preenchida via JS -->
     <div id="semanaGrid" class="semana-grid">
@@ -124,6 +141,64 @@ $tiposRefeicao = Database::listarTiposRefeicaoPratoDia();
     </div>
 
 </main>
+
+<!-- Modal para copiar pratos de um dia para outro -->
+<div id="modalCopiarDia" class="modal-publicar-overlay" role="dialog" aria-modal="true" aria-labelledby="modalCopiarDiaTitulo">
+    <div class="modal-publicar-caixa">
+        <h2 class="modal-publicar-titulo" id="modalCopiarDiaTitulo">
+            <i class="bi bi-copy"></i> Copiar ementa de <span id="copiarDiaOrigemNome"></span>
+        </h2>
+        <p class="modal-publicar-desc">Escolhe o dia de destino para copiar os pratos configurados:</p>
+
+        <div class="copiar-dia-opcoes" id="copiarDiaDestinosWrap">
+            <!-- Opções geradas dinamicamente via JS -->
+        </div>
+
+        <div class="modal-publicar-acoes">
+            <button type="button" class="btn-modal-cancelar" id="btnCancelarCopiarDia">Cancelar</button>
+            <button type="button" class="btn-modal-confirmar" id="btnConfirmarCopiarDia" disabled>
+                <i class="bi bi-check-lg"></i> Copiar pratos
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de publicação -->
+<div id="modalPublicar" class="modal-publicar-overlay" role="dialog" aria-modal="true" aria-labelledby="modalPublicarTitulo">
+    <div class="modal-publicar-caixa">
+        <h2 class="modal-publicar-titulo" id="modalPublicarTitulo">
+            <i class="bi bi-send-check-fill"></i> Publicar ementa
+        </h2>
+        <p class="modal-publicar-desc">Escolhe quando a ementa fica visível para os alunos:</p>
+
+        <div class="modal-opcoes">
+            <label class="modal-opcao modal-opcao--selecionada" id="labelOpcaoPadrao">
+                <input type="radio" name="modoAbertura" value="padrao" checked>
+                <span class="modal-opcao-icone"><i class="bi bi-calendar-check"></i></span>
+                <span class="modal-opcao-texto">
+                    <strong>Sexta às 14h30</strong>
+                    <small>Abre automaticamente na sexta-feira às 14h30 (padrão)</small>
+                </span>
+            </label>
+
+            <label class="modal-opcao" id="labelOpcaoImediato">
+                <input type="radio" name="modoAbertura" value="imediato">
+                <span class="modal-opcao-icone"><i class="bi bi-lightning-charge-fill"></i></span>
+                <span class="modal-opcao-texto">
+                    <strong>Imediatamente</strong>
+                    <small>Fica visível de imediato para todos os alunos</small>
+                </span>
+            </label>
+        </div>
+
+        <div class="modal-publicar-acoes">
+            <button class="btn-modal-cancelar" id="btnCancelarPublicar">Cancelar</button>
+            <button class="btn-modal-confirmar" id="btnConfirmarPublicar">
+                <i class="bi bi-send-check-fill"></i> Confirmar publicação
+            </button>
+        </div>
+    </div>
+</div>
 
 </div><!-- #bodycontainer -->
 

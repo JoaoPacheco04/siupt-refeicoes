@@ -15,6 +15,15 @@ function escHtml(str) {
         .replace(/"/g, '&quot;');
 }
 
+/**
+ * Converte 'YYYY-MM-DD' em 'DD/MM/YYYY' para apresentação ao utilizador.
+ */
+function formatarDataPt(iso) {
+    if (!iso) return iso;
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+}
+
 // ── Elementos principais da interface de validação ──────────────────────
 const resultadoCard   = document.getElementById('resultadoCard');
 const resultadoIcone  = document.getElementById('resultadoIcone');
@@ -148,17 +157,18 @@ async function validarQrCode(qrcode) {
 
     if (dados.status === 'valido') {
         adicionarAListaValidacoes(dados);
-
-        // Decrementa "por levantar hoje" — o elemento só existe no DOM
-        // se o valor inicial era > 0 (ver validar.php).
-        const contadorPorLevantar = document.getElementById('contadorPorLevantar');
-        if (contadorPorLevantar) {
-            const atual = parseInt(contadorPorLevantar.textContent, 10) || 0;
-            contadorPorLevantar.textContent = Math.max(0, atual - 1);
-        }
     }
 
+    // Atualiza o contador "por levantar hoje" com o valor real do servidor
+    // (correto mesmo com vários atendentes a validar em simultâneo)
+    const contadorPorLevantar = document.getElementById('contadorPorLevantar');
+    if (contadorPorLevantar && typeof dados.refeicoes_por_levantar === 'number') {
+        contadorPorLevantar.textContent = dados.refeicoes_por_levantar;
+    }
+
+    inputManual.value = '';
     inputManual.focus();
+    inputManual.select();
 }
 
 /* ======================================================================
@@ -192,26 +202,91 @@ function adicionarAListaValidacoes(dados) {
     listaEl.prepend(item);
 }
 
+let somAtivo = localStorage.getItem('validar_som_ativo') !== 'false';
+const btnToggleSom = document.getElementById('btnToggleSom');
+const iconeSom = document.getElementById('iconeSom');
+const textoSom = document.getElementById('textoSom');
+
+function actualizarEstadoSomUI() {
+    if (!btnToggleSom) return;
+    if (somAtivo) {
+        btnToggleSom.classList.remove('btn-toggle-som--mudo');
+        if (iconeSom) iconeSom.className = 'bi bi-volume-up-fill';
+        if (textoSom) textoSom.textContent = 'Som ativo';
+    } else {
+        btnToggleSom.classList.add('btn-toggle-som--mudo');
+        if (iconeSom) iconeSom.className = 'bi bi-volume-mute-fill';
+        if (textoSom) textoSom.textContent = 'Som desativado';
+    }
+}
+
+if (btnToggleSom) {
+    btnToggleSom.addEventListener('click', () => {
+        somAtivo = !somAtivo;
+        localStorage.setItem('validar_som_ativo', somAtivo ? 'true' : 'false');
+        actualizarEstadoSomUI();
+        if (somAtivo) tocarSom(true);
+    });
+    actualizarEstadoSomUI();
+}
+
 /**
- * Emite um sinal sonoro sintetizado (beep) com frequência diferente
+ * Manter o campo manual focado para pistolas leitoras USB/Bluetooth.
+ */
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('a, button, input, select, textarea, .validacao-item')) {
+        inputManual?.focus();
+    }
+});
+
+/**
+ * Emite um sinal sonoro sintetizado com frequência diferente
  * consoante o sucesso ou o insucesso da validação.
  */
 function tocarSom(sucesso) {
     try {
-        const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.type = 'sine';
-        osc.frequency.value = sucesso ? 880 : 220; // Tom agudo para sucesso, grave para erro
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-        osc.onended = () => ctx.close();
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        const ctx = new AudioCtx();
+        const now = ctx.currentTime;
+
+        if (sucesso) {
+            // Tom ascendente elegante: Ré5 (587.33Hz) -> Lá5 (880Hz)
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+
+            osc.frequency.setValueAtTime(587.33, now);
+            osc.frequency.setValueAtTime(880, now + 0.08);
+
+            gain.gain.setValueAtTime(0.18, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+
+            osc.start(now);
+            osc.stop(now + 0.28);
+            osc.onended = () => ctx.close();
+        } else {
+            // Tom de alerta/erro mais grave
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sawtooth';
+
+            osc.frequency.setValueAtTime(220, now);
+            osc.frequency.exponentialRampToValueAtTime(130, now + 0.25);
+
+            gain.gain.setValueAtTime(0.16, now);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+            osc.start(now);
+            osc.stop(now + 0.25);
+            osc.onended = () => ctx.close();
+        }
     } catch (e) {
-        // Ignora falhas de autoplay ou restrições de contexto de áudio do browser
+        // Silencioso se restrito pelo browser
     }
 }
 
@@ -222,6 +297,16 @@ function tocarSom(sucesso) {
 function mostrarResultado(status, dados = {}) {
     resultadoCard.className = 'resultado-card visivel';
     resultadoLinhas.innerHTML = '';
+
+    if (status !== 'loading') {
+        const ehSucesso = status === 'valido';
+        if (somAtivo) {
+            tocarSom(ehSucesso);
+        }
+        if (navigator.vibrate) {
+            navigator.vibrate(ehSucesso ? [120] : [100, 60, 100]);
+        }
+    }
 
     const configs = {
         loading: {
@@ -239,31 +324,43 @@ function mostrarResultado(status, dados = {}) {
         nao_pago: {
             classe: 'erro',
             icone: '💳',
-            estado: 'Pagamento não confirmado',
+            estado: dados.mensagem || 'Pagamento não confirmado. Não é possível consumir.',
             nome: dados.nome ?? ''
         },
         utilizado: {
-            classe: 'aviso',
+            classe: 'erro',
             icone: '⚠️',
-            estado: 'QR code já utilizado',
+            estado: dados.data_validacao
+                ? `Senha já consumida em ${dados.data_validacao}${dados.validado_por ? ' (por ' + dados.validado_por + ')' : ''}. Não pode ser reutilizada!`
+                : (dados.mensagem || 'Esta senha já foi consumida e não pode ser reutilizada!'),
             nome: dados.nome ?? ''
         },
         expirado: {
             classe: 'erro',
             icone: '❌',
-            estado: 'Pedido expirado (data de refeição já passou)',
+            estado: dados.data_refeicao
+                ? `Senha expirada — era para ${formatarDataPt(dados.data_refeicao)}. As senhas só podem ser consumidas no dia agendado.`
+                : (dados.mensagem || 'Pedido expirado (data de refeição já passou)'),
+            nome: dados.nome ?? ''
+        },
+        dia_errado: {
+            classe: 'erro',
+            icone: '📅',
+            estado: dados.data_refeicao
+                ? `Senha inválida para hoje! Esta refeição foi comprada para ${formatarDataPt(dados.data_refeicao)} e só pode ser consumida nesse dia.`
+                : (dados.mensagem || 'Esta refeição não é para hoje!'),
             nome: dados.nome ?? ''
         },
         invalido: {
             classe: 'erro',
             icone: '🚫',
-            estado: 'QR code inválido',
+            estado: dados.mensagem || 'QR code ou código inválido',
             nome: ''
         },
         erro: {
             classe: 'erro',
             icone: '❌',
-            estado: 'Erro ao processar',
+            estado: dados.mensagem || 'Erro ao processar validação',
             nome: ''
         },
         erro_rede: {
@@ -281,7 +378,7 @@ function mostrarResultado(status, dados = {}) {
     resultadoNome.textContent   = cfg.nome;
     resultadoNumero.textContent = dados.numero ? `Nº ${dados.numero}` : '';
 
-    if (status === 'valido' && Array.isArray(dados.linhas) && dados.linhas.length > 0) {
+    if (Array.isArray(dados.linhas) && dados.linhas.length > 0) {
         dados.linhas.forEach(linha => {
             const li = document.createElement('li');
             li.innerHTML = `
@@ -292,10 +389,9 @@ function mostrarResultado(status, dados = {}) {
         });
     }
 
-    // Executa scroll automático até ao resultado e reproduz o alerta sonoro
+    // Executa scroll automático até ao resultado
     if (status !== 'loading') {
         resultadoCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        tocarSom(status === 'valido');
     }
 }
 

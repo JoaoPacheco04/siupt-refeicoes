@@ -653,3 +653,57 @@
     align-items: center;
     gap: 0.4rem;
 }
+
+.btn-guardar-qr-fs {
+    margin-top: 1rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 1rem;
+    background: #f1f5f9;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #334155;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.btn-guardar-qr-fs:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+
+
+/* ── Alerta de data no modal QR ── */
+.qr-fullscreen-aviso {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    margin-bottom: 0.5rem;
+}
+
+.qr-fullscreen-aviso.qr-aviso--hoje {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.qr-fullscreen-aviso.qr-aviso--futuro {
+    background: #eff6ff;
+    color: #1e40af;
+    border: 1px solid #bfdbfe;
+}
+
+.qr-fullscreen-aviso.qr-aviso--expirado {
+    background: #fee2e2;
+    color: #991b1b;
+}
+

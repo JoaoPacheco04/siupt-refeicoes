@@ -141,12 +141,13 @@ function syncComponentesVisibility(card) {
     const wrap            = card.querySelector('.dia-componentes-wrap');
     if (!componentes) return;
 
-    const temPrato = card.querySelector('.radio-prato-principal:checked') !== null;
-    const mostrar  = temPrato && !(menuCompletoBox?.checked ?? false);
+    // Mostra sempre que não haja menu completo selecionado
+    // (os componentes podem ser comprados sem prato principal)
+    const menuCompletoAtivo = menuCompletoBox?.checked ?? false;
 
-    componentes.classList.toggle('visivel', mostrar);
+    componentes.classList.toggle('visivel', !menuCompletoAtivo);
     if (wrap) {
-        wrap.classList.toggle('tem-prato', temPrato);
+        wrap.classList.toggle('tem-prato', true); // sempre visível
     }
 }
 
@@ -600,3 +601,34 @@ function mostrarErro(mensagens) {
     modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--primary', () => modal.close());
     modal.open();
 }
+
+/* ======================================================================
+   TEMPORIZADOR DE PRAZO E FILTROS DE DIETA
+   ====================================================================== */
+
+// ── Temporizador decrescente ao vivo para o prazo de compra ──────────────
+(function () {
+    const banner = document.getElementById('bannerPrazoProximo');
+    const ticker = document.getElementById('tickerPrazo');
+    if (!banner || !ticker) return;
+
+    let segundos = parseInt(banner.dataset.segundos, 10);
+
+    if (isNaN(segundos) || segundos <= 0) return;
+
+    const timer = setInterval(() => {
+        segundos--;
+        if (segundos <= 0) {
+            clearInterval(timer);
+            ticker.textContent = 'Prazo encerrado';
+            banner.style.background = '#fee2e2';
+            banner.style.color = '#991b1b';
+            return;
+        }
+
+        const h = Math.floor(segundos / 3600);
+        const m = Math.floor((segundos % 3600) / 60);
+        const s = segundos % 60;
+        ticker.textContent = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }, 1000);
+})();

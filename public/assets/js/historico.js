@@ -130,105 +130,38 @@ document.querySelectorAll('.btn-ver-qr').forEach(btn => {
     btn.addEventListener('click', () => {
         const qrcode      = btn.dataset.qrcode;
         const data        = btn.dataset.data;
+        const dataIso     = btn.dataset.dataIso;
         const descricao   = btn.dataset.descricao;
         const codigoCurto = btn.dataset.codigoCurto;
-        mostrarQrCode(qrcode, data, descricao, codigoCurto);
+        abrirQrFullscreen(qrcode, data, descricao, codigoCurto, dataIso);
     });
 });
 
 /**
- * Constrói uma janela modal e utiliza a biblioteca QRCode.js
- * para desenhar visualmente o código de levantamento na cantina.
- * N4: Inclui botão para guardar/download do QR code como imagem PNG.
- */
-function mostrarQrCode(qrcode, data, descricao, codigoCurto) {
-    const idUnico = `qr-historico-${++qrModalCounter}`;
-
-    const modal = new tingle.modal({
-        footer: true,
-        closeMethods: ['overlay', 'button', 'escape'],
-        closeLabel: 'Fechar',
-        cssClass: ['tingle-siupt'],
-        onClose: function () { modal.destroy(); }
-    });
-
-    modal.setContent(`
-        <div class="modal-siupt-header sucesso">
-            <i class="bi bi-qr-code-scan"></i>
-            <h4>QR code — ${escHtml(data)}</h4>
-        </div>
-        <p class="text-muted small text-center mb-1">${escHtml(descricao)}</p>
-        <div class="text-center py-2">
-            <div id="${idUnico}" style="display:inline-block;"></div>
-            <p class="codigo-curto">${escHtml(codigoCurto ?? '')}</p>
-        </div>
-        <p class="text-muted small text-center mt-1">
-            <i class="bi bi-info-circle"></i>
-            Apresenta este código na cantina no momento da recolha.
-        </p>
-    `);
-
-    // Botão de fechar + botão de download + botão de ecrã cheio
-    modal.addFooterBtn('Fechar', 'tingle-btn tingle-btn--default', () => modal.close());
-    
-    const btnFullscreen = modal.addFooterBtn(
-        '<i class="bi bi-arrows-fullscreen"></i> Ecrã Cheio',
-        'tingle-btn tingle-btn--default',
-        () => {
-            abrirQrFullscreen(qrcode, data, descricao, codigoCurto);
-        }
-    );
-    btnFullscreen.innerHTML = '<i class="bi bi-arrows-fullscreen"></i> Ecrã Cheio';
-
-    const btnDownload = modal.addFooterBtn(
-        '<i class="bi bi-download"></i> Guardar QR',
-        'tingle-btn tingle-btn--primary',
-        () => {
-            const elQrCanvas = document.querySelector(`#${idUnico} canvas`);
-            const elQrImg    = document.querySelector(`#${idUnico} img`);
-            const src = elQrCanvas ? elQrCanvas.toDataURL('image/png')
-                      : elQrImg    ? elQrImg.src
-                      : null;
-            if (!src) return;
-            const a = document.createElement('a');
-            a.href = src;
-            a.download = `qr-refeicao-${codigoCurto || 'siupt'}.png`;
-            a.click();
-        }
-    );
-    btnDownload.innerHTML = '<i class="bi bi-download"></i> Guardar QR';
-
-    modal.open();
-
-    const elQr = document.getElementById(idUnico);
-    if (elQr) {
-        try {
-            new QRCode(elQr, {
-                text: qrcode,
-                width: 200,
-                height: 200,
-                colorDark: '#1e2a3b',
-                colorLight: '#ffffff'
-            });
-        } catch (err) {
-            console.error('Falha ao desenhar QR code:', err);
-        }
-    } else {
-        console.warn('Elemento do QR não encontrado.');
-    }
-}
-
-/**
  * Abre o QR Code em modo de ecrã cheio e alto contraste (ideal para telemóvel na cantina).
  */
-function abrirQrFullscreen(qrcode, data, descricao, codigoCurto) {
+function abrirQrFullscreen(qrcode, data, descricao, codigoCurto, dataIso) {
     const idFs = `qr-fs-${++qrModalCounter}`;
+    const hojeStr = new Date().toISOString().split('T')[0];
+
+    let avisoDiaHtml = '';
+    if (dataIso) {
+        if (dataIso === hojeStr) {
+            avisoDiaHtml = `<div class="qr-fullscreen-aviso qr-aviso--hoje"><i class="bi bi-check-circle-fill"></i> Válido para consumo hoje</div>`;
+        } else if (dataIso > hojeStr) {
+            avisoDiaHtml = `<div class="qr-fullscreen-aviso qr-aviso--futuro"><i class="bi bi-calendar-event"></i> Esta senha só é válida no dia ${escHtml(data)}</div>`;
+        } else {
+            avisoDiaHtml = `<div class="qr-fullscreen-aviso qr-aviso--expirado"><i class="bi bi-x-circle-fill"></i> Refeição expirada (era para ${escHtml(data)})</div>`;
+        }
+    }
+
     const overlay = document.createElement('div');
     overlay.className = 'qr-fullscreen-overlay';
     overlay.innerHTML = `
         <div class="qr-fullscreen-container">
             <button class="qr-fullscreen-fechar" title="Fechar">&times;</button>
             <div class="qr-fullscreen-tag">SIUPT Refeições</div>
+            ${avisoDiaHtml}
             <div class="qr-fullscreen-data">${escHtml(data)}</div>
             <div class="qr-fullscreen-prato">${escHtml(descricao)}</div>
             <div class="qr-fullscreen-box">
@@ -238,19 +171,35 @@ function abrirQrFullscreen(qrcode, data, descricao, codigoCurto) {
             <div class="qr-fullscreen-dica">
                 <i class="bi bi-brightness-high"></i> Apresenta no leitor ótico da cantina
             </div>
+            <button type="button" class="btn-guardar-qr-fs" id="btnGuardarQrFs">
+                <i class="bi bi-download"></i> Guardar imagem QR
+            </button>
         </div>
     `;
 
     document.body.appendChild(overlay);
 
     const el = document.getElementById(idFs);
-    const tamanho = Math.min(window.innerWidth - 70, 300);
+    const tamanho = Math.min(window.innerWidth - 70, 280);
     new QRCode(el, {
         text: qrcode,
         width: tamanho,
         height: tamanho,
         colorDark: '#000000',
         colorLight: '#ffffff'
+    });
+
+    overlay.querySelector('#btnGuardarQrFs')?.addEventListener('click', () => {
+        const elQrCanvas = overlay.querySelector(`#${idFs} canvas`);
+        const elQrImg    = overlay.querySelector(`#${idFs} img`);
+        const src = elQrCanvas ? elQrCanvas.toDataURL('image/png')
+                  : elQrImg    ? elQrImg.src
+                  : null;
+        if (!src) return;
+        const a = document.createElement('a');
+        a.href = src;
+        a.download = `qr-refeicao-${codigoCurto || 'siupt'}.png`;
+        a.click();
     });
 
     function fechar() {

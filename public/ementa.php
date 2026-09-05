@@ -86,6 +86,13 @@ $iconePrato = [
     'Vegetariano' => '<img src="assets/img/icone-vegetariano.svg" alt="Vegetariano" style="width: 28px; height: 28px; object-fit: contain;">',
 ];
 
+// Configuração dos ícones para acompanhamentos (Sopa, Sobremesa, Bebida)
+$iconeComponente = [
+    'Sopa'      => '<img src="assets/img/icone-sopa.svg" alt="Sopa" style="width: 28px; height: 28px; object-fit: contain;">',
+    'Sobremesa' => '<img src="assets/img/icone-sobremesa.svg" alt="Sobremesa" style="width: 28px; height: 28px; object-fit: contain;">',
+    'Bebida'    => '<img src="assets/img/icone-bebida.svg" alt="Bebida" style="width: 28px; height: 28px; object-fit: contain;">',
+];
+
 // Carrega os pratos extras, o ID do tipo "Menu Completo" e o texto do prazo.
 $extras = Database::listarPratosExtras();
 $tipoMenuCompletoId = Database::obterTipoIdPorNome('Menu Completo');
@@ -238,6 +245,7 @@ foreach (['Carne', 'Peixe', 'Vegetariano'] as $tipoPrincipal) {
         $avisoPrazo = [
             'horas' => $horasRestantes,
             'minutos' => $minutosRestantes,
+            'segundos' => $diffSegundos,
             'hora_limite' => substr($limite['RDL_HORA'], 0, 5),
         ];
         break; // já encontrámos o próximo prazo a expirar, não precisamos de continuar
@@ -292,6 +300,10 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
         </a>
 
         <?php if (temPapelSessao('admin_cantina')): ?>
+        <a href="gerir_ementa.php" class="nav-icon-link" title="Gerir ementa semanal">
+            <i class="bi bi-calendar-week"></i>
+        </a>
+
         <a href="gerir_extras.php" class="nav-icon-link" title="Gerir extras">
             <i class="bi bi-egg-fried"></i>
         </a>
@@ -359,13 +371,11 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
     <?php endif; ?>
 
     <?php if ($avisoPrazo !== null): ?>
-    <div class="banner-prazo-proximo" role="alert">
+    <div class="banner-prazo-proximo" id="bannerPrazoProximo" role="alert" data-segundos="<?= $avisoPrazo['segundos'] ?>" data-hora="<?= $avisoPrazo['hora_limite'] ?>">
         <i class="bi bi-clock-fill"></i>
-        <?php if ($avisoPrazo['horas'] > 0): ?>
-        Faltam <?= $avisoPrazo['horas'] ?>h<?= $avisoPrazo['minutos'] > 0 ? $avisoPrazo['minutos'] . 'min' : '' ?> para o prazo de compra de hoje (<?= $avisoPrazo['hora_limite'] ?>).
-        <?php else: ?>
-        Faltam apenas <?= $avisoPrazo['minutos'] ?> minutos para o prazo de compra de hoje (<?= $avisoPrazo['hora_limite'] ?>)!
-        <?php endif; ?>
+        <span id="textoAvisoPrazo">
+            Faltam <span class="banner-prazo-ticker" id="tickerPrazo"><?= sprintf('%02d:%02d:%02d', $avisoPrazo['horas'], $avisoPrazo['minutos'], $avisoPrazo['segundos'] % 60) ?></span> para o prazo de compra de hoje (<?= $avisoPrazo['hora_limite'] ?>).
+        </span>
     </div>
     <?php endif; ?>
 
@@ -482,8 +492,10 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
         <?php endif; ?>
 
         <div class="dia-pratos-principais">
-            <?php foreach ($pratosPrincipais as $tipoNome => $prato): ?>
-                <label class="prato-opcao">
+            <?php foreach ($pratosPrincipais as $tipoNome => $prato):
+                $tipoSlug = strtolower(trim($tipoNome));
+            ?>
+                <label class="prato-opcao prato-opcao--<?= $tipoSlug ?>" data-tipo="<?= $tipoSlug ?>">
                     <input type="radio" name="prato_<?= $data ?>" class="radio-prato-principal"
                            data-rm-id="<?= $prato['rm_id'] ?>"
                            data-preco="<?= $prato['preco'] ?>"
@@ -519,7 +531,7 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEn
 <div class="menu-completo-resumo">
     <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
     <span class="menu-completo-item-incluido">
-        <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($tipoNome) ?>
+        <i class="bi bi-check-circle-fill"></i> <?= htmlspecialchars($tipoNome) ?><?= !empty($comp['nome']) ? ' (' . htmlspecialchars($comp['nome']) . ')' : '' ?>
     </span>
     <?php endforeach; ?>
 </div>
@@ -528,7 +540,7 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEn
         <?php
         if (!empty($componentesExtra) && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEncerradoExplicito): ?>
         <div class="dia-componentes-wrap">
-            <p class="componentes-hint"><i class="bi bi-hand-index"></i> Seleciona um prato para adicionar extras</p>
+            <p class="componentes-hint"><i class="bi bi-plus-circle"></i> Acompanhamentos</p>
             <div class="dia-componentes">
                 <?php foreach ($componentesExtra as $tipoNome => $comp): ?>
                 <label class="componente-opcao">
@@ -536,8 +548,14 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEn
                            data-rm-id="<?= $comp['rm_id'] ?>"
                            data-preco="<?= $comp['preco'] ?>"
                            data-nome="<?= htmlspecialchars($tipoNome . ' — ' . $comp['nome']) ?>">
-                    <span class="nome-extra"><?= htmlspecialchars($tipoNome) ?></span>
-                    <span class="preco-extra"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
+                    <span class="prato-tipo-icone"><?= $iconeComponente[$tipoNome] ?? '' ?></span>
+                    <span class="prato-opcao-label">
+                        <strong><?= htmlspecialchars($tipoNome) ?></strong>
+                        <?php if (!empty($comp['nome'])): ?>
+                        <small><?= htmlspecialchars($comp['nome']) ?></small>
+                        <?php endif; ?>
+                        <span class="prato-opcao-preco"><?= number_format($comp['preco'], 2, ',', '') ?>€</span>
+                    </span>
                 </label>
                 <?php endforeach; ?>
             </div>

@@ -51,7 +51,8 @@ function exigirLogin(?string $tipo_exigido = null, bool $isApi = false): array
         }
 
         $destino = urlencode($_SERVER['REQUEST_URI'] ?? '');
-        header('Location: ' . APP_BASE_URL . '/login.php' . ($destino ? '?next=' . $destino : ''));
+        $baseUrl = defined('APP_BASE_URL') ? rtrim(APP_BASE_URL, '/') : '';
+        header('Location: ' . ($baseUrl ? $baseUrl . '/login.php' : 'login.php') . ($destino ? '?next=' . $destino : ''));
         exit;
     }
 
@@ -86,7 +87,8 @@ function exigirLogin(?string $tipo_exigido = null, bool $isApi = false): array
                 ? 'validar.php'
                 : 'ementa.php';
 
-            header('Location: ' . APP_BASE_URL . '/' . $paginaCorreta);
+            $baseUrl = defined('APP_BASE_URL') ? rtrim(APP_BASE_URL, '/') : '';
+            header('Location: ' . ($baseUrl ? $baseUrl . '/' . $paginaCorreta : $paginaCorreta));
             exit;
         }
     }

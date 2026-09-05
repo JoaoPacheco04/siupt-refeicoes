@@ -884,9 +884,11 @@ class Database {
             $params[] = $fim;
         }
         $stmt = self::conexao()->prepare("
-            SELECT * FROM restaurante_pedido
-            WHERE RP_U_ID = ? $filtroMes
-            ORDER BY RP_DATA_REFEICAO DESC
+            SELECT rp.*, rv.RV_DATA_VALIDACAO
+            FROM restaurante_pedido rp
+            LEFT JOIN restaurante_validacao rv ON rv.RV_RP_ID = rp.RP_ID
+            WHERE rp.RP_U_ID = ? $filtroMes
+            ORDER BY rp.RP_DATA_REFEICAO DESC, rp.RP_ID DESC
         ");
         $stmt->execute($params);
         $pedidos = $stmt->fetchAll();
@@ -1008,14 +1010,78 @@ class Database {
         $pedido = $stmt->fetch();
 
         if (!$pedido) {
-            return ['status' => 'invalido'];
+            return [
+                'status'   => 'invalido',
+                'mensagem' => 'QR code ou código curto inválido.'
+            ];
         }
 
-        $estado = self::calcularEstadoPedido($pedido);
-        if ($estado !== 'ativo') {
-            return ['status' => $estado, 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
+        $dataRefeicao = $pedido['RP_DATA_REFEICAO'];
+        if ($dataRefeicao instanceof DateTime) {
+            $dataRefeicao = $dataRefeicao->format('Y-m-d');
+        } elseif (is_string($dataRefeicao)) {
+            $dataRefeicao = substr(trim($dataRefeicao), 0, 10);
+        }
+        $hoje = date('Y-m-d');
+
+        // 1. Controlo de utilização: se já foi consumida, NUNCA permite consumir de novo
+        if ((int) $pedido['RP_UTILIZADO'] === 1) {
+            $stmtVal = $pdo->prepare("
+                SELECT TOP 1 rv.RV_DATA_VALIDACAO, func.U_NOME AS funcionario_nome
+                FROM restaurante_validacao rv
+                LEFT JOIN users func ON rv.RV_FUNCIONARIO_ID = func.U_ID
+                WHERE rv.RV_RP_ID = ?
+                ORDER BY rv.RV_ID DESC
+            ");
+            $stmtVal->execute([$pedido['RP_ID']]);
+            $val = $stmtVal->fetch(PDO::FETCH_ASSOC);
+
+            $dataValFormatada = null;
+            if ($val && !empty($val['RV_DATA_VALIDACAO'])) {
+                $dataValFormatada = date('d/m/Y \à\s H:i', strtotime($val['RV_DATA_VALIDACAO']));
+            }
+
+            return [
+                'status'         => 'utilizado',
+                'nome'           => $pedido['U_NOME'],
+                'numero'         => $pedido['U_BICC'],
+                'pedido_id'      => (int) $pedido['RP_ID'],
+                'data_refeicao'  => $dataRefeicao,
+                'data_validacao' => $dataValFormatada,
+                'validado_por'   => $val['funcionario_nome'] ?? null,
+                'mensagem'       => 'Esta senha já foi consumida e não pode ser reutilizada.'
+            ];
         }
 
+        // 2. Controlo de pagamento: a senha tem de estar paga
+        if (!(int) $pedido['RP_PAGO']) {
+            return [
+                'status'        => 'nao_pago',
+                'nome'          => $pedido['U_NOME'],
+                'numero'        => $pedido['U_BICC'],
+                'pedido_id'     => (int) $pedido['RP_ID'],
+                'data_refeicao' => $dataRefeicao,
+                'mensagem'      => 'Pagamento pendente. A refeição não pode ser consumida.'
+            ];
+        }
+
+        // 3. Controlo da data da refeição: a senha comprada para um dia SÓ pode ser consumida nesse dia
+        if (!empty($dataRefeicao) && $dataRefeicao !== $hoje) {
+            $ehFuturo = ($dataRefeicao > $hoje);
+            return [
+                'status'        => $ehFuturo ? 'dia_errado' : 'expirado',
+                'subtipo'       => $ehFuturo ? 'futuro' : 'passado',
+                'nome'          => $pedido['U_NOME'],
+                'numero'        => $pedido['U_BICC'],
+                'pedido_id'     => (int) $pedido['RP_ID'],
+                'data_refeicao' => $dataRefeicao,
+                'mensagem'      => $ehFuturo
+                    ? 'A senha foi comprada para ' . date('d/m/Y', strtotime($dataRefeicao)) . ' e só pode ser consumida nesse dia.'
+                    : 'A senha expirou (era para ' . date('d/m/Y', strtotime($dataRefeicao)) . '). Só podia ser consumida no próprio dia.'
+            ];
+        }
+
+        // 4. Validação atómica na base de dados
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare("UPDATE restaurante_pedido SET RP_UTILIZADO = 1 WHERE RP_ID = ? AND RP_UTILIZADO = 0");
@@ -1026,18 +1092,27 @@ class Database {
                     ->execute([$pedido['RP_ID'], $funcionarioId]);
                 $pdo->commit();
                 return [
-                    'status' => 'valido',
-                    'nome' => $pedido['U_NOME'],
-                    'numero' => $pedido['U_BICC'],
-                    'pedido_id' => $pedido['RP_ID'],
+                    'status'        => 'valido',
+                    'nome'          => $pedido['U_NOME'],
+                    'numero'        => $pedido['U_BICC'],
+                    'pedido_id'     => (int) $pedido['RP_ID'],
+                    'data_refeicao' => $dataRefeicao,
+                    'mensagem'      => 'Refeição validada com sucesso!'
                 ];
             }
 
             $pdo->rollBack();
-            return ['status' => 'utilizado', 'nome' => $pedido['U_NOME'], 'numero' => $pedido['U_BICC']];
+            return [
+                'status'        => 'utilizado',
+                'nome'          => $pedido['U_NOME'],
+                'numero'        => $pedido['U_BICC'],
+                'pedido_id'     => (int) $pedido['RP_ID'],
+                'data_refeicao' => $dataRefeicao,
+                'mensagem'      => 'Esta senha já foi consumida e não pode ser reutilizada.'
+            ];
         } catch (Exception $e) {
             $pdo->rollBack();
-            return ['status' => 'erro'];
+            return ['status' => 'erro', 'mensagem' => 'Erro interno ao validar refeição.'];
         }
     }
 
@@ -1208,40 +1283,40 @@ class Database {
     }
 
     /**
- * Publica todos os pratos de ementa de uma semana.
- * $modoAbertura: 'padrao' (sexta 14h30 da semana anterior) ou 'imediato'.
- */
-public static function publicarSemanaEmenta(string $inicio, string $fim, string $modoAbertura = 'padrao'): int {
-    if ($modoAbertura === 'imediato') {
-        $stmt = self::conexao()->prepare("
-            UPDATE restaurante_menu
-            SET RM_PUBLICADO = 1, RM_DATA_ABERTURA = GETDATE()
-            WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
-        ");
-    } else {
-        $stmt = self::conexao()->prepare("
-            UPDATE restaurante_menu
-            SET RM_PUBLICADO = 1, RM_DATA_ABERTURA = NULL
-            WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
-        ");
+     * Publica todos os pratos de ementa de uma semana.
+     * $modoAbertura: 'padrao' (sexta 14h30 da semana anterior) ou 'imediato'.
+     */
+    public static function publicarSemanaEmenta(string $inicio, string $fim, string $modoAbertura = 'padrao'): int {
+        if ($modoAbertura === 'imediato') {
+            $stmt = self::conexao()->prepare("
+                UPDATE restaurante_menu
+                SET RM_PUBLICADO = 1, RM_DATA_ABERTURA = GETDATE()
+                WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
+            ");
+        } else {
+            $stmt = self::conexao()->prepare("
+                UPDATE restaurante_menu
+                SET RM_PUBLICADO = 1, RM_DATA_ABERTURA = NULL
+                WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
+            ");
+        }
+        $stmt->execute([$inicio, $fim]);
+        return $stmt->rowCount();
     }
-    $stmt->execute([$inicio, $fim]);
-    return $stmt->rowCount();
-}
 
     /**
      * Despublica todos os pratos de ementa de uma semana.
      * Retorna o número de pratos atualizados.
      */
     public static function despublicarSemanaEmenta(string $inicio, string $fim): int {
-    $stmt = self::conexao()->prepare("
-        UPDATE restaurante_menu
-        SET RM_PUBLICADO = 0, RM_DATA_ABERTURA = NULL
-        WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
-    ");
-    $stmt->execute([$inicio, $fim]);
-    return $stmt->rowCount();
-}
+        $stmt = self::conexao()->prepare("
+            UPDATE restaurante_menu
+            SET RM_PUBLICADO = 0, RM_DATA_ABERTURA = NULL
+            WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL
+        ");
+        $stmt->execute([$inicio, $fim]);
+        return $stmt->rowCount();
+    }
 
     /**
      * Verifica se uma semana está publicada (todos os pratos com RM_PUBLICADO=1)
@@ -1269,29 +1344,28 @@ public static function publicarSemanaEmenta(string $inicio, string $fim, string 
     }
 
     /**
- * Determina se a ementa da semana já está automaticamente visível para
- * os alunos, com base na hora de abertura explícita (RM_DATA_ABERTURA)
- * ou, na sua ausência, na regra padrão (sexta 14h30 da semana anterior).
- * Calculado dinamicamente — sem processo agendado, mesmo princípio do
- * estado "expirado".
- */
-public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): bool {
-    $stmt = self::conexao()->prepare("
-        SELECT TOP 1 RM_DATA_ABERTURA FROM restaurante_menu
-        WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA_ABERTURA IS NOT NULL
-    ");
-    $stmt->execute([$inicio, $fim]);
-    $aberturaExplicita = $stmt->fetchColumn();
+     * Determina se a ementa da semana já está automaticamente visível para
+     * os alunos, com base na hora de abertura explícita (RM_DATA_ABERTURA)
+     * ou, na sua ausência, na regra padrão (sexta 14h30 da semana anterior).
+     * Calculado dinamicamente — sem processo agendado, mesmo princípio do
+     * estado "expirado".
+     */
+    public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): bool {
+        $stmt = self::conexao()->prepare("
+            SELECT TOP 1 RM_DATA_ABERTURA FROM restaurante_menu
+            WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA_ABERTURA IS NOT NULL
+        ");
+        $stmt->execute([$inicio, $fim]);
+        $aberturaExplicita = $stmt->fetchColumn();
 
-    if ($aberturaExplicita) {
-        return new DateTime() >= new DateTime($aberturaExplicita);
+        if ($aberturaExplicita) {
+            return new DateTime() >= new DateTime($aberturaExplicita);
+        }
+
+        // $inicio é sempre uma segunda-feira — a sexta anterior são exatamente -3 dias
+        $abertura = (new DateTime($inicio))->modify('-3 days')->setTime(14, 30, 0);
+        return new DateTime() >= $abertura;
     }
-
-    $segunda = new DateTime($inicio);
-    $segunda->modify('monday this week');
-    $abertura = (clone $segunda)->modify('-3 days')->setTime(14, 30, 0);
-    return new DateTime() >= $abertura;
-}
 
     public static function listarTiposRefeicao(): array {
         $stmt = self::conexao()->prepare("SELECT RTP_ID, RTP_NOME FROM restaurante_tipo_refeicao ORDER BY RTP_NOME");
@@ -1334,6 +1408,8 @@ public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): b
         $dt = DateTime::createFromFormat('Y-m-d', $data);
         if (!$dt || $dt->format('Y-m-d') !== $data) return 'data_invalida';
 
+        if ($data < date('Y-m-d')) return 'data_passada';
+
         if(self::ehFeriado($data)) return 'dia_feriado';
 
         $stmt = self::conexao()->prepare("
@@ -1342,6 +1418,14 @@ public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): b
         ");
         $stmt->execute([$tipoId]);
         if (!$stmt->fetch()) return 'tipo_invalido';
+
+        // Garante que só pode existir 1 prato de cada tipo no mesmo dia
+        $stmtCheck = self::conexao()->prepare("
+            SELECT COUNT(*) FROM restaurante_menu
+            WHERE RM_TP_ID = ? AND RM_DATA = ?
+        ");
+        $stmtCheck->execute([$tipoId, $data]);
+        if ((int) $stmtCheck->fetchColumn() > 0) return 'tipo_duplicado';
 
         $stmt = self::conexao()->prepare("
             INSERT INTO restaurante_menu (RM_NOME, RM_TP_ID, RM_DATA) VALUES (?, ?, ?)
@@ -1356,6 +1440,14 @@ public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): b
     public static function atualizarNomePratoEmenta(int $rmId, string $novoNome): bool {
         $novoNome = trim($novoNome);
         if ($novoNome === '') return false;
+
+        $stmtCheck = self::conexao()->prepare("
+            SELECT RM_DATA FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NOT NULL
+        ");
+        $stmtCheck->execute([$rmId]);
+        $dataPrato = $stmtCheck->fetchColumn();
+        if (!$dataPrato || $dataPrato < date('Y-m-d')) return false;
+
         $stmt = self::conexao()->prepare("
             UPDATE restaurante_menu SET RM_NOME = ?
             WHERE RM_ID = ? AND RM_DATA IS NOT NULL
@@ -1367,15 +1459,18 @@ public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): b
     /**
      * Apaga um prato de ementa se não tiver pedidos associados.
      *
-     * @return string 'ok' | 'nao_encontrado' | 'tem_pedidos'
+     * @return string 'ok' | 'nao_encontrado' | 'tem_pedidos' | 'data_passada'
      */
     public static function apagarPratoEmenta(int $rmId): string {
         // Confirma que existe e é prato de ementa (não extra)
         $stmt = self::conexao()->prepare("
-            SELECT RM_ID FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NOT NULL
+            SELECT RM_ID, RM_DATA FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NOT NULL
         ");
         $stmt->execute([$rmId]);
-        if (!$stmt->fetch()) return 'nao_encontrado';
+        $prato = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$prato) return 'nao_encontrado';
+
+        if ($prato['RM_DATA'] < date('Y-m-d')) return 'data_passada';
 
         // Verifica pedidos associados
         $stmt = self::conexao()->prepare("
@@ -1387,6 +1482,127 @@ public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): b
         self::conexao()->prepare("DELETE FROM restaurante_menu WHERE RM_ID = ? AND RM_DATA IS NOT NULL")
             ->execute([$rmId]);
         return 'ok';
+    }
+
+    /**
+     * Limpa os pratos de ementa de um período (um dia ou uma semana inteira).
+     * Ignora pratos que já tenham reservas/compras efetuadas ou que pertençam a dias anteriores a hoje.
+     *
+     * @return array{apagados: int, bloqueados: int}
+     */
+    public static function limparEmentaPeriodo(string $inicio, string $fim): array {
+        $pdo = self::conexao();
+        $pdo->beginTransaction();
+        try {
+            $stmt = $pdo->prepare("
+                SELECT RM_ID FROM restaurante_menu
+                WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA IS NOT NULL AND RM_DATA >= CONVERT(date, GETDATE())
+            ");
+            $stmt->execute([$inicio, $fim]);
+            $todosIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+            if (empty($todosIds)) {
+                $pdo->rollBack();
+                return ['apagados' => 0, 'bloqueados' => 0];
+            }
+
+            // Identificar quais têm reservas
+            $ph = implode(',', array_fill(0, count($todosIds), '?'));
+            $stmtCompras = $pdo->prepare("
+                SELECT DISTINCT RC_RM_ID FROM restaurante_compra
+                WHERE RC_RM_ID IN ($ph)
+            ");
+            $stmtCompras->execute($todosIds);
+            $comprasIds = $stmtCompras->fetchAll(PDO::FETCH_COLUMN);
+            $comprasSet = array_flip($comprasIds);
+
+            $paraApagar = array_filter($todosIds, fn($id) => !isset($comprasSet[$id]));
+            $bloqueados = count($todosIds) - count($paraApagar);
+
+            if (!empty($paraApagar)) {
+                $phApagar = implode(',', array_fill(0, count($paraApagar), '?'));
+                $stmtDel = $pdo->prepare("
+                    DELETE FROM restaurante_menu
+                    WHERE RM_ID IN ($phApagar) AND RM_DATA IS NOT NULL
+                ");
+                $stmtDel->execute(array_values($paraApagar));
+                $apagados = $stmtDel->rowCount();
+            } else {
+                $apagados = 0;
+            }
+
+            $pdo->commit();
+            return ['apagados' => $apagados, 'bloqueados' => $bloqueados];
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    }
+
+    /**
+     * Copia os pratos de um dia (dataOrigem) para outro (dataDestino).
+     * Não sobrepõe tipos de refeição já existentes no dia de destino.
+     *
+     * @return array{copiados: int, ignorados: int, status?: string}
+     */
+    public static function copiarPratosDia(string $dataOrigem, string $dataDestino): array {
+        if ($dataDestino < date('Y-m-d')) {
+            return ['status' => 'data_passada', 'copiados' => 0, 'ignorados' => 0];
+        }
+
+        if (self::ehFeriado($dataDestino)) {
+            return ['status' => 'dia_feriado', 'copiados' => 0, 'ignorados' => 0];
+        }
+
+        $pdo = self::conexao();
+        $pdo->beginTransaction();
+        try {
+            // Pratos de origem
+            $stmtOrigem = $pdo->prepare("
+                SELECT RM_NOME, RM_TP_ID FROM restaurante_menu
+                WHERE RM_DATA = ? AND RM_DATA IS NOT NULL
+            ");
+            $stmtOrigem->execute([$dataOrigem]);
+            $pratosOrigem = $stmtOrigem->fetchAll(PDO::FETCH_ASSOC);
+
+            if (empty($pratosOrigem)) {
+                $pdo->rollBack();
+                return ['status' => 'origem_vazia', 'copiados' => 0, 'ignorados' => 0];
+            }
+
+            // Tipos já existentes no destino
+            $stmtDestino = $pdo->prepare("
+                SELECT RM_TP_ID FROM restaurante_menu
+                WHERE RM_DATA = ? AND RM_DATA IS NOT NULL
+            ");
+            $stmtDestino->execute([$dataDestino]);
+            $tiposDestino = array_flip($stmtDestino->fetchAll(PDO::FETCH_COLUMN));
+
+            $stmtInsert = $pdo->prepare("
+                INSERT INTO restaurante_menu (RM_NOME, RM_TP_ID, RM_DATA)
+                VALUES (?, ?, ?)
+            ");
+
+            $copiados  = 0;
+            $ignorados = 0;
+
+            foreach ($pratosOrigem as $p) {
+                $tpId = (int) $p['RM_TP_ID'];
+                if (isset($tiposDestino[$tpId])) {
+                    $ignorados++;
+                    continue;
+                }
+                $stmtInsert->execute([$p['RM_NOME'], $tpId, $dataDestino]);
+                $tiposDestino[$tpId] = true; // evita duplicar se a própria origem tivesse duplicados
+                $copiados++;
+            }
+
+            $pdo->commit();
+            return ['status' => 'ok', 'copiados' => $copiados, 'ignorados' => $ignorados];
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
     }
 
 

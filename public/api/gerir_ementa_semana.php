@@ -53,11 +53,16 @@ try {
         }
     }
 
-    // Normaliza datas dos pratos (podem ser DateTime no driver SQL Server)
-    $pratosNormalizados = array_map(function ($p) use ($reservasPorPrato) {
+    // Normaliza datas dos pratos e mantém total de reservas por data
+    $reservasPorData = [];
+    $pratosNormalizados = array_map(function ($p) use ($reservasPorPrato, &$reservasPorData) {
         $data = $p['RM_DATA'] instanceof DateTime
             ? $p['RM_DATA']->format('Y-m-d')
             : (string) $p['RM_DATA'];
+        $nReservas = $reservasPorPrato[(int) $p['RM_ID']] ?? 0;
+        if ($nReservas > 0) {
+            $reservasPorData[$data] = ($reservasPorData[$data] ?? 0) + $nReservas;
+        }
         return [
             'rm_id'       => (int) $p['RM_ID'],
             'nome'        => $p['RM_NOME'],
@@ -66,15 +71,31 @@ try {
             'tipo_nome'   => $p['RTP_NOME'],
             'prato_dia'   => (bool) $p['RM_PRATO_DIA'],
             'publicado'   => (bool) $p['RM_PUBLICADO'],
-            'tem_reservas'=> ($reservasPorPrato[(int) $p['RM_ID']] ?? 0) > 0,
+            'tem_reservas'=> $nReservas > 0,
         ];
     }, $pratos);
+
+    // $inicio é sempre uma segunda-feira — a sexta anterior são exatamente -3 dias
+    $dtAberturaPadrao = (new DateTime($inicio))->modify('-3 days')->setTime(14, 30, 0);
+    $visivelEm   = $dtAberturaPadrao->format('Y-m-d H:i:s');
+    $jaVisivel   = Database::semanaJaVisivelParaAlunos($inicio, $fim);
+
+    $publicacao = [
+        'total'      => $estadoPubl['total'],
+        'publicados' => $estadoPubl['publicados'],
+        'publicada'  => $estadoPubl['publicada'],
+        'visivel_em' => $visivelEm,
+        'ja_visivel' => $jaVisivel,
+    ];
 
     echo json_encode([
         'status'           => 'ok',
         'pratos'           => $pratosNormalizados,
         'feriados'         => $feriados,
         'dias_especiais'   => $diasEspeciais,
+        'publicacao'       => $publicacao,
+        'reservas_por_data'=> $reservasPorData,
+        // Campos legados mantidos por compatibilidade
         'semana_publicada' => $estadoPubl['publicada'],
         'total_pratos'     => $estadoPubl['total'],
         'total_publicados' => $estadoPubl['publicados'],

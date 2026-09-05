@@ -28,17 +28,24 @@
    CONTADOR DE VALIDAÇÕES
    ====================================================================== */
 
+.validacoes-top-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.25rem;
+}
+
 .validacoes-contador {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
     background: #f0f4f8;
     border-radius: 8px;
-    padding: 0.5rem 1rem;
+    padding: 0.45rem 0.9rem;
     font-size: 0.82rem;
     color: #4b5563;
     font-weight: 600;
-    margin-bottom: 1.5rem;
 }
 
 .validacoes-contador i {
@@ -50,6 +57,38 @@
     font-family: 'Manrope', sans-serif;
     font-size: 1.1rem;
     color: #1e2a3b;
+}
+
+.btn-toggle-som {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.85rem;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0369a1;
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s ease;
+}
+
+.btn-toggle-som:hover {
+    background: #f0f9ff;
+    border-color: #7dd3fc;
+}
+
+.btn-toggle-som--mudo {
+    color: #94a3b8;
+    border-color: #cbd5e1;
+}
+
+.btn-toggle-som--mudo:hover {
+    background: #f8fafc;
+    color: #64748b;
 }
 
 /* ======================================================================

@@ -2,8 +2,8 @@
 require_once __DIR__ . '/../../src/Support/Auth.php';
 require_once __DIR__ . '/../../src/Infrastructure/Database.php';
 
-$utilizador = exigirLogin('admin_cantina', true);
-verificarCsrfToken(true);
+Auth::exigirPapel('admin_cantina');
+Auth::validarCsrf();
 
 $dados = json_decode(file_get_contents('php://input'), true);
 $modoAbertura = ($dados['modo_abertura'] ?? 'padrao') === 'imediato' ? 'imediato' : 'padrao';

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+    <!-- Palhinha dobrada -->
+    <path d="M 8.5,1.5 L 12.5,3 L 13.8,6.5 L 11.8,6.5 L 10.8,4.2 L 8,3.2 C 7.5,3 7.5,2.2 8,2 L 8.5,1.5 Z" fill="#0288d1" />
+    <!-- Tampa do copo -->
+    <rect x="4" y="6.5" width="16" height="2.5" rx="1.25" fill="#0288d1" />
+    <!-- Corpo cónico do copo -->
+    <path d="M 5.2,9.5 L 7,20.8 C 7.2,21.8 8,22.5 9,22.5 L 15,22.5 C 16,22.5 16.8,21.8 17,20.8 L 18.8,9.5 Z" fill="#0288d1" />
+    <!-- Gota de bebida branca no centro -->
+    <path d="M 12,12.2 C 10.5,14.2 9.9,15.2 9.9,16.2 C 9.9,17.4 10.8,18.3 12,18.3 C 13.2,18.3 14.1,17.4 14.1,16.2 C 14.1,15.2 13.5,14.2 12,12.2 Z" fill="#ffffff" />
+</svg>

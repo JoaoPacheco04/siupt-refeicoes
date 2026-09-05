@@ -410,9 +410,6 @@
     transition: opacity 0.2s;
 }
 
-.dia-componentes-wrap.tem-prato .componentes-hint {
-    display: none;
-}
 
 .dia-componentes {
     display: flex;
@@ -432,22 +429,22 @@
 }
 
 .componente-opcao {
+    flex: 1;
+    min-width: 140px;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.3rem;
+    align-items: center;
+    gap: 0.5rem;
     border: 1.5px solid #dee2e6;
     border-radius: 8px;
-    padding: 0.6rem 0.9rem;
-    min-width: 130px;
-    flex: 1;
+    padding: 0.6rem 0.75rem;
     cursor: pointer;
-    transition: border-color 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
 
 .componente-opcao:has(input:checked) {
     border-color: #3a78b5;
     background: #eaf3fb;
+    animation: prato-pop 0.2s ease;
 }
 
 .componente-opcao.ja-comprado {
@@ -467,6 +464,7 @@
     font-weight: 700;
     color: #2c4a6e;
     font-size: 0.8rem;
+    margin-left: auto;
 }
 
 /* ======================================================================
@@ -823,3 +821,14 @@
     font-weight: 500;
     letter-spacing: 0;
 }
+
+/* ── Temporizador decrescente ativo ─────────────────────────────────── */
+.banner-prazo-ticker {
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    background: rgba(220, 38, 38, 0.12);
+    padding: 0.12rem 0.4rem;
+    border-radius: 4px;
+    color: #991b1b;
+}

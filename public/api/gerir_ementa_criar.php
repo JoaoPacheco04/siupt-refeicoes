@@ -27,12 +27,15 @@ try {
 
     if (is_string($resultado)) {
         $mensagens = [
-            'nome_vazio'    => 'O nome não pode estar vazio.',
-            'data_invalida' => 'Data inválida.',
-            'tipo_invalido' => 'Tipo de refeição inválido.',
+            'nome_vazio'     => 'O nome não pode estar vazio.',
+            'data_invalida'  => 'Data inválida.',
+            'tipo_invalido'  => 'Tipo de refeição inválido.',
+            'tipo_duplicado' => 'Já existe um item deste tipo configurado para este dia.',
+            'dia_feriado'    => 'Não é possível adicionar pratos num dia de feriado.',
+            'data_passada'   => 'Não é possível adicionar pratos em datas anteriores a hoje.',
         ];
         echo json_encode([
-            'status'   => 'erro',
+            'status'   => $resultado,
             'mensagem' => $mensagens[$resultado] ?? 'Erro desconhecido.',
         ]);
         exit;
