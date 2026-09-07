@@ -156,8 +156,10 @@ $datasComPedido = array_flip(
  * Se o horário de corte para o dia de hoje já passou, começa a contar
  * a partir de amanhã.
  */
-$horaLimiteExtras = defined('EXTRA_HORA_LIMITE_HOJE') ? EXTRA_HORA_LIMITE_HOJE : '10:00:00';
-$hojeBloqueadoExtras = date('H:i:s') > $horaLimiteExtras;
+$prazoExtras = Database::obterPrazoExtras();
+$horaLimiteExtras = $prazoExtras['hora'];
+$diasExtras = (int) $prazoExtras['dias_antecedencia'];
+$hojeBloqueadoExtras = Database::extraForaDeHorarioHoje(date('Y-m-d'));
 $diasUteisExtras = [];
 $cursor = new DateTime();
 if ($hojeBloqueadoExtras) {
@@ -318,6 +320,10 @@ $pedidosPorAvaliar = Database::contarPedidosPorAvaliar((int) $utilizador['id']);
 
         <a href="gerir_atendentes.php" class="nav-icon-link" title="Gerir atendentes">
             <i class="bi bi-people"></i>
+        </a>
+
+        <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
+            <i class="bi bi-clock-history"></i>
         </a>
 
         <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
@@ -568,7 +574,17 @@ if ($precoMC !== null && !$jaComprado && !$diaBloqueado && !$ehFeriado && !$ehEn
     <?php if (!empty($extrasComPreco)): ?>
     <div class="extras-secao">
         <h2 class="ementa-semana">pratos extras</h2>
-        <p class="text-muted small">Disponíveis nos dias úteis (pedidos para o próprio dia até às <?= substr($horaLimiteExtras, 0, 2) ?>h<?= substr($horaLimiteExtras, 3, 2) ?>).</p>
+        <?php
+        $horaFormatadaExtras = substr($horaLimiteExtras, 0, 2) . 'h' . substr($horaLimiteExtras, 3, 2);
+        if ($diasExtras === 0) {
+            $msgPrazoExtras = "Disponíveis nos dias úteis (pedidos para o próprio dia até às {$horaFormatadaExtras}).";
+        } elseif ($diasExtras === 1) {
+            $msgPrazoExtras = "Disponíveis nos dias úteis (pedidos até às {$horaFormatadaExtras} do dia anterior).";
+        } else {
+            $msgPrazoExtras = "Disponíveis nos dias úteis (pedidos até às {$horaFormatadaExtras} com {$diasExtras} dias de antecedência).";
+        }
+        ?>
+        <p class="text-muted small"><?= htmlspecialchars($msgPrazoExtras) ?></p>
 
         <div class="extras-data-escolha">
             <label for="dataExtras">Para quando?</label>

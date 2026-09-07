@@ -1,0 +1,368 @@
+/* ======================================================================
+   gerir-prazos.css — Estilos para a página de gestão de horas limite
+   de compra (prazos de corte para ementa e extras).
+   ====================================================================== */
+
+.gerir-prazos-main {
+    background: transparent;
+    min-height: calc(100vh - 60px);
+    padding: 1.5rem 1.5rem 3rem;
+    max-width: 860px;
+    margin: 0 auto;
+}
+
+.gerir-prazos-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.25rem 0;
+}
+
+.gerir-prazos-subtitulo {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0 0 1.75rem 0;
+}
+
+/* ── Cartões de configuração ────────────────────────────────────────── */
+.prazos-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    margin-bottom: 2rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.prazos-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.prazos-card-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.prazos-card-titulo i {
+    font-size: 1.25rem;
+    color: #4f46e5;
+}
+
+.prazos-badge-preview {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: #f1f5f9;
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 9999px;
+    border: 1px solid #cbd5e1;
+}
+
+.prazos-badge-preview.badge-ativo {
+    background: #ecfdf5;
+    color: #047857;
+    border-color: #a7f3d0;
+}
+
+.prazos-descricao {
+    font-size: 0.875rem;
+    color: #64748b;
+    line-height: 1.5;
+    margin-bottom: 1.25rem;
+}
+
+/* ── Formulários e campos ───────────────────────────────────────────── */
+.form-prazo-linha {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.form-campo-prazo {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    flex: 1;
+    min-width: 130px;
+}
+
+.form-campo-prazo label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-campo-prazo input,
+.form-campo-prazo select {
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.925rem;
+    color: #1e293b;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.form-campo-prazo input:focus,
+.form-campo-prazo select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.18);
+}
+
+/* ── Botões ─────────────────────────────────────────────────────────── */
+.btn-salvar-prazo {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.15s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+.btn-salvar-prazo:hover {
+    background: #1d4ed8;
+}
+
+.btn-salvar-prazo:active {
+    transform: scale(0.98);
+}
+
+.btn-salvar-prazo:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-salvar-prazo--verde {
+    background: #16a34a;
+}
+
+.btn-salvar-prazo--verde:hover {
+    background: #15803d;
+}
+
+/* ── Tabela de tipos da ementa ──────────────────────────────────────── */
+.ementa-tipos-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+
+.ementa-tipos-header {
+    margin-bottom: 1.25rem;
+}
+
+.ementa-tipos-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.tipo-linha-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.9rem 1.1rem;
+    border: 1px solid #f1f5f9;
+    background: #f8fafc;
+    border-radius: 10px;
+    flex-wrap: wrap;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.tipo-linha-item:hover {
+    border-color: #cbd5e1;
+    background: #fff;
+}
+
+.tipo-linha-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 140px;
+}
+
+.tipo-icone-badge {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    background: #ede9fe;
+    color: #6366f1;
+}
+
+.tipo-nome {
+    font-weight: 600;
+    font-size: 0.925rem;
+    color: #1e293b;
+}
+
+.tipo-linha-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.tipo-linha-form input[type="time"] {
+    width: 120px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+}
+
+.tipo-linha-form select {
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.4rem 0.5rem;
+    font-size: 0.85rem;
+    background: #fff;
+}
+
+.btn-tipo-salvar {
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.4rem 0.85rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.15s;
+}
+
+.btn-tipo-salvar:hover {
+    background: #4f46e5;
+    color: #fff;
+    border-color: #4f46e5;
+}
+
+/* ── Alertas e feedback ─────────────────────────────────────────────── */
+.toast-notificacao {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #1e293b;
+    color: #fff;
+    padding: 0.85rem 1.4rem;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(15px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+}
+
+.toast-notificacao.toast--visivel {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.toast-notificacao.toast--sucesso {
+    background: #065f46;
+}
+
+.toast-notificacao.toast--erro {
+    background: #991b1b;
+}
+
+/* ── Atalho nas outras páginas ──────────────────────────────────────── */
+.banner-atalho-prazo {
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    color: #475569;
+}
+
+.banner-atalho-prazo strong {
+    color: #0f172a;
+}
+
+.btn-link-prazo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #ede9fe;
+    color: #4338ca;
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    padding: 0.3rem 0.65rem;
+    border-radius: 6px;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+.btn-link-prazo:hover {
+    background: #ddd6fe;
+    color: #3730a3;
+}
+
+@media (max-width: 640px) {
+    .prazos-card-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .form-prazo-linha {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .tipo-linha-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .tipo-linha-form {
+        justify-content: space-between;
+    }
+}

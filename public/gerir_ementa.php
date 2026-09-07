@@ -13,6 +13,7 @@ require_once __DIR__ . '/../src/Support/Assets.php';
 
 $utilizador   = exigirLogin('admin_cantina');
 $tiposRefeicao = Database::listarTiposRefeicaoPratoDia();
+$prazoEmentaTexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia anterior';
 
 ?>
 <!DOCTYPE html>
@@ -34,6 +35,7 @@ $tiposRefeicao = Database::listarTiposRefeicaoPratoDia();
 
     <!-- CSS específico desta página -->
     <link href="<?= assetUrl('assets/css/gerir-ementa.css') ?>" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/gerir-prazos.css') ?>" rel="stylesheet">
 </head>
 <body>
 
@@ -74,6 +76,10 @@ $tiposRefeicao = Database::listarTiposRefeicaoPratoDia();
         <i class="bi bi-people"></i>
     </a>
 
+    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
+        <i class="bi bi-clock-history"></i>
+    </a>
+
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>
@@ -98,6 +104,16 @@ $tiposRefeicao = Database::listarTiposRefeicaoPratoDia();
     <p class="gerir-ementa-subtitulo">
         Configura os pratos disponíveis para cada dia da semana. Clica no nome de um prato para o editar.
     </p>
+
+    <div class="banner-atalho-prazo">
+        <span>
+            <i class="bi bi-clock-history"></i>
+            Prazo de reserva atual para os alunos: <strong><?= htmlspecialchars($prazoEmentaTexto) ?></strong>
+        </span>
+        <a href="gerir_prazos.php" class="btn-link-prazo" title="Alterar hora limite da ementa">
+            <i class="bi bi-pencil-square"></i> Alterar horário
+        </a>
+    </div>
 
     <!-- Navegação semanal -->
     <nav class="semana-nav" aria-label="Navegação semanal">

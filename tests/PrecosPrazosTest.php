@@ -48,4 +48,45 @@ final class PrecosPrazosTest extends DatabaseTestCase
         $dataPassada = date('Y-m-d', strtotime('-1 day'));
         $this->assertTrue(Database::foraDePrazo($tipoId, $dataPassada));
     }
+
+    public function testAtualizarPrazoExtrasEObterHoraLimiteExtras(): void
+    {
+        $horaOriginal = Database::obterHoraLimiteExtras();
+
+        $res = Database::atualizarPrazoExtras('11:30', 0);
+        $this->assertTrue($res);
+        $this->assertSame('11:30:00', Database::obterHoraLimiteExtras());
+
+        // Restaura
+        Database::atualizarPrazoExtras($horaOriginal ?: '10:00:00', 0);
+    }
+
+    public function testAtualizarPrazosEmenta(): void
+    {
+        $tipoId = $this->criarTipoComPreco('Carne Teste Ementa', 3.50);
+        Database::conexao()->prepare("UPDATE restaurante_tipo_refeicao SET RM_PRATO_DIA = 1 WHERE RTP_ID = ?")->execute([$tipoId]);
+
+        $res = Database::atualizarPrazosEmenta('15:00', 1);
+        $this->assertTrue($res);
+
+        $prazos = Database::listarPrazosEmenta();
+        $this->assertNotEmpty($prazos);
+
+        $encontrou = false;
+        foreach ($prazos as $p) {
+            if ((int) $p['RTP_ID'] === $tipoId) {
+                $this->assertSame('15:00:00', substr((string) $p['RDL_HORA'], 0, 8));
+                $this->assertSame(1, (int) $p['RDL_DIA_ANTECEDENCIA']);
+                $encontrou = true;
+            }
+        }
+        $this->assertTrue($encontrou);
+    }
+
+    public function testDefinirPrazoTipoRejeitaDadosInvalidos(): void
+    {
+        $tipoId = $this->criarTipoComPreco('Teste Invalido', 3.00);
+        $this->assertSame('hora_invalida', Database::definirPrazoTipo($tipoId, 'hora_errada', 1));
+        $this->assertSame('antecedencia_invalida', Database::definirPrazoTipo($tipoId, '12:00', 10));
+    }
 }

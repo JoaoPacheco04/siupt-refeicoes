@@ -181,6 +181,10 @@ foreach ($vendasDiarias as $d) {
                     <i class="bi bi-people"></i>
                 </a>
 
+                <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
+                    <i class="bi bi-clock-history"></i>
+                </a>
+
                 <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
                     <i class="bi bi-bar-chart-line"></i>
                 </a>
@@ -202,11 +206,8 @@ foreach ($vendasDiarias as $d) {
             <div class="relatorio-header-acoes">
                 <h1 class="relatorio-titulo">relatório mensal</h1>
                 <div class="relatorio-acoes-grupo">
-                    <a href="api/exportar_relatorio_mensal.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv" title="Exportar lista detalhada de refeições em CSV">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> CSV Detalhado
-                    </a>
-                    <a href="api/exportar_relatorio.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv" title="Exportar resumo de vendas em CSV">
-                        <i class="bi bi-filetype-csv"></i> CSV Resumo
+                    <a href="api/exportar_relatorio_mensal.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv" title="Exportar refeições em CSV">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> CSV
                     </a>
                     <a href="api/exportar_relatorio_pdf.php?mes=<?= htmlspecialchars($anoMes) ?>"
                         class="btn-exportar-pdf">

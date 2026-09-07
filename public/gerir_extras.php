@@ -5,6 +5,17 @@ require_once __DIR__ . '/../src/Infrastructure/Database.php';
 
 $utilizador = exigirLogin('admin_cantina');
 $extras = Database::listarDetalhesExtrasParaGestao();
+$prazoExtras = Database::obterPrazoExtras();
+$horaLimiteExtras = $prazoExtras['hora'];
+$diasExtras = (int) $prazoExtras['dias_antecedencia'];
+$horaTextoExtras = substr($horaLimiteExtras, 0, 2) . 'h' . substr($horaLimiteExtras, 3, 2);
+if ($diasExtras === 0) {
+    $textoPrazoExtras = "até às {$horaTextoExtras} do próprio dia";
+} elseif ($diasExtras === 1) {
+    $textoPrazoExtras = "até às {$horaTextoExtras} do dia anterior";
+} else {
+    $textoPrazoExtras = "até às {$horaTextoExtras} com {$diasExtras} dias de antecedência";
+}
 
 ?>
 <!DOCTYPE html>
@@ -35,6 +46,7 @@ $extras = Database::listarDetalhesExtrasParaGestao();
 
     <!-- CSS específico desta página -->
     <link href="<?= assetUrl('assets/css/gerir-extras.css') ?>" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/gerir-prazos.css') ?>" rel="stylesheet">
 </head>
 <body>
 
@@ -76,6 +88,10 @@ $extras = Database::listarDetalhesExtrasParaGestao();
         <i class="bi bi-people"></i>
     </a>
 
+    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
+        <i class="bi bi-clock-history"></i>
+    </a>
+
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
         <i class="bi bi-bar-chart-line"></i>
     </a>
@@ -105,6 +121,16 @@ $extras = Database::listarDetalhesExtrasParaGestao();
     <p class="gerir-extras-subtitulo">
         Cria novos extras ou atualiza nomes e preços dos existentes.
     </p>
+
+    <div class="banner-atalho-prazo">
+        <span>
+            <i class="bi bi-clock-history"></i>
+            Prazo de reserva atual dos extras: <strong><?= htmlspecialchars($textoPrazoExtras) ?></strong>
+        </span>
+        <a href="gerir_prazos.php" class="btn-link-prazo" title="Alterar hora limite dos extras">
+            <i class="bi bi-pencil-square"></i> Alterar horário
+        </a>
+    </div>
 
     <!-- ==========================
          Formulário de criação

@@ -154,6 +154,10 @@ $filtroInicial = ($contagens['ativo'] > 0) ? 'ativo' : 'todos';
             <i class="bi bi-people"></i>
         </a>
 
+        <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
+            <i class="bi bi-clock-history"></i>
+        </a>
+
         <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
             <i class="bi bi-bar-chart-line"></i>
         </a>

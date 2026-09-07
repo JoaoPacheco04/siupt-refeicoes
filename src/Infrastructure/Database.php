@@ -305,7 +305,33 @@ class Database {
     }
 
     /**
-     * Atualiza a hora limite e a antecedência de um prazo existente.
+     * Lista todos os tipos de refeição da ementa (pratos do dia) com o seu prazo configurado.
+     */
+    public static function listarPrazosEmenta(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT rtp.RTP_ID, rtp.RTP_NOME,
+                   rdl.RDL_ID,
+                   COALESCE(rdl.RDL_HORA, '14:30:00') AS RDL_HORA,
+                   COALESCE(rdl.RDL_DIA_ANTECEDENCIA, 1) AS RDL_DIA_ANTECEDENCIA
+            FROM restaurante_tipo_refeicao rtp
+            LEFT JOIN restaurante_data_limite rdl ON rdl.RDL_RTP_ID = rtp.RTP_ID
+            WHERE rtp.RM_PRATO_DIA = 1
+            ORDER BY CASE rtp.RTP_NOME
+                WHEN 'Carne' THEN 1
+                WHEN 'Peixe' THEN 2
+                WHEN 'Vegetariano' THEN 3
+                WHEN 'Sopa' THEN 4
+                WHEN 'Sobremesa' THEN 5
+                WHEN 'Bebida' THEN 6
+                ELSE 7
+            END, rtp.RTP_NOME
+        ");
+        $stmt->execute();
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Atualiza a hora limite e a antecedência de um prazo existente pelo RDL_ID.
      * Retorna true em caso de sucesso, string de erro caso contrário.
      */
     public static function atualizarPrazo(int $id, string $hora, int $diasAntecedencia): bool|string {
@@ -324,6 +350,144 @@ class Database {
         ");
         $stmt->execute([$hora, $diasAntecedencia, $id]);
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Define (insere ou atualiza) a hora limite e antecedência para um tipo de refeição específico.
+     */
+    public static function definirPrazoTipo(int $tipoId, string $hora, int $diasAntecedencia): bool|string {
+        if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $hora)) {
+            return 'hora_invalida';
+        }
+        if ($diasAntecedencia < 0 || $diasAntecedencia > 7) {
+            return 'antecedencia_invalida';
+        }
+        $hora = substr($hora, 0, 5) . ':00';
+        $pdo = self::conexao();
+
+        $stmtVerifica = $pdo->prepare("SELECT RDL_ID FROM restaurante_data_limite WHERE RDL_RTP_ID = ?");
+        $stmtVerifica->execute([$tipoId]);
+        $rdlId = $stmtVerifica->fetchColumn();
+
+        if ($rdlId) {
+            $stmt = $pdo->prepare("
+                UPDATE restaurante_data_limite
+                SET RDL_HORA = ?, RDL_DIA_ANTECEDENCIA = ?
+                WHERE RDL_ID = ?
+            ");
+            $stmt->execute([$hora, $diasAntecedencia, $rdlId]);
+        } else {
+            $stmt = $pdo->prepare("
+                INSERT INTO restaurante_data_limite (RDL_RTP_ID, RDL_HORA, RDL_DIA_ANTECEDENCIA)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->execute([$tipoId, $hora, $diasAntecedencia]);
+        }
+
+        return true;
+    }
+
+    /**
+     * Atualiza em lote a hora limite e antecedência de todos os pratos da ementa (pratos do dia).
+     */
+    public static function atualizarPrazosEmenta(string $hora, int $diasAntecedencia): bool|string {
+        if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $hora)) {
+            return 'hora_invalida';
+        }
+        if ($diasAntecedencia < 0 || $diasAntecedencia > 7) {
+            return 'antecedencia_invalida';
+        }
+        $hora = substr($hora, 0, 5) . ':00';
+        $pdo = self::conexao();
+
+        $stmtTipos = $pdo->prepare("SELECT RTP_ID FROM restaurante_tipo_refeicao WHERE RM_PRATO_DIA = 1");
+        $stmtTipos->execute();
+        $tipos = $stmtTipos->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($tipos as $tipoId) {
+            self::definirPrazoTipo((int) $tipoId, $hora, $diasAntecedencia);
+        }
+
+        return true;
+    }
+
+    /**
+     * Obtém a hora limite configurada para a compra de pratos extra para o próprio dia.
+     * Procura primeiro na BD por registos de 'Prato extra' ou 'Extra:%'.
+     * Em fallback, utiliza a constante EXTRA_HORA_LIMITE_HOJE ou '10:00:00'.
+     */
+    public static function obterHoraLimiteExtras(): string {
+        $prazo = self::obterPrazoExtras();
+        return $prazo['hora'];
+    }
+
+    /**
+     * Obtém o prazo completo configurado para pratos extra (hora + dias de antecedência).
+     */
+    public static function obterPrazoExtras(): array {
+        $stmt = self::conexao()->prepare("
+            SELECT TOP 1 rdl.RDL_HORA, rdl.RDL_DIA_ANTECEDENCIA
+            FROM restaurante_data_limite rdl
+            JOIN restaurante_tipo_refeicao rtp ON rdl.RDL_RTP_ID = rtp.RTP_ID
+            WHERE rtp.RTP_NOME = 'Prato extra' OR rtp.RTP_NOME LIKE 'Extra:%'
+            ORDER BY CASE WHEN rtp.RTP_NOME = 'Prato extra' THEN 1 ELSE 2 END, rdl.RDL_ID DESC
+        ");
+        $stmt->execute();
+        $row = $stmt->fetch();
+        if ($row) {
+            return [
+                'hora' => substr((string) $row['RDL_HORA'], 0, 8),
+                'dias_antecedencia' => (int) $row['RDL_DIA_ANTECEDENCIA']
+            ];
+        }
+
+        if (defined('EXTRA_HORA_LIMITE_HOJE')) {
+            return [
+                'hora' => EXTRA_HORA_LIMITE_HOJE,
+                'dias_antecedencia' => 0
+            ];
+        }
+
+        return [
+            'hora' => '10:00:00',
+            'dias_antecedencia' => 0
+        ];
+    }
+
+    /**
+     * Atualiza a hora limite e antecedência de todos os pratos extra na base de dados.
+     * Atualiza os registos existentes e garante que o tipo base 'Prato extra' também fica configurado.
+     */
+    public static function atualizarPrazoExtras(string $hora, int $diasAntecedencia = 0): bool|string {
+        if (!preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $hora)) {
+            return 'hora_invalida';
+        }
+        if ($diasAntecedencia < 0 || $diasAntecedencia > 7) {
+            return 'antecedencia_invalida';
+        }
+        $hora = substr($hora, 0, 5) . ':00';
+        $pdo = self::conexao();
+
+        // 1. Encontra todos os IDs de tipos associados a extras ('Prato extra' ou 'Extra:%')
+        $stmtTipos = $pdo->prepare("
+            SELECT RTP_ID FROM restaurante_tipo_refeicao
+            WHERE RTP_NOME = 'Prato extra' OR RTP_NOME LIKE 'Extra:%'
+        ");
+        $stmtTipos->execute();
+        $tipoIds = $stmtTipos->fetchAll(PDO::FETCH_COLUMN);
+
+        // Se o tipo 'Prato extra' não existir de todo, cria-o para manter a referência
+        if (empty($tipoIds)) {
+            $pdo->prepare("INSERT INTO restaurante_tipo_refeicao (RTP_NOME, RM_PRATO_DIA) VALUES ('Prato extra', 0)")->execute();
+            $tipoIds = [(int) $pdo->lastInsertId()];
+        }
+
+        // 2. Atualiza ou insere em restaurante_data_limite para cada tipo de extra
+        foreach ($tipoIds as $tipoId) {
+            self::definirPrazoTipo((int) $tipoId, $hora, $diasAntecedencia);
+        }
+
+        return true;
     }
 
 
@@ -1175,13 +1339,12 @@ class Database {
     }
 
     public static function extraForaDeHorarioHoje(string $dataRefeicao): bool {
-        if ($dataRefeicao !== date('Y-m-d')) {
-            return false;
-        }
-        if (!defined('EXTRA_HORA_LIMITE_HOJE')) {
-            return false;
-        }
-        return date('H:i:s') > EXTRA_HORA_LIMITE_HOJE;
+        $prazo = self::obterPrazoExtras();
+        $dataLimite = date(
+            'Y-m-d ' . $prazo['hora'],
+            strtotime($dataRefeicao . ' -' . $prazo['dias_antecedencia'] . ' days')
+        );
+        return date('Y-m-d H:i:s') > $dataLimite;
     }
 
     public static function obterNomeTipoRefeicao(int $tipoId): ?string {
@@ -1206,11 +1369,12 @@ class Database {
         $stmt->execute(["Extra: {$nomePrato}"]);
         $tipoId = (int) $pdo->lastInsertId();
 
-        // Limite de compra por defeito: até às 10h do próprio dia
+        // Limite de compra herda a hora configurada atualmente para os extras
+        $horaLimite = self::obterHoraLimiteExtras();
         $pdo->prepare("
             INSERT INTO restaurante_data_limite (RDL_RTP_ID, RDL_HORA, RDL_DIA_ANTECEDENCIA)
-            VALUES (?, '10:00:00', 0)
-        ")->execute([$tipoId]);
+            VALUES (?, ?, 0)
+        ")->execute([$tipoId, $horaLimite]);
 
         return $tipoId;
     }
