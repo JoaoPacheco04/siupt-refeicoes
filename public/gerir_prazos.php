@@ -23,6 +23,11 @@ $diasExtras           = (int) $prazoExtras['dias_antecedencia'];
 $prazosEmenta         = Database::listarPrazosEmenta();
 $prazoPrincipalTexto  = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia anterior';
 
+$configPubl           = Database::obterConfiguracaoPublicacaoEmenta();
+$horaPublFormatada    = $configPubl['hora_hm'];
+$diasPubl             = (int) $configPubl['dias_antecedencia'];
+$textoBadgePubl       = $configPubl['texto'];
+
 // Determina valores padrão para o formulário global da ementa a partir do primeiro item (ex: Carne)
 $horaEmentaGlobal = '14:30';
 $diasEmentaGlobal = 1;
@@ -56,7 +61,7 @@ if ($diasExtras === 0) {
 
     <!-- Folhas de estilo base -->
     <link href="assets/css/base.css" rel="stylesheet">
-    <link href="assets/css/navbar.css" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/navbar.css') ?>" rel="stylesheet">
 
     <!-- CSS específico desta página -->
     <link href="<?= assetUrl('assets/css/gerir-prazos.css') ?>" rel="stylesheet">
@@ -87,6 +92,10 @@ if ($diasExtras === 0) {
         <i class="bi bi-egg-fried"></i>
     </a>
 
+    <a href="gerir_precos.php" class="nav-icon-link" title="Gerir preços">
+        <i class="bi bi-tag"></i>
+    </a>
+
     <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
         <i class="bi bi-chat-square-text"></i>
     </a>
@@ -99,8 +108,8 @@ if ($diasExtras === 0) {
         <i class="bi bi-people"></i>
     </a>
 
-    <a href="gerir_prazos.php" class="nav-icon-link nav-icon-link--ativo" title="Gerir horas limite">
-        <i class="bi bi-clock-history"></i>
+    <a href="gerir_prazos.php" class="nav-icon-link nav-icon-link--ativo" title="Gerir prazos e horas limite">
+        <i class="bi bi-hourglass-split"></i>
     </a>
 
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
@@ -123,10 +132,61 @@ if ($diasExtras === 0) {
 <!-- Conteúdo principal -->
 <main class="gerir-prazos-main">
 
-    <h1 class="gerir-prazos-titulo">gerir horas limite de compra</h1>
+    <h1 class="gerir-prazos-titulo">gerir horas limite e horários</h1>
     <p class="gerir-prazos-subtitulo">
-        Define os horários de corte e antecedência para a reserva de refeições da ementa e de pratos extra.
+        Define a hora de publicação automática da ementa aos alunos e os horários de corte para a reserva de refeições e extras.
     </p>
+
+    <!-- ================================================================
+         0. SECÇÃO: PUBLICAÇÃO AUTOMÁTICA DA EMENTA
+         ================================================================ -->
+    <div class="prazos-card" id="cardPublicacao">
+        <div class="prazos-card-header">
+            <div>
+                <h2 class="prazos-card-titulo">
+                    <i class="bi bi-calendar-check"></i>
+                    Publicação Automática da Ementa
+                </h2>
+            </div>
+            <span class="prazos-badge-preview badge-ativo" id="badgePreviewPublicacao">
+                <i class="bi bi-broadcast"></i>
+                <?= htmlspecialchars($textoBadgePubl) ?>
+            </span>
+        </div>
+
+        <p class="prazos-descricao">
+            Define o dia da semana e o horário em que a ementa semanal passa a estar visível aos alunos quando publicada no modo padrão. A referência é a 2.ª feira da semana da ementa.
+        </p>
+
+        <form id="formPublicacaoPadrao" class="form-prazo-linha">
+            <div class="form-campo-prazo" style="max-width: 260px;">
+                <label for="diasPublicacao">Dia de abertura</label>
+                <select id="diasPublicacao" name="dias_antecedencia">
+                    <option value="3" <?= $diasPubl === 3 ? 'selected' : '' ?>>Sexta-feira (3 dias antes)</option>
+                    <option value="4" <?= $diasPubl === 4 ? 'selected' : '' ?>>Quinta-feira (4 dias antes)</option>
+                    <option value="5" <?= $diasPubl === 5 ? 'selected' : '' ?>>Quarta-feira (5 dias antes)</option>
+                    <option value="2" <?= $diasPubl === 2 ? 'selected' : '' ?>>Sábado (2 dias antes)</option>
+                    <option value="1" <?= $diasPubl === 1 ? 'selected' : '' ?>>Domingo (1 dia antes)</option>
+                    <option value="0" <?= $diasPubl === 0 ? 'selected' : '' ?>>Segunda-feira (próprio dia de início)</option>
+                </select>
+            </div>
+
+            <div class="form-campo-prazo" style="max-width: 180px;">
+                <label for="horaPublicacao">Hora de abertura</label>
+                <input
+                    type="time"
+                    id="horaPublicacao"
+                    name="hora"
+                    value="<?= htmlspecialchars($horaPublFormatada) ?>"
+                    required>
+            </div>
+
+            <button type="submit" class="btn-salvar-prazo btn-salvar-prazo--indigo">
+                <i class="bi bi-check-lg"></i>
+                Guardar Horário Padrão
+            </button>
+        </form>
+    </div>
 
     <!-- ================================================================
          1. SECÇÃO: PRATOS EXTRA
@@ -233,10 +293,10 @@ if ($diasExtras === 0) {
         <div class="ementa-tipos-header">
             <h2 class="prazos-card-titulo" style="font-size: 1rem;">
                 <i class="bi bi-sliders"></i>
-                Ajuste Individual por Tipo de Refeição
+                Ajuste Individual dos Pratos Principais
             </h2>
             <p class="prazos-descricao" style="margin-bottom: 0.5rem;">
-                Se necessitares de definir uma hora ou antecedência diferente para um tipo específico de refeição, podes ajustar diretamente abaixo:
+                Ajusta individualmente Carne, Peixe ou Vegetariano se algum deles necessitar de um prazo diferente. Sopa, sobremesa e bebida são acompanhamentos e seguem o prazo global da refeição.
             </p>
         </div>
 
@@ -246,9 +306,6 @@ if ($diasExtras === 0) {
                 'Carne'       => 'bi-fire',
                 'Peixe'       => 'bi-water',
                 'Vegetariano' => 'bi-flower1',
-                'Sopa'        => 'bi-cup-hot',
-                'Sobremesa'   => 'bi-cake2',
-                'Bebida'      => 'bi-cup-straw',
             ];
             ?>
             <?php foreach ($prazosEmenta as $p): ?>

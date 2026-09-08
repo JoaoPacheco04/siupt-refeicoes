@@ -37,9 +37,97 @@ function formatarTextoPrazo(hora, dias) {
     }
 }
 
+function formatarTextoPublicacao(hora, dias) {
+    const horaFormatada = hora.substring(0, 5).replace(':', 'h');
+    const diasNum = parseInt(dias, 10);
+    const diasNomes = {
+        0: 'Segunda',
+        1: 'Domingo',
+        2: 'Sábado',
+        3: 'Sexta',
+        4: 'Quinta',
+        5: 'Quarta',
+        6: 'Terça'
+    };
+    const nome = diasNomes[diasNum] || `${diasNum} dias antes`;
+    return `${nome} às ${horaFormatada}`;
+}
+
+// 0. Atualizar Publicação Automática Padrão da Ementa
+const formPublicacao = document.getElementById('formPublicacaoPadrao');
+if (formPublicacao) {
+    const horaInput = document.getElementById('horaPublicacao');
+    const diasSelect = document.getElementById('diasPublicacao');
+    const badgePubl = document.getElementById('badgePreviewPublicacao');
+
+    function atualizarBadgePublLive() {
+        if (!badgePubl || !horaInput || !diasSelect) return;
+        const h = horaInput.value.trim();
+        const d = diasSelect.value;
+        if (h) {
+            badgePubl.innerHTML = `<i class="bi bi-broadcast"></i> ${formatarTextoPublicacao(h, d)}`;
+        }
+    }
+    diasSelect?.addEventListener('change', atualizarBadgePublLive);
+    horaInput?.addEventListener('input', atualizarBadgePublLive);
+    formPublicacao.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const horaInput = document.getElementById('horaPublicacao');
+        const diasSelect = document.getElementById('diasPublicacao');
+        const hora = horaInput ? horaInput.value.trim() : '';
+        const dias = diasSelect ? diasSelect.value : '3';
+        const btn = formPublicacao.querySelector('button[type="submit"]');
+
+        if (!hora) return;
+
+        btn.disabled = true;
+        try {
+            const res = await fetch('api/gerir_publicacao_config.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({
+                    hora: hora,
+                    dias_antecedencia: dias,
+                    csrf_token: CSRF_TOKEN
+                })
+            });
+
+            const data = await res.json();
+            if (data.status === 'ok') {
+                mostrarToast(data.mensagem || 'Horário padrão de publicação guardado com sucesso!');
+                const badge = document.getElementById('badgePreviewPublicacao');
+                if (badge && data.config) {
+                    badge.innerHTML = `<i class="bi bi-broadcast"></i> ${data.config.texto}`;
+                }
+            } else {
+                mostrarToast(data.mensagem || 'Erro ao guardar horário de publicação.', 'erro');
+            }
+        } catch (err) {
+            mostrarToast('Erro de rede ao comunicar com o servidor.', 'erro');
+        } finally {
+            btn.disabled = false;
+        }
+    });
+}
+
 // 1. Atualizar Hora Limite dos Extras
 const formExtras = document.getElementById('formPrazoExtras');
 if (formExtras) {
+    const horaInput = document.getElementById('horaExtras');
+    const diasInput = document.getElementById('diasExtras');
+    const badgeExtras = document.getElementById('badgePreviewExtras');
+
+    function atualizarBadgeExtrasLive() {
+        if (!badgeExtras || !horaInput || !diasInput) return;
+        const h = horaInput.value.trim();
+        const d = diasInput.value;
+        if (h) {
+            badgeExtras.innerHTML = `<i class="bi bi-clock"></i> ${formatarTextoPrazo(h, d)}`;
+        }
+    }
+    diasInput?.addEventListener('change', atualizarBadgeExtrasLive);
+    horaInput?.addEventListener('input', atualizarBadgeExtrasLive);
+
     formExtras.addEventListener('submit', async (e) => {
         e.preventDefault();
         const horaInput = document.getElementById('horaExtras');
@@ -84,6 +172,21 @@ if (formExtras) {
 // 2. Atualizar Todos os Pratos da Ementa
 const formTodosEmenta = document.getElementById('formPrazoTodosEmenta');
 if (formTodosEmenta) {
+    const horaInput = document.getElementById('horaEmentaGlobal');
+    const diasInput = document.getElementById('diasEmentaGlobal');
+    const badgeEmenta = document.getElementById('badgePreviewEmenta');
+
+    function atualizarBadgeEmentaLive() {
+        if (!badgeEmenta || !horaInput || !diasInput) return;
+        const h = horaInput.value.trim();
+        const d = diasInput.value;
+        if (h) {
+            badgeEmenta.innerHTML = `<i class="bi bi-clock"></i> ${formatarTextoPrazo(h, d)}`;
+        }
+    }
+    diasInput?.addEventListener('change', atualizarBadgeEmentaLive);
+    horaInput?.addEventListener('input', atualizarBadgeEmentaLive);
+
     formTodosEmenta.addEventListener('submit', async (e) => {
         e.preventDefault();
         const horaInput = document.getElementById('horaEmentaGlobal');

@@ -14,8 +14,8 @@ header {
     background: #e3e6fb;
     border-bottom: 2px solid #73c5d8;
     min-height: 60px;
-    padding: 4px 1.1rem 4px 0;
-    gap: 1.25rem;
+    padding: 4px 1.25rem 4px 0;
+    gap: 0.5rem;
     flex-shrink: 0;
 }
 
@@ -28,6 +28,7 @@ a#home {
     align-items: center;
     text-decoration: none;
     flex-shrink: 0;
+    margin-right: 0.25rem;
 }
 
 #siupt-logo {
@@ -38,38 +39,53 @@ a#home {
 }
 
 /* ======================================================================
-   SELETOR DE IDIOMA (REMOVIDO — era decorativo)
-   ====================================================================== */
-/* #form_new_user_lang, #new_user_lang — bloco eliminado de todas as páginas */
-
-/* ======================================================================
-   ÁREA DO PERFIL DO UTILIZADOR
+   ÁREA DO PERFIL DO UTILIZADOR & TERMINAR SESSÃO (ALINHADO À DIREITA)
    ====================================================================== */
 
 #profile {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.65rem;
     flex-shrink: 0;
-    transform: translateY(5px);
+    margin-left: auto; /* Empurra o perfil e logout para a extremidade direita */
+    flex-direction: row-reverse; /* Avatar à esquerda, botão de logout à direita */
+    background: rgba(255, 255, 255, 0.5);
+    padding: 3px 6px 3px 6px;
+    border-radius: 20px;
+    border: 1px solid rgba(181, 194, 222, 0.65);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+#profile:hover {
+    background: rgba(255, 255, 255, 0.85);
+    border-color: rgba(148, 163, 184, 0.8);
+}
+
+#profile form {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    align-items: center;
 }
 
 /* ── Avatar do utilizador ──────────────────────── */
 #profile-photo,
 .profile-avatar {
-    width: 35px;
-    height: 35px;
-    border-radius: 3px;
-    box-shadow: 0 3px 9px rgba(17, 24, 39, 0.35);
-    background: linear-gradient(135deg, #5a6ac9, #7e8fe0);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-shadow: 0 2px 5px rgba(17, 24, 39, 0.2);
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
     color: #fff;
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: 'Manrope', sans-serif;
     font-weight: 800;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     text-transform: uppercase;
+    flex-shrink: 0;
 }
 
 #profile-photo img,
@@ -77,34 +93,41 @@ a#home {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    border-radius: 3px;
+    border-radius: 50%;
 }
 
 /* ── Botão de terminar sessão (logout) ─────────── */
 #quit {
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    background-color: transparent;
-    border: none;
+    background-color: rgba(255, 255, 255, 0.75);
+    border: 1px solid rgba(203, 213, 225, 0.9);
     padding: 0;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23111827' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 1v7'/%3E%3Cpath d='M3.757 3.757a6 6 0 1 0 8.486 0'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23475569' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 1v7'/%3E%3Cpath d='M3.757 3.757a6 6 0 1 0 8.486 0'/%3E%3C/svg%3E");
     background-position: center;
     background-repeat: no-repeat;
-    background-size: 18px 18px;
+    background-size: 15px 15px;
     font-size: 0;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
 }
 
 #quit:hover {
-    opacity: 0.75;
+    background-color: #fee2e2;
+    border-color: #fca5a5;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='%23dc2626' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' viewBox='0 0 16 16'%3E%3Cpath d='M8 1v7'/%3E%3Cpath d='M3.757 3.757a6 6 0 1 0 8.486 0'/%3E%3C/svg%3E");
+    transform: scale(1.05);
+    box-shadow: 0 2px 6px rgba(220, 38, 38, 0.2);
 }
 
 /* ======================================================================
-   ÍCONES DE NAVEGAÇÃO (HISTÓRICO, RELATÓRIO, ETC.)
+   ÍCONES DE NAVEGAÇÃO & AGRUPAMENTO LÓGICO
    ====================================================================== */
 
 .nav-icon-link {
@@ -113,35 +136,96 @@ a#home {
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: 3px;
-    color: #4b5563;
+    border-radius: 8px;
+    color: #475569;
     text-decoration: none;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     flex-shrink: 0;
-    transition: background 0.15s, color 0.15s;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    position: relative;
 }
 
 .nav-icon-link:hover {
-    background: rgba(115, 197, 216, 0.15);
-    color: #2c4060;
+    background: #ffffff;
+    color: #1e3a8a;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 
-/* D1: Estado ativo — página atual */
+/* Estado ativo — página atual */
 .nav-icon-link--ativo {
-    background: rgba(26, 58, 99, 0.1);
-    color: #1a3a63;
-    box-shadow: inset 0 0 0 1.5px rgba(26, 58, 99, 0.18);
+    background: #ffffff;
+    color: #1e3a8a;
+    border-color: #93c5fd;
+    box-shadow: 0 2px 6px rgba(30, 58, 138, 0.12);
 }
 
 .nav-icon-link--ativo:hover {
-    background: rgba(26, 58, 99, 0.15);
-    color: #1a3a63;
+    background: #ffffff;
+    color: #1e3a8a;
+    border-color: #60a5fa;
+}
+
+/* ── Separadores Visuais entre Grupos de Funcionalidades ── */
+/* Grupo 1: Operações (Validar, Ementa) */
+/* Grupo 2: Gestão da Ementa e Preçário (Gerir Ementa, Extras, Preços) */
+header a.nav-icon-link[href="gerir_ementa.php"] {
+    margin-left: 0.65rem;
+    position: relative;
+}
+
+header a.nav-icon-link[href="gerir_ementa.php"]::before {
+    content: '';
+    position: absolute;
+    left: -0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 20px;
+    background: #b5c2de;
+}
+
+/* Grupo 3: Administração e Configurações (Motivos, Feriados, Atendentes, Prazos) */
+header a.nav-icon-link[href="gerir_motivos.php"] {
+    margin-left: 0.65rem;
+    position: relative;
+}
+
+header a.nav-icon-link[href="gerir_motivos.php"]::before {
+    content: '';
+    position: absolute;
+    left: -0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 20px;
+    background: #b5c2de;
+}
+
+/* Grupo 4: Relatórios e Estatísticas */
+header a.nav-icon-link[href="relatorio.php"] {
+    margin-left: 0.65rem;
+    position: relative;
+}
+
+header a.nav-icon-link[href="relatorio.php"]::before {
+    content: '';
+    position: absolute;
+    left: -0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 20px;
+    background: #b5c2de;
 }
 
 /* ── Badge de notificação no ícone de navegação ── */
 .nav-icon-com-badge {
     position: relative;
 }
+
 
 .nav-badge {
     position: absolute;
@@ -165,10 +249,17 @@ a#home {
    AJUSTES RESPONSIVOS
    ====================================================================== */
 
+@media (max-width: 900px) {
+    header {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
 @media (max-width: 768px) {
     header {
         padding: 0 0.9rem 0 0;
-        gap: 0.5rem;
+        gap: 0.4rem;
     }
 }
 
@@ -176,7 +267,7 @@ a#home {
     header {
         padding: 0 0.75rem 0 0;
         min-height: 48px;
-        gap: 0.5rem;
+        gap: 0.35rem;
     }
 
     #siupt-logo {
@@ -184,21 +275,21 @@ a#home {
     }
 
     #profile {
-        margin-left: auto;
-        gap: 0.75rem;
+        gap: 0.5rem;
+        padding: 2px 4px 2px 4px;
     }
 
     #profile-photo,
     .profile-avatar {
-        width: 32px;
-        height: 32px;
-        font-size: 0.85rem;
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
     }
 
     #quit {
-        width: 19px;
-        height: 19px;
-        background-size: 19px 19px;
+        width: 26px;
+        height: 26px;
+        background-size: 13px 13px;
     }
 }
 

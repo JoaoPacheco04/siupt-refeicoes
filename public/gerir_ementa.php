@@ -14,6 +14,7 @@ require_once __DIR__ . '/../src/Support/Assets.php';
 $utilizador   = exigirLogin('admin_cantina');
 $tiposRefeicao = Database::listarTiposRefeicaoPratoDia();
 $prazoEmentaTexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia anterior';
+$configPubl = Database::obterConfiguracaoPublicacaoEmenta();
 
 ?>
 <!DOCTYPE html>
@@ -31,7 +32,7 @@ $prazoEmentaTexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia a
 
     <!-- Folhas de estilo da aplicação -->
     <link href="assets/css/base.css" rel="stylesheet">
-    <link href="assets/css/navbar.css" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/navbar.css') ?>" rel="stylesheet">
 
     <!-- CSS específico desta página -->
     <link href="<?= assetUrl('assets/css/gerir-ementa.css') ?>" rel="stylesheet">
@@ -64,6 +65,10 @@ $prazoEmentaTexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia a
         <i class="bi bi-egg-fried"></i>
     </a>
 
+    <a href="gerir_precos.php" class="nav-icon-link" title="Gerir preços">
+        <i class="bi bi-tag"></i>
+    </a>
+
     <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
         <i class="bi bi-chat-square-text"></i>
     </a>
@@ -76,8 +81,8 @@ $prazoEmentaTexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia a
         <i class="bi bi-people"></i>
     </a>
 
-    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
-        <i class="bi bi-clock-history"></i>
+    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir prazos e horas limite">
+        <i class="bi bi-hourglass-split"></i>
     </a>
 
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">
@@ -192,8 +197,8 @@ $prazoEmentaTexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia a
                 <input type="radio" name="modoAbertura" value="padrao" checked>
                 <span class="modal-opcao-icone"><i class="bi bi-calendar-check"></i></span>
                 <span class="modal-opcao-texto">
-                    <strong>Sexta às 14h30</strong>
-                    <small>Abre automaticamente na sexta-feira às 14h30 (padrão)</small>
+                    <strong id="textoOpcaoPadraoTitulo"><?= htmlspecialchars($configPubl['texto']) ?></strong>
+                    <small id="textoOpcaoPadraoSubtitulo"><?= htmlspecialchars($configPubl['descricao']) ?> (padrão)</small>
                 </span>
             </label>
 
@@ -205,6 +210,12 @@ $prazoEmentaTexto = Database::obterDataLimitePrincipalTexto() ?? '14h30 do dia a
                     <small>Fica visível de imediato para todos os alunos</small>
                 </span>
             </label>
+        </div>
+
+        <div class="modal-publicar-rodape-config" style="margin-top: 0.75rem; text-align: center;">
+            <a href="gerir_prazos.php#cardPublicacao" style="color: #64748b; font-size: 0.8rem; text-decoration: none;" title="Alterar horário padrão de publicação">
+                <i class="bi bi-clock-history"></i> Alterar horário padrão de publicação
+            </a>
         </div>
 
         <div class="modal-publicar-acoes">

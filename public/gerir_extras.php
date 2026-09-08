@@ -41,7 +41,7 @@ if ($diasExtras === 0) {
 
     <!-- Folhas de estilo da aplicação -->
     <link href="assets/css/base.css" rel="stylesheet">
-    <link href="assets/css/navbar.css" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/navbar.css') ?>" rel="stylesheet">
     <link href="assets/css/modal.css" rel="stylesheet">
 
     <!-- CSS específico desta página -->
@@ -76,6 +76,10 @@ if ($diasExtras === 0) {
         <i class="bi bi-egg-fried"></i>
     </a>
 
+    <a href="gerir_precos.php" class="nav-icon-link" title="Gerir preços">
+        <i class="bi bi-tag"></i>
+    </a>
+
     <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
         <i class="bi bi-chat-square-text"></i>
     </a>
@@ -88,8 +92,8 @@ if ($diasExtras === 0) {
         <i class="bi bi-people"></i>
     </a>
 
-    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
-        <i class="bi bi-clock-history"></i>
+    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir prazos e horas limite">
+        <i class="bi bi-hourglass-split"></i>
     </a>
 
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">

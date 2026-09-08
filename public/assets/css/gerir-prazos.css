@@ -169,6 +169,40 @@
     background: #15803d;
 }
 
+.btn-salvar-prazo--indigo,
+.btn-prazos-salvar {
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.15s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+.btn-salvar-prazo--indigo:hover,
+.btn-prazos-salvar:hover {
+    background: #4338ca;
+}
+
+.btn-salvar-prazo--indigo:active,
+.btn-prazos-salvar:active {
+    transform: scale(0.98);
+}
+
+.btn-salvar-prazo--indigo:disabled,
+.btn-prazos-salvar:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+}
+
 /* ── Tabela de tipos da ementa ──────────────────────────────────────── */
 .ementa-tipos-card {
     background: #fff;

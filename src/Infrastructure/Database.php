@@ -105,7 +105,7 @@ class Database {
             SELECT TOP 1 RPTR_PRECO
             FROM restaurante_preco_tipo_refeicao
             WHERE RPTR_TP_ID = ? AND RPTR_DATAINICIO <= ?
-            ORDER BY RPTR_DATAINICIO DESC
+            ORDER BY RPTR_DATAINICIO DESC, RPTR_ID DESC
         ");
         $stmt->execute([$tipoRefeicaoId, $dataPedido]);
         $preco = $stmt->fetchColumn();
@@ -124,7 +124,7 @@ class Database {
             SELECT x.RPTR_TP_ID, x.RPTR_PRECO
             FROM (
                 SELECT RPTR_TP_ID, RPTR_PRECO,
-                       ROW_NUMBER() OVER (PARTITION BY RPTR_TP_ID ORDER BY RPTR_DATAINICIO DESC) AS rn
+                       ROW_NUMBER() OVER (PARTITION BY RPTR_TP_ID ORDER BY RPTR_DATAINICIO DESC, RPTR_ID DESC) AS rn
                 FROM restaurante_preco_tipo_refeicao
                 WHERE RPTR_DATAINICIO <= ? AND RPTR_TP_ID IN ($ph)
             ) x
@@ -305,7 +305,8 @@ class Database {
     }
 
     /**
-     * Lista todos os tipos de refeição da ementa (pratos do dia) com o seu prazo configurado.
+     * Lista os pratos principais da ementa (Carne, Peixe, Vegetariano) com o seu prazo configurado.
+     * Sopa, Sobremesa e Bebida são acompanhamentos da refeição e seguem o prazo global.
      */
     public static function listarPrazosEmenta(): array {
         $stmt = self::conexao()->prepare("
@@ -315,15 +316,13 @@ class Database {
                    COALESCE(rdl.RDL_DIA_ANTECEDENCIA, 1) AS RDL_DIA_ANTECEDENCIA
             FROM restaurante_tipo_refeicao rtp
             LEFT JOIN restaurante_data_limite rdl ON rdl.RDL_RTP_ID = rtp.RTP_ID
-            WHERE rtp.RM_PRATO_DIA = 1
+            WHERE rtp.RTP_NOME IN ('Carne', 'Peixe', 'Vegetariano')
+               OR (rtp.RM_PRATO_DIA = 1 AND rtp.RTP_NOME NOT IN ('Sopa', 'Sobremesa', 'Bebida', 'Menu Completo') AND rtp.RTP_NOME NOT LIKE 'Extra:%')
             ORDER BY CASE rtp.RTP_NOME
                 WHEN 'Carne' THEN 1
                 WHEN 'Peixe' THEN 2
                 WHEN 'Vegetariano' THEN 3
-                WHEN 'Sopa' THEN 4
-                WHEN 'Sobremesa' THEN 5
-                WHEN 'Bebida' THEN 6
-                ELSE 7
+                ELSE 4
             END, rtp.RTP_NOME
         ");
         $stmt->execute();
@@ -1451,6 +1450,7 @@ class Database {
      * $modoAbertura: 'padrao' (sexta 14h30 da semana anterior) ou 'imediato'.
      */
     public static function publicarSemanaEmenta(string $inicio, string $fim, string $modoAbertura = 'padrao'): int {
+        self::garantirColunaDataAbertura();
         if ($modoAbertura === 'imediato') {
             $stmt = self::conexao()->prepare("
                 UPDATE restaurante_menu
@@ -1473,6 +1473,7 @@ class Database {
      * Retorna o número de pratos atualizados.
      */
     public static function despublicarSemanaEmenta(string $inicio, string $fim): int {
+        self::garantirColunaDataAbertura();
         $stmt = self::conexao()->prepare("
             UPDATE restaurante_menu
             SET RM_PUBLICADO = 0, RM_DATA_ABERTURA = NULL
@@ -1507,14 +1508,27 @@ class Database {
         ];
     }
 
+    public static function garantirColunaDataAbertura(): void {
+        self::conexao()->exec("
+            IF NOT EXISTS (
+                SELECT 1 FROM sys.columns
+                WHERE object_id = OBJECT_ID('restaurante_menu') AND name = 'RM_DATA_ABERTURA'
+            )
+            BEGIN
+                ALTER TABLE restaurante_menu ADD RM_DATA_ABERTURA DATETIME NULL;
+            END
+        ");
+    }
+
     /**
      * Determina se a ementa da semana já está automaticamente visível para
      * os alunos, com base na hora de abertura explícita (RM_DATA_ABERTURA)
-     * ou, na sua ausência, na regra padrão (sexta 14h30 da semana anterior).
+     * ou, na sua ausência, na regra padrão configurada (ex: sexta 14h30 da semana anterior).
      * Calculado dinamicamente — sem processo agendado, mesmo princípio do
      * estado "expirado".
      */
     public static function semanaJaVisivelParaAlunos(string $inicio, string $fim): bool {
+        self::garantirColunaDataAbertura();
         $stmt = self::conexao()->prepare("
             SELECT TOP 1 RM_DATA_ABERTURA FROM restaurante_menu
             WHERE RM_DATA BETWEEN ? AND ? AND RM_DATA_ABERTURA IS NOT NULL
@@ -1526,9 +1540,174 @@ class Database {
             return new DateTime() >= new DateTime($aberturaExplicita);
         }
 
-        // $inicio é sempre uma segunda-feira — a sexta anterior são exatamente -3 dias
-        $abertura = (new DateTime($inicio))->modify('-3 days')->setTime(14, 30, 0);
+        $config = self::obterConfiguracaoPublicacaoEmenta();
+        $dias = (int) $config['dias_antecedencia'];
+        [$h, $m] = explode(':', substr($config['hora'], 0, 5));
+
+        // $inicio é sempre uma segunda-feira
+        $abertura = (new DateTime($inicio))->modify("-{$dias} days")->setTime((int) $h, (int) $m, 0);
         return new DateTime() >= $abertura;
+    }
+
+    // ============================================
+    // Configurações Gerais e Publicação da Ementa
+    // ============================================
+
+    public static function garantirTabelaConfiguracao(): void {
+        self::conexao()->exec("
+            IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'restaurante_configuracao')
+            BEGIN
+                CREATE TABLE restaurante_configuracao (
+                    RC_CHAVE VARCHAR(50) PRIMARY KEY,
+                    RC_VALOR VARCHAR(255) NOT NULL
+                );
+            END
+        ");
+    }
+
+    public static function obterConfiguracao(string $chave, ?string $padrao = null): ?string {
+        self::garantirTabelaConfiguracao();
+        $stmt = self::conexao()->prepare("SELECT RC_VALOR FROM restaurante_configuracao WHERE RC_CHAVE = ?");
+        $stmt->execute([$chave]);
+        $val = $stmt->fetchColumn();
+        return $val !== false ? (string) $val : $padrao;
+    }
+
+    public static function gravarConfiguracao(string $chave, string $valor): bool {
+        self::garantirTabelaConfiguracao();
+        $pdo = self::conexao();
+        $stmt = $pdo->prepare("SELECT 1 FROM restaurante_configuracao WHERE RC_CHAVE = ?");
+        $stmt->execute([$chave]);
+        if ($stmt->fetchColumn()) {
+            $upd = $pdo->prepare("UPDATE restaurante_configuracao SET RC_VALOR = ? WHERE RC_CHAVE = ?");
+            return $upd->execute([$valor, $chave]);
+        } else {
+            $ins = $pdo->prepare("INSERT INTO restaurante_configuracao (RC_CHAVE, RC_VALOR) VALUES (?, ?)");
+            return $ins->execute([$chave, $valor]);
+        }
+    }
+
+    /**
+     * Obtém a configuração de publicação padrão da ementa (dias de antecedência em relação a 2ª feira e hora).
+     * Padrão de fábrica: 3 dias de antecedência (Sexta-feira anterior) às 14:30.
+     */
+    public static function obterConfiguracaoPublicacaoEmenta(): array {
+        $diasStr = self::obterConfiguracao('publicacao_ementa_dias_antecedencia', '3');
+        $dias = is_numeric($diasStr) ? (int) $diasStr : 3;
+        $hora = self::obterConfiguracao('publicacao_ementa_hora', '14:30:00') ?? '14:30:00';
+        $horaHm = substr($hora, 0, 5);
+
+        $diasNomes = [
+            0 => 'Segunda-feira (próprio dia)',
+            1 => 'Domingo',
+            2 => 'Sábado',
+            3 => 'Sexta-feira',
+            4 => 'Quinta-feira',
+            5 => 'Quarta-feira',
+            6 => 'Terça-feira',
+            7 => 'Segunda-feira (1 semana antes)',
+        ];
+        $diaNome = $diasNomes[$dias] ?? ($dias . ' dias de antecedência');
+        $horaFormatada = str_replace(':', 'h', $horaHm);
+
+        $texto = match ($dias) {
+            3 => "Sexta às {$horaFormatada}",
+            4 => "Quinta às {$horaFormatada}",
+            2 => "Sábado às {$horaFormatada}",
+            1 => "Domingo às {$horaFormatada}",
+            0 => "Segunda às {$horaFormatada}",
+            default => "{$diaNome} às {$horaFormatada}",
+        };
+
+        $descricao = match ($dias) {
+            0 => "Abre na segunda-feira às {$horaFormatada} (próprio dia)",
+            1 => "Abre no domingo às {$horaFormatada}",
+            default => "Abre automaticamente na {$diaNome} às {$horaFormatada} (da semana anterior)",
+        };
+
+        return [
+            'dias_antecedencia' => $dias,
+            'hora'              => $horaHm . ':00',
+            'hora_hm'           => $horaHm,
+            'dia_nome'          => $diaNome,
+            'texto'             => $texto,
+            'descricao'         => $descricao,
+        ];
+    }
+
+    /**
+     * Atualiza a configuração da publicação automática da ementa semanal.
+     */
+    public static function atualizarConfiguracaoPublicacaoEmenta(int $diasAntecedencia, string $hora): bool|string {
+        if (!preg_match('/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/', $hora)) {
+            return 'hora_invalida';
+        }
+        if ($diasAntecedencia < 0 || $diasAntecedencia > 14) {
+            return 'antecedencia_invalida';
+        }
+        $hora = substr($hora, 0, 5) . ':00';
+        self::gravarConfiguracao('publicacao_ementa_dias_antecedencia', (string) $diasAntecedencia);
+        self::gravarConfiguracao('publicacao_ementa_hora', $hora);
+        return true;
+    }
+
+    // ============================================
+    // Gestão de Preços das Refeições (admin_cantina)
+    // ============================================
+
+    /**
+     * Lista todos os tipos de refeição base com os respetivos preços vigentes e data de início.
+     * Agrupa Carne, Peixe, Vegetariano, Menu Completo, Sopa, Sobremesa, Bebida e Prato extra.
+     */
+    public static function listarPrecosVigentesTodosTipos(): array {
+        $hoje = date('Y-m-d');
+        $stmt = self::conexao()->prepare("
+            SELECT
+                rtp.RTP_ID,
+                rtp.RTP_NOME,
+                rtp.RM_PRATO_DIA,
+                p.RPTR_PRECO AS preco_atual,
+                p.RPTR_DATAINICIO AS data_inicio_preco
+            FROM restaurante_tipo_refeicao rtp
+            LEFT JOIN (
+                SELECT RPTR_TP_ID, RPTR_PRECO, RPTR_DATAINICIO,
+                       ROW_NUMBER() OVER (PARTITION BY RPTR_TP_ID ORDER BY RPTR_DATAINICIO DESC, RPTR_ID DESC) as rn
+                FROM restaurante_preco_tipo_refeicao
+                WHERE RPTR_DATAINICIO <= ?
+            ) p ON p.RPTR_TP_ID = rtp.RTP_ID AND p.rn = 1
+            WHERE rtp.RTP_NOME NOT LIKE 'Extra: %'
+            ORDER BY CASE rtp.RTP_NOME
+                WHEN 'Carne' THEN 1
+                WHEN 'Peixe' THEN 2
+                WHEN 'Vegetariano' THEN 3
+                WHEN 'Menu Completo' THEN 4
+                WHEN 'Sopa' THEN 5
+                WHEN 'Sobremesa' THEN 6
+                WHEN 'Bebida' THEN 7
+                WHEN 'Prato extra' THEN 8
+                ELSE 9
+            END, rtp.RTP_NOME
+        ");
+        $stmt->execute([$hoje]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Atualiza o preço de um tipo de refeição com validação.
+     */
+    public static function atualizarPrecoRefeicao(int $tipoId, float $novoPreco): bool|string {
+        if ($novoPreco < 0 || $novoPreco > 999.99) {
+            return 'preco_invalido';
+        }
+        $stmt = self::conexao()->prepare("SELECT RTP_NOME FROM restaurante_tipo_refeicao WHERE RTP_ID = ?");
+        $stmt->execute([$tipoId]);
+        $nome = $stmt->fetchColumn();
+        if (!$nome) {
+            return 'tipo_nao_encontrado';
+        }
+
+        self::atualizarPrecoTipo($tipoId, $novoPreco);
+        return true;
     }
 
     public static function listarTiposRefeicao(): array {

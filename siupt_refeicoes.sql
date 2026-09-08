@@ -462,5 +462,20 @@ GO
 -- SELECT DISTINCT YEAR(RF_DATA) FROM restaurante_feriado
 -- WHERE YEAR(RF_DATA) NOT IN (SELECT RFG_ANO FROM restaurante_feriado_geracao);
 
+-- =========================================================================
+-- 16. MIGRAÇÃO — tabela restaurante_configuracao
+-- Guarda pares chave-valor para parâmetros globais da aplicação, tais
+-- como o horário de publicação automática da ementa aos alunos.
+-- =========================================================================
 
+CREATE TABLE restaurante_configuracao (
+    RC_CHAVE VARCHAR(50) PRIMARY KEY,
+    RC_VALOR VARCHAR(255) NOT NULL
+);
+GO
 
+-- Valores padrão: publicação na sexta-feira (3 dias antes de segunda) às 14:30
+INSERT INTO restaurante_configuracao (RC_CHAVE, RC_VALOR) VALUES
+('publicacao_ementa_dias_antecedencia', '3'),
+('publicacao_ementa_hora', '14:30:00');
+GO

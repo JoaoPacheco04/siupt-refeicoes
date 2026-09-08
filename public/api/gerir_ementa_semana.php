@@ -75,17 +75,21 @@ try {
         ];
     }, $pratos);
 
-    // $inicio é sempre uma segunda-feira — a sexta anterior são exatamente -3 dias
-    $dtAberturaPadrao = (new DateTime($inicio))->modify('-3 days')->setTime(14, 30, 0);
+    $configPubl  = Database::obterConfiguracaoPublicacaoEmenta();
+    $diasPubl    = (int) $configPubl['dias_antecedencia'];
+    [$hPubl, $mPubl] = explode(':', substr($configPubl['hora'], 0, 5));
+
+    $dtAberturaPadrao = (new DateTime($inicio))->modify("-{$diasPubl} days")->setTime((int) $hPubl, (int) $mPubl, 0);
     $visivelEm   = $dtAberturaPadrao->format('Y-m-d H:i:s');
     $jaVisivel   = Database::semanaJaVisivelParaAlunos($inicio, $fim);
 
     $publicacao = [
-        'total'      => $estadoPubl['total'],
-        'publicados' => $estadoPubl['publicados'],
-        'publicada'  => $estadoPubl['publicada'],
-        'visivel_em' => $visivelEm,
-        'ja_visivel' => $jaVisivel,
+        'total'             => $estadoPubl['total'],
+        'publicados'        => $estadoPubl['publicados'],
+        'publicada'         => $estadoPubl['publicada'],
+        'visivel_em'        => $visivelEm,
+        'ja_visivel'        => $jaVisivel,
+        'config_publicacao' => $configPubl,
     ];
 
     echo json_encode([

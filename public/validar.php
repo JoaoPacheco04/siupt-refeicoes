@@ -31,7 +31,7 @@ $listaValidacoes = $vejoTudo
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="assets/css/base.css" rel="stylesheet">
-    <link href="assets/css/navbar.css" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/navbar.css') ?>" rel="stylesheet">
     <link href="<?= assetUrl('assets/css/validar.css') ?>" rel="stylesheet">
 </head>
 <body>
@@ -61,6 +61,10 @@ $listaValidacoes = $vejoTudo
         <i class="bi bi-egg-fried"></i>
     </a>
 
+    <a href="gerir_precos.php" class="nav-icon-link" title="Gerir preços">
+        <i class="bi bi-tag"></i>
+    </a>
+
     <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
         <i class="bi bi-chat-square-text"></i>
     </a>
@@ -73,8 +77,8 @@ $listaValidacoes = $vejoTudo
         <i class="bi bi-people"></i>
     </a>
 
-    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
-        <i class="bi bi-clock-history"></i>
+    <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir prazos e horas limite">
+        <i class="bi bi-hourglass-split"></i>
     </a>
 
     <a href="relatorio.php" class="nav-icon-link" title="Relatório mensal">

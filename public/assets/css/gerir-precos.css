@@ -1,0 +1,679 @@
+/* ======================================================================
+   gerir-precos.css — Estilos para a página de gestão de preços de refeições
+   Área reservada a administradores da cantina (admin_cantina)
+   ====================================================================== */
+
+.gerir-precos-main {
+    background: transparent;
+    min-height: calc(100vh - 60px);
+    padding: 1.5rem 1.5rem 3rem;
+    max-width: 920px;
+    margin: 0 auto;
+}
+
+.gerir-precos-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1.25rem;
+    margin-bottom: 1.75rem;
+    flex-wrap: wrap;
+}
+
+.gerir-precos-header-texto {
+    flex: 1;
+    min-width: 280px;
+}
+
+.gerir-precos-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #1e2a3b;
+    text-transform: lowercase;
+    margin: 0 0 0.25rem 0;
+}
+
+.gerir-precos-subtitulo {
+    font-size: 0.875rem;
+    color: #64748b;
+    margin: 0;
+}
+
+/* ── Botões de Ação no Topo (Imprimir PDF / CSV) ─────────────────────── */
+.gerir-precos-acoes-topo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.btn-acao-exportar {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.55rem 1rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.btn-imprimir-pdf {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #1e293b;
+}
+
+.btn-imprimir-pdf:hover {
+    background: #1e293b;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(15, 23, 42, 0.15);
+}
+
+.btn-exportar-csv {
+    background: #047857;
+    color: #ffffff;
+    border-color: #065f46;
+}
+
+.btn-exportar-csv:hover {
+    background: #065f46;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(5, 150, 105, 0.2);
+}
+
+/* Elementos exclusivos de impressão — ocultos no ecrã */
+.print-header-oficial,
+.print-footer-oficial {
+    display: none;
+}
+
+/* ── Banner de Auditoria/Histórico ───────────────────────────────────── */
+.precos-aviso-historico {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #4f46e5;
+    border-radius: 8px;
+    padding: 0.85rem 1.15rem;
+    font-size: 0.84rem;
+    color: #475569;
+    margin-bottom: 1.75rem;
+}
+
+.precos-aviso-historico i {
+    font-size: 1.2rem;
+    color: #4f46e5;
+    flex-shrink: 0;
+}
+
+/* ── Cartões de Categoria ────────────────────────────────────────────── */
+.precos-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+    margin-bottom: 2rem;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.precos-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.25rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.precos-card-titulo {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+}
+
+.precos-card-titulo i {
+    font-size: 1.25rem;
+    color: #4f46e5;
+}
+
+.precos-badge-categoria {
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: #f1f5f9;
+    color: #64748b;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+}
+
+/* ── Lista e Linhas de Itens de Preço ────────────────────────────────── */
+.precos-itens-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.preco-item-linha {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.95rem 1.15rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.preco-item-linha:hover {
+    background: #ffffff;
+    border-color: #cbd5e1;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04);
+}
+
+.preco-item-info {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    min-width: 220px;
+}
+
+.preco-tipo-icone {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: #eff6ff;
+    color: #3b82f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.preco-item-linha[data-tipo="Carne"] .preco-tipo-icone {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+.preco-item-linha[data-tipo="Peixe"] .preco-tipo-icone {
+    background: #eff6ff;
+    color: #0284c7;
+}
+
+.preco-item-linha[data-tipo="Vegetariano"] .preco-tipo-icone {
+    background: #f0fdf4;
+    color: #16a34a;
+}
+
+.preco-item-linha[data-tipo="Menu Completo"] .preco-tipo-icone {
+    background: #fdf4ff;
+    color: #9333ea;
+}
+
+.preco-item-linha[data-tipo="Sopa"] .preco-tipo-icone {
+    background: #fffbeb;
+    color: #d97706;
+}
+
+.preco-item-linha[data-tipo="Sobremesa"] .preco-tipo-icone {
+    background: #fdf2f8;
+    color: #db2777;
+}
+
+.preco-item-linha[data-tipo="Bebida"] .preco-tipo-icone {
+    background: #f0f9ff;
+    color: #0891b2;
+}
+
+.preco-item-linha[data-tipo="Prato extra"] .preco-tipo-icone {
+    background: #fff7ed;
+    color: #ea580c;
+}
+
+.preco-tipo-detalhes {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.preco-tipo-nome {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.preco-tipo-desc {
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+/* ── Preço Vigente & Formulário de Atualização ───────────────────────── */
+.preco-item-acoes {
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+    flex-wrap: wrap;
+}
+
+.preco-item-vigente-bloco {
+    text-align: right;
+}
+
+.preco-vigente-valor {
+    font-family: 'Manrope', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.02em;
+}
+
+.preco-vigente-data {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    display: block;
+    margin-top: 0.1rem;
+}
+
+.preco-item-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.input-preco-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.input-preco-simbolo {
+    position: absolute;
+    right: 0.65rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748b;
+    pointer-events: none;
+}
+
+.input-novo-preco {
+    width: 100px;
+    padding: 0.45rem 1.6rem 0.45rem 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b;
+    background: #ffffff;
+    text-align: right;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.input-novo-preco:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.btn-salvar-preco {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: #4f46e5;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 0.48rem 0.85rem;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+    white-space: nowrap;
+}
+
+.btn-salvar-preco:hover {
+    background: #4338ca;
+}
+
+.btn-salvar-preco:active {
+    transform: scale(0.98);
+}
+
+.btn-salvar-preco:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+/* ── Rodapé Informativo dos Extras ──────────────────────────────────── */
+.precos-rodape-atalho {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    padding: 0.85rem 1.15rem;
+    margin-top: 1rem;
+    font-size: 0.83rem;
+    color: #475569;
+}
+
+.btn-link-extras {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: #4f46e5;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+.btn-link-extras:hover {
+    color: #3730a3;
+    text-decoration: underline;
+}
+
+/* ── Toast de Notificação ───────────────────────────────────────────── */
+.toast-notificacao {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    background: #0f172a;
+    color: #ffffff;
+    padding: 0.85rem 1.25rem;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+    opacity: 0;
+    transform: translateY(1rem);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    pointer-events: none;
+}
+
+.toast-notificacao.toast--visivel {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.toast-notificacao.toast--sucesso {
+    background: #065f46;
+    border-left: 4px solid #10b981;
+}
+
+.toast-notificacao.toast--erro {
+    background: #7f1d1d;
+    border-left: 4px solid #ef4444;
+}
+
+@media (max-width: 640px) {
+    .preco-item-linha {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .preco-item-acoes {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .preco-item-vigente-bloco {
+        text-align: left;
+    }
+}
+
+/* ── Extras Individuais Específicos ─────────────────────────────────── */
+.precos-extras-individuais-seccao {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px dashed #cbd5e1;
+}
+
+.precos-extras-subtitulo-bloco {
+    margin-bottom: 0.75rem;
+}
+
+.precos-extras-subtitulo-texto {
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #475569;
+}
+
+.preco-item-linha--extra-individual {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.btn-editar-extra-atalho {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.85rem;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #334155;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.btn-editar-extra-atalho:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #0f172a;
+    text-decoration: none;
+}
+
+/* ======================================================================
+   Estilos de Impressão Oficial (A4 para Afixação Física / Guardar como PDF)
+   ====================================================================== */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 1.2cm 1.5cm;
+    }
+
+    header,
+    .gerir-precos-header,
+    .precos-aviso-historico,
+    .preco-item-form,
+    .precos-rodape-atalho,
+    .btn-editar-extra-atalho,
+    .toast-notificacao,
+    .nav-icon-link,
+    #profile {
+        display: none !important;
+    }
+
+    body,
+    #bodycontainer,
+    .gerir-precos-main {
+        background: #ffffff !important;
+        color: #0f172a !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        font-size: 10pt;
+    }
+
+    .print-header-oficial {
+        display: block !important;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #0f172a;
+    }
+
+    .print-header-oficial .print-instituicao {
+        font-family: 'Manrope', sans-serif;
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: 1px;
+        color: #0f172a;
+        text-transform: uppercase;
+        margin: 0 0 0.2rem 0;
+    }
+
+    .print-header-oficial .print-subinstituicao {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #475569;
+        margin: 0 0 0.5rem 0;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .print-header-oficial .print-titulo {
+        font-family: 'Manrope', sans-serif;
+        font-size: 1.45rem;
+        font-weight: 800;
+        color: #0f172a;
+        margin: 0.6rem 0 0.25rem 0;
+    }
+
+    .print-header-oficial .print-data-emissao {
+        font-size: 0.8rem;
+        color: #64748b;
+        margin: 0;
+    }
+
+    .precos-card {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+        border-radius: 8px !important;
+        page-break-inside: avoid;
+        margin-bottom: 1rem !important;
+        padding: 0.85rem 1rem !important;
+        background: #ffffff !important;
+    }
+
+    .precos-card-header {
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding-bottom: 0.4rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+
+    .precos-card-titulo {
+        font-size: 1rem !important;
+        color: #0f172a !important;
+    }
+
+    .precos-card-titulo i {
+        display: none !important;
+    }
+
+    .precos-badge-categoria {
+        background: #f1f5f9 !important;
+        color: #334155 !important;
+        border: 1px solid #cbd5e1 !important;
+        font-size: 0.75rem !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .preco-item-linha {
+        background: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 6px !important;
+        padding: 0.45rem 0.75rem !important;
+        margin-bottom: 0.35rem !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .preco-tipo-icone {
+        display: none !important;
+    }
+
+    .preco-tipo-nome {
+        font-size: 0.95rem !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+    }
+
+    .preco-tipo-desc {
+        font-size: 0.78rem !important;
+        color: #475569 !important;
+    }
+
+    .preco-item-vigente-bloco {
+        text-align: right !important;
+    }
+
+    .preco-vigente-valor {
+        font-size: 1.15rem !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+    }
+
+    .preco-vigente-data {
+        font-size: 0.72rem !important;
+        color: #64748b !important;
+    }
+
+    .precos-extras-individuais-seccao {
+        margin-top: 0.85rem !important;
+        padding-top: 0.65rem !important;
+        border-top: 1px dashed #cbd5e1 !important;
+    }
+
+    .print-footer-oficial {
+        display: block !important;
+        margin-top: 1.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid #cbd5e1;
+        font-size: 0.8rem;
+        color: #475569;
+        page-break-inside: avoid;
+    }
+
+    .print-footer-notas {
+        margin-bottom: 1.25rem;
+        line-height: 1.45;
+    }
+
+    .print-footer-notas p {
+        margin: 0 0 0.25rem 0;
+    }
+
+    .print-footer-assinatura {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        padding-top: 1.5rem;
+    }
+
+    .print-assinatura-linha {
+        border-top: 1px solid #0f172a;
+        width: 220px;
+        text-align: center;
+        font-size: 0.75rem;
+        padding-top: 0.25rem;
+        color: #1e293b;
+    }
+}

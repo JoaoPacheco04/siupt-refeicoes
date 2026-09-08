@@ -761,6 +761,17 @@ function renderizarEstadoPublicacao(dados) {
 
     const pub = dados.publicacao || { publicada: false, total: 0, publicados: 0, visivel_em: null, ja_visivel: false };
 
+    if (pub.config_publicacao) {
+        const tituloEl = document.getElementById('textoOpcaoPadraoTitulo');
+        const subtituloEl = document.getElementById('textoOpcaoPadraoSubtitulo');
+        if (tituloEl && pub.config_publicacao.texto) {
+            tituloEl.textContent = pub.config_publicacao.texto;
+        }
+        if (subtituloEl && pub.config_publicacao.descricao) {
+            subtituloEl.textContent = `${pub.config_publicacao.descricao} (padrão)`;
+        }
+    }
+
     // Se estiver em rascunho ou sem pratos, esconde a barra para não poluir
     if (pub.total === 0 || !pub.publicada) {
         barra.style.display = 'none';

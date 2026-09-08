@@ -138,7 +138,7 @@ foreach ($vendasDiarias as $d) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="assets/css/base.css" rel="stylesheet">
-    <link href="assets/css/navbar.css" rel="stylesheet">
+    <link href="<?= assetUrl('assets/css/navbar.css') ?>" rel="stylesheet">
     <link href="<?= assetUrl('assets/css/relatorio.css') ?>" rel="stylesheet">
     <!-- Chart.js para o gráfico de vendas diárias -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
@@ -169,6 +169,10 @@ foreach ($vendasDiarias as $d) {
                     <i class="bi bi-egg-fried"></i>
                 </a>
 
+                <a href="gerir_precos.php" class="nav-icon-link" title="Gerir preços">
+                    <i class="bi bi-tag"></i>
+                </a>
+
                 <a href="gerir_motivos.php" class="nav-icon-link" title="Gerir motivos">
                     <i class="bi bi-chat-square-text"></i>
                 </a>
@@ -181,8 +185,8 @@ foreach ($vendasDiarias as $d) {
                     <i class="bi bi-people"></i>
                 </a>
 
-                <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir horas limite">
-                    <i class="bi bi-clock-history"></i>
+                <a href="gerir_prazos.php" class="nav-icon-link" title="Gerir prazos e horas limite">
+                    <i class="bi bi-hourglass-split"></i>
                 </a>
 
                 <a href="relatorio.php" class="nav-icon-link nav-icon-link--ativo" title="Relatório mensal">
@@ -203,14 +207,25 @@ foreach ($vendasDiarias as $d) {
         </header>
 
         <main class="relatorio-main">
+
+            <!-- Cabeçalho Oficial exclusivo para Impressão direta -->
+            <div class="print-header-relatorio">
+                <div class="print-relatorio-instituicao">Universidade Portucalense &bull; Serviços de Cantina e Alimentação</div>
+                <div class="print-relatorio-titulo">Relatório Mensal de Atividade &mdash; <?= htmlspecialchars($nomeMesSelecionado . ' ' . $anoSelecionado) ?></div>
+                <div class="print-relatorio-data">Emitido em <?= date('d/m/Y \à\s H:i') ?> &bull; Utilizador: <?= htmlspecialchars($utilizador['nome']) ?></div>
+            </div>
+
             <div class="relatorio-header-acoes">
                 <h1 class="relatorio-titulo">relatório mensal</h1>
                 <div class="relatorio-acoes-grupo">
-                    <a href="api/exportar_relatorio_mensal.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv" title="Exportar refeições em CSV">
+                    <button type="button" class="btn-imprimir-relatorio" onclick="window.print()" title="Imprimir relatório direto para papel ou guardar em PDF">
+                        <i class="bi bi-printer"></i> Imprimir
+                    </button>
+                    <a href="api/exportar_relatorio_mensal.php?mes=<?= htmlspecialchars($anoMes) ?>" class="btn-exportar-csv" title="Exportar relatório completo em CSV (Excel)">
                         <i class="bi bi-file-earmark-spreadsheet"></i> CSV
                     </a>
                     <a href="api/exportar_relatorio_pdf.php?mes=<?= htmlspecialchars($anoMes) ?>"
-                        class="btn-exportar-pdf">
+                        class="btn-exportar-pdf" title="Descarregar relatório oficial em formato PDF">
                         <i class="bi bi-file-earmark-pdf"></i> PDF
                     </a>
                 </div>
@@ -528,6 +543,11 @@ foreach ($vendasDiarias as $d) {
                     <?php endforeach; ?>
                 </div>
             <?php endif; ?>
+
+            <!-- Rodapé exclusivo para Impressão direta -->
+            <div class="print-footer-relatorio">
+                SIUPT &bull; Sistema Integrado da Universidade Portucalense &bull; Cantina Universitária
+            </div>
 
         </main>
     </div>

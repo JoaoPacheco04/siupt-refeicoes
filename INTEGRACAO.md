@@ -25,6 +25,7 @@ A **única** tabela partilhada com o sistema existente é `users`, e é usada **
 | `restaurante_avaliacao` | Avaliação do aluno (1-5 estrelas + motivo opcional para notas baixas) — associada ao **pedido**, não a um prato individual (ver Limitações) |
 | `restaurante_transferencia` | Registo de transferências de refeições bem-sucedidas entre utilizadores |
 | `restaurante_transferencia_tentativa` | Auditoria de tentativas de transferência falhadas |
+| `restaurante_configuracao` | Pares chave-valor para parâmetros globais da cantina (ex: horário e dias de antecedência para publicação da ementa) |
 
 O script completo de criação está em `siupt_refeicoes.sql`, na raiz do projeto, organizado por secções e com comentários.
 
